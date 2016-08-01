@@ -1,0 +1,12 @@
+{
+    "require": {
+        "silex/silex": "~2.0",
+        "symfony/translation": "^3.1",
+        "yetanotherape/diff-match-patch": "^1.0"
+    },
+    "autoload": {
+      "psr-4": {
+        "Curator\\": "src/"
+      }
+    }
+}
