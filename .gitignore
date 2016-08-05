@@ -1,6 +1,8 @@
-dist/vendor
-dist/web/curator.php
-dist/web/curator-gui
+/dist/vendor
+/dist/web/curator.php
+/dist/web/curator-gui
 *.phar
 *.phar.gz
 *.phar.bz2
+/phpdoc.xml
+/phpdoc/
