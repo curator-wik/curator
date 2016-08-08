@@ -3,7 +3,7 @@ if (php_sapi_name() == 'cli') {
   die("Curator cannot be used from the command line.\n");
 }
 
-// Don't do < php 5.4. 5.3 has register_globals ** shiver
+// Don't do < php 5.4. 5.3 has register_globals & safe mode ** shiver
 if (!defined('PHP_VERSION_ID') || PHP_MAJOR_VERSION < 5 || (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION < 4)) {
   die("Curator requires PHP 5.4+\n");
 }
