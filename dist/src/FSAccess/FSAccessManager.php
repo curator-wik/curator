@@ -90,22 +90,8 @@ class FSAccessManager {
     if ($wd === NULL) {
       throw new \LogicException('setWorkingPath() must have been called as a precondition to using normalizePath()');
     }
-    $orig_wd = $this->writeOps->getcwd();
 
-    if (! $this->chdir($wd)) {
-      throw new FileException(sprintf('Unable to make %s the working directory.', $wd));
-    }
-
-    if (! @$this->readOps->pathExists($path)) {
-      if ($orig_wd) {
-        $this->chdir($orig_wd);
-      }
-      throw new FileNotFoundException($path);
-    }
-    $abs_path = $this->readOps->realPath($path);
-    if ($orig_wd) {
-      $this->chdir($orig_wd);
-    }
+    $abs_path = $this->readOps->realPath($path, $wd);
 
     // On case-insensitive systems, this could result in false positives.
     if (strpos($abs_path, $wd) !== 0) {
@@ -279,26 +265,4 @@ class FSAccessManager {
     return $this->readOps->isDir($path);
   }
 
-  /**
-   * Changes the current directory for both read and write operations.
-   *
-   * Consumers of the public API should use setWorkingPath().
-   *
-   * @param string $directory
-   *   The directory to change to.
-   * @return bool
-   *   TRUE on success or FALSE on failure.
-   */
-  protected function chdir($directory) {
-    $write_wd = $this->writeOps->getcwd();
-    if ($this->writeOps->chdir($directory)) {
-      if ($this->readOps->chdir($directory)) {
-        return TRUE;
-      } else if ($write_wd) {
-        $this->writeOps->chdir($write_wd);
-      }
-    }
-
-    return FALSE;
-  }
 }

@@ -16,10 +16,9 @@ trait MockedFilesystemTrait {
   protected $contents;
 
   /**
-   * @var string $cwd
-   *   The current working directory
+   * @var string $proj_root
+   *   The location in the mocked filesystem where our simulated contents start.
    */
-  protected $cwd = '/test/mock/default';
   protected $proj_root = '/';
 
   public function getAdapterName() {
@@ -38,21 +37,18 @@ trait MockedFilesystemTrait {
     $this->contents = $contents;
   }
 
-  protected function _chdir($path) {
-    $this->cwd = $path;
-    return TRUE;
-  }
+  protected function _realPath($path, $relative_to, $throwOnMissingPath = TRUE) {
+    if (static::_pathIsAbsolute($path)) {
+      $path = $this->simplifyPath($path);
+    } else if (empty($relative_to)) {
+      throw new \LogicException('Cannot resolve canonical absolute path given a relative path and no $relative_to');
+    } else {
+      $path = $this->simplifyPath($relative_to . '/' . $path);
+    }
 
-  protected function _realPath($path, $throwOnMissingPath = TRUE) {
-    $path = $this->simplifyPath($path);
     if ($this->_isInProjectRoot($path)) {
       if ($throwOnMissingPath && ! $this->_pathExists($path, FALSE)) {
         throw new FileException(sprintf('Path "%s" does not exist in the mocked fs.', $path));
-      }
-
-      if (! static::_pathIsAbsolute($path)) {
-        // We can't lose track of what $path is truly relative to
-        $path = $this->simplifyPath($this->cwd . '/' . $path);
       }
 
       // Transform to path findable in MockedFilesystemContents
@@ -114,20 +110,9 @@ trait MockedFilesystemTrait {
     return strncmp($path, '/', 1) === 0;
   }
 
-  protected function _isInProjectRoot($path) {
-    if (static::_pathIsAbsolute($path)) {
-      return strncmp($this->simplifyPath($path), $this->proj_root, strlen($this->proj_root)) === 0;
-    } else if (strncmp($path, './../', 5) === 0) {
-      return FALSE;
-    } else {
-      // Relative paths are within the project root when the cwd is
-      return strncmp($this->cwd, $this->proj_root, strlen($this->proj_root)) === 0;
-    }
-  }
-
   protected function _pathExists($path, $translate_real = TRUE) {
     if ($translate_real) {
-      $path = $this->_realPath($path, FALSE);
+      $path = $this->_realPath($path, NULL, FALSE);
     }
 
     if ($this->_isDir($path, FALSE)) {
@@ -150,6 +135,28 @@ trait MockedFilesystemTrait {
     return FALSE;
   }
 
+  /**
+   * Tests whether a path is within the tree of the mocked filesystem
+   * that we are simulating the contents of. This helps the mocked filesystem's
+   * other methods know how to respond to a given path.
+   *
+   * In other words, the mocked filesystem supports "mounting" the mocked
+   * contents to pretend they begin at some location other than '/', say
+   * /foo/bar. This tests whether the given path is part of the mocked contents:
+   * /foo/bar/test would be in that case, but not /baz.
+   *
+   * @param string $path
+   *
+   * @return bool
+   */
+  protected function _isInProjectRoot($path) {
+    if (! static::_pathIsAbsolute($path)) {
+      throw new \LogicException('API contract violation: relative paths not allowed by the low-level read/write adapters.');
+    } else {
+      return strncmp($this->simplifyPath($path), $this->proj_root, strlen($this->proj_root)) === 0;
+    }
+  }
+
   protected function _isDir($path, $translate_real = TRUE) {
     // Special path '.' is always a directory
     if ($path == '.') {
@@ -157,7 +164,7 @@ trait MockedFilesystemTrait {
     }
 
     if ($translate_real) {
-      $path = $this->_realPath($path, FALSE);
+      $path = $this->_realPath($path, NULL, FALSE);
     }
 
     if (self::_isInProjectRoot($path)) {
@@ -170,7 +177,7 @@ trait MockedFilesystemTrait {
 
   protected function _isFile($path, $translate_real = TRUE) {
     if ($translate_real) {
-      $path = $this->_realPath($path, FALSE);
+      $path = $this->_realPath($path, NULL, FALSE);
     }
 
     if (self::_isInProjectRoot($path)) {

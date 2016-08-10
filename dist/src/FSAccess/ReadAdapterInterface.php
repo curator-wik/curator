@@ -29,8 +29,9 @@ interface ReadAdapterInterface {
   /**
    * Returns an absolute pathname, canonicalized if the adapter supports it.
    *
-   * Relative paths are made absolute relative to the last working directory
-   * this adapter was changed to using chdir().
+   * Relative paths are made absolute relative to the $relative_to path. It is
+   * a logic error to invoke this method with a relative $path and an empty
+   * $relative_to.
    *
    * The resulting path will always resolve references to '/./' and '/../', and
    * will exclude extraneous directory separator characters. When the filesystem
@@ -40,12 +41,16 @@ interface ReadAdapterInterface {
    *
    * @param string $path
    *   The path to make absolute.
+   * @param string $relative_to
+   *   When $path is relative, the path to resolve it relative to.
    * @return string
    *   The absolute pathname.
+   * @throws FileNotFoundException
+   *   If the path does not exist.
    * @throws FileException
-   *   On permission, missing file, or other errors.
+   *   On permission or I/O errors.
    */
-  function realPath($path);
+  function realPath($path, $relative_to = NULL);
 
   /**
    * Determines whether anything exists at $path.
@@ -76,16 +81,6 @@ interface ReadAdapterInterface {
    * @throws FileException
    */
   function isFile($path);
-
-  /**
-   * Changes the current directory.
-   *
-   * @param $path
-   *   An absolute path to the new current directory.
-   * @return void
-   * @throws FileException
-   */
-  function chdir($path);
 
   /**
    * Reads an entire file at $filename into a string.

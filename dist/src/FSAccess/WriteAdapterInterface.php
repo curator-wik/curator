@@ -18,27 +18,6 @@ interface WriteAdapterInterface {
   function getAdapterName();
 
   /**
-   * Gets the current working directory.
-   *
-   * Before the first successful call to chdir(), the current working directory
-   * is determined by the underlying operating system or file transfer server.
-   *
-   * @return string|bool
-   *   The current working directory. On error, returns FALSE.
-   */
-  function getcwd();
-
-  /**
-   * Changes the current directory.
-   *
-   * @param $path
-   *   An absolute path to the new current directory.
-   * @return void
-   * @throws FileException
-   */
-  function chdir($path);
-
-  /**
    * Writes an entire string to $filename, overwriting it if it already exists.
    *
    * @param string $filename

@@ -15,18 +15,15 @@ class WriteAdapterMock implements WriteAdapterInterface {
     $this->_setProjectRoot($project_root);
   }
 
-  public function getcwd() {
-    return $this->cwd;
-  }
-
-  public function chdir($path) {
-    return $this->_chdir($path);
-  }
-
   public function filePutContents($filename, $data, $lock_if_able = TRUE) {
+    if (! self::_pathIsAbsolute($filename)) {
+      throw new \LogicException('Relative paths not allowed');
+    }
+
     if ($this->_isDir(dirname($filename))) {
       $dir = $this->_realPath(dirname($filename));
-      $new_path = $this->_toRelativePath($this->simplifyPath($dir . '/' . basename($filename)));
+      $new_path = $this->_toRelativePath(
+        $this->simplifyPath($dir . '/' . basename($filename)));
       $this->contents->files[$new_path] = $data;
       return strlen($data);
     } else {
@@ -35,6 +32,10 @@ class WriteAdapterMock implements WriteAdapterInterface {
   }
 
   public function mkdir($path) {
+    if (! self::_pathIsAbsolute($path)) {
+      throw new \LogicException('Relative paths not allowed');
+    }
+
     // Comply with WriteAdapterInterface contract for exception throwing.
     // Probe all children for non-directory objects.
     if ($this->_isInProjectRoot($path)) {
