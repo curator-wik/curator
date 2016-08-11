@@ -95,6 +95,21 @@ class PathSimplificationTraitTest extends \PHPUnit_Framework_TestCase {
     );
   }
 
+  public function testWindowsAbsolutePaths() {
+    // Might want to employ ReadAdapterInterface's pathIsAbsolute functionality
+    self::assertEquals(
+      "c:/windows/system32",
+      $this->simplifyPath("c:\\windows\\system\\..\\system32"),
+      'Drive-letter style Windows absolute paths are preserved.'
+    );
+
+    self::assertEquals(
+      "\\\\big.server/share/stuff",
+      $this->simplifyPath("\\\\big.server/share/stuff"),
+      'UNC-style Windows absolute paths are preserved.'
+    );
+  }
+
   public function testDotHandling() {
     // Verifies that no unsecaped .'s that match any char snuck into regexes.
     self::assertEquals(

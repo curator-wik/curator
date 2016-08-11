@@ -2,6 +2,7 @@
 
 namespace Curator\Tests\FSAccess;
 
+use Curator\FSAccess\FileExistsException;
 use Curator\FSAccess\FSAccessManager;
 use Curator\Tests\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\FSAccess\Mocks\ReadAdapterMock;
@@ -163,18 +164,18 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
 
   /**
    * @expectedException \InvalidArgumentException
-   * @expectedExceptionMessage Path "test/b" is not within working path "test/a".
+   * @expectedExceptionMessage Path "/within/a/project/test" is not within working path "/within/a/project/test/a".
    */
   public function testMkdir_outsideWorkingPath_throws() {
     $sut = static::sutFactory();
 
-    $sut->setWorkingPath('test/a');
-    $sut->mkdir('test/b');
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test/a');
+    $sut->mkdir(self::PROJECT_PATH . '/test/b');
   }
 
   /**
    * @expectedException \InvalidArgumentException
-   * @expectedExceptionMessage Path "test/b" is not within working path "test/a".
+   * @expectedExceptionMessage Path "up.link/new_dir" is not within working path "/within/a/project".
    */
   public function testMkdir_outsideWorkingPath_throws_2() {
     $sut = static::sutFactory();
@@ -221,6 +222,30 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     self::assertMockDirExists($sut, 'new2');
   }
 
+  public function testMkdir_newAtCustomRoot() {
+    $sut = static::sutFactory(FALSE, FALSE);
+    $sut->setWorkingPath(static::PROJECT_PATH . '/test');
+    $sut->mkdir(static::PROJECT_PATH . '/test/new', TRUE);
+    self::assertMockDirExists($sut, 'new');
+    self::assertMockDirExists($sut, static::PROJECT_PATH . '/test/new');
+  }
+
+  /**
+   * @expectedException \Curator\FSAccess\FileExistsException
+   */
+  public function testMkdir_newProjRoot_throws() {
+    $sut = static::sutFactory();
+    $sut->mkdir(self::PROJECT_PATH);
+  }
+
+  /**
+   * @expectedException \Curator\FSAccess\FileExistsException
+   */
+  public function testMkdir_newSysRoot_throws() {
+    $sut = static::sutFactory(TRUE);
+    $sut->mkdir('/');
+  }
+
   public function testMkdir_newAtDepth1FromSysRoot() {
     $sut = static::sutFactory(TRUE);
     $sut->mkdir('/test/b');
@@ -254,6 +279,38 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     self::assertMockDirExists($sut, self::PROJECT_PATH  . '/test/a/b');
   }
 
+  public function testMkdir_handlesBackslashes() {
+    $sut = static::sutFactory(FALSE, FALSE);
+    $sut->setWorkingPath(self::PROJECT_PATH . '\\test');
+    $sut->mkdir('a\\b');
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/a/b');
+
+    $sut->mkdir(self::PROJECT_PATH . '\\test\\c');
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/c');
+
+    $sut->mkdir(self::PROJECT_PATH . '\\test\\d\\e', TRUE);
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/d/e');
+
+    $sut->mkdir('f\\g', TRUE);
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/f/g');
+  }
+
+  public function testMkdir_handlesSymlinks() {
+    $sut = static::sutFactory(FALSE);
+    $sut->mkdir('dir.link/b');
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/a/b');
+
+    $sut->mkdir('dir.link/c/d', TRUE);
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/a/c');
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/a/c/d');
+  }
+
+  public function testMkdir_handlesPathIndirection() {
+    $sut = static::sutFactory(FALSE);
+    $sut->mkdir('test/a/nother/../b', TRUE);
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/a/b');
+  }
+
   /**
    * @expectedException \Curator\FSAccess\FileNotFoundException
    */
@@ -261,5 +318,7 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     $sut = static::sutFactory();
     $sut->mkdir('random/place');
   }
+
+  // TODO: Test traversals of all those interesting symlinks
 
 }

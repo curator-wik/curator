@@ -39,7 +39,7 @@ interface WriteAdapterInterface {
    * Makes a directory.
    *
    * @param $path
-   *   Absolute path, or relative path under the working path.
+   *   Absolute path under the working path.
    *
    *   All components of the path except for the last must be existing
    *   directories.
@@ -47,10 +47,10 @@ interface WriteAdapterInterface {
    * @throws FileNotFoundException
    *   When the directory to create the new directory in does not already exist.
    * @throws FileExistsException
-   *   When a filesystem object already exists at the $path (code 0), or a
-   *   non-directory exists at a location along the $path (code 1).
+   *   When a filesystem object already exists at the $path (code 0), or the
+   *   parent of the new directory is not a directory (code 1).
    * @throws FileException
-   *   On permission or I/O errors,
+   *   On permission or I/O errors.
    */
   function mkdir($path);
 }

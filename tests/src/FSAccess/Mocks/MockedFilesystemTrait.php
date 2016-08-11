@@ -5,6 +5,7 @@ namespace Curator\Tests\FSAccess\Mocks;
 
 
 use Curator\FSAccess\FileException;
+use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\PathSimplificationTrait;
 
 trait MockedFilesystemTrait {
@@ -47,32 +48,46 @@ trait MockedFilesystemTrait {
     }
 
     if ($this->_isInProjectRoot($path)) {
-      if ($throwOnMissingPath && ! $this->_pathExists($path, FALSE)) {
-        throw new FileException(sprintf('Path "%s" does not exist in the mocked fs.', $path));
-      }
-
       // Transform to path findable in MockedFilesystemContents
       $path = $this->_toRelativePath($path);
 
-      // This quick hack for symlink resolution won't work with symlinks
-      // placed below the project root directory.
-      if (array_key_exists($path, $this->contents->symlinks)) {
-        $readlink = $this->contents->symlinks[$path];
-        switch ($readlink) {
-          case '../':
-            $newpath = dirname($path);
-            break;
-          default:
-            $newpath = $readlink;
-            break;
-        }
-        return $this->simplifyPath($this->proj_root . '/' . $newpath);
+      $converted_path = $this->simplifyPath(
+        $this->proj_root . '/' . $this->_resolveSymlinks($path));
+      if ($throwOnMissingPath
+        && $this->_isInProjectRoot($converted_path, TRUE)
+        && ! $this->_pathExists($converted_path, FALSE)) {
+        throw new FileNotFoundException($path);
       } else {
-        return $this->simplifyPath($this->proj_root . '/' . $path);
+        return $converted_path;
       }
     } else {
       return $path;
     }
+  }
+
+  protected function _resolveSymlinks($path) {
+    if (! $this->_isInProjectRoot($path, TRUE)) {
+      return $path;
+    }
+
+    if (static::_pathIsAbsolute($path)) {
+      $path = $this->_toRelativePath($path);
+    }
+
+    $location = $this->simplifyPath($path);
+    $nonsymlink_elements = [];
+    $path_elements = explode('/', $location);
+    while(count($path_elements)) {
+      $link_test = implode('/', $path_elements);
+      if (array_key_exists($link_test, $this->contents->symlinks)) {
+        return $this->_resolveSymlinks(
+          $this->simplifyPath($this->contents->symlinks[$link_test] . '/' . implode('/', $nonsymlink_elements))
+        );
+      } else {
+        array_unshift($nonsymlink_elements, array_pop($path_elements));
+      }
+    }
+    return $path;
   }
 
   /**
@@ -149,9 +164,13 @@ trait MockedFilesystemTrait {
    *
    * @return bool
    */
-  protected function _isInProjectRoot($path) {
+  protected function _isInProjectRoot($path, $ignore_contract = FALSE) {
     if (! static::_pathIsAbsolute($path)) {
-      throw new \LogicException('API contract violation: relative paths not allowed by the low-level read/write adapters.');
+      if ($ignore_contract) {
+        return strncmp($path, './../', 5) !== 0;
+      } else {
+        throw new \LogicException('API contract violation: relative paths not allowed by the low-level read/write adapters.');
+      }
     } else {
       return strncmp($this->simplifyPath($path), $this->proj_root, strlen($this->proj_root)) === 0;
     }

@@ -19,6 +19,9 @@ class MockedFilesystemContents {
     'up.link' => '../',
     'README.link' => 'README',
     'shortcut.link' => 'test/file_depth1',
+    'dir.link' => 'test/a',
+    'test/a/up.link' => '../',
+    'test/a/root.link' => '../../',
     'broken.link' => 'nothing/here',
   ];
 

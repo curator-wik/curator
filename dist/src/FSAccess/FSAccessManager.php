@@ -189,39 +189,59 @@ class FSAccessManager {
    * @throws FileNotFoundException
    *   When a non-leaf directory of $path is not found and $create_parents is
    *   false.
+   * @throws FileExistsException
+   *   When a filesystem object already exists at the $path (code 0), or a
+   *   non-directory exists at a location along the $path (code 1).
    * @throws FileException
    *   Resulting from permission or I/O errors.
    * @throws \InvalidArgumentException
    *   If $path is outside the working path.
    */
   function mkdir($path, $create_parents = FALSE) {
-    $location = $this->simplifyPath($path);
-    // Catch relative paths that ascend above the working path right now.
-    if (strncmp($location, './../', 5) === 0) {
-      throw new \InvalidArgumentException(sprintf('Will not create directory "%s" outside the working path.', $path));
+    /*
+     * Creating directories is harder than it looks. This is because we need to
+     * support creating parent directories as needed, but the
+     * WriteAdapterInterface only supports creating one directory at a time,
+     * and we need to ensure we only allow directories to be created within the
+     * working path, but the ReadAdapterInterface's realPath() and by extension
+     * $this->normalizePath() only work on paths that already exist.
+     */
+    $path = $this->simplifyPath($path);
+    $dirs_needed = [];
+    try {
+      $this->normalizePath($path);
+      throw new FileExistsException($path, 0);
+    } catch (FileNotFoundException $e) {
+      array_unshift($dirs_needed, basename($path));
+      $parent = dirname($path);
     }
 
-    if ($create_parents) {
-      $existing_path = NULL;
-      $new_depth = 1;
-      do {
-        $location = dirname($location);
-        if ($location != '.') {
-          $new_depth++;
+    while ($parent != '.') {
+      try {
+        $parent = $this->normalizePath($parent);
+        break;
+      } catch (FileNotFoundException $e) {
+        if ($create_parents !== TRUE) {
+          throw $e;
         }
-        try {
-          $existing_path = $this->normalizePath($location);
-        } catch (FileNotFoundException $e) {
-          // Let the loop try one more level up.
-        }
-      } while($existing_path === NULL && $location != '/' && $location != '.');
-
-      if ($existing_path === NULL) {
-        throw new FileException(sprintf('Unable to find location in existing directory tree to attach new directories in path: %s', $path));
+        array_unshift($dirs_needed, basename($parent));
+        $parent = dirname($parent);
       }
+    }
+    if ($parent == '.') {
+      // Then the last $parent checked by normalizePath() was in the working
+      // path. Either $path is absolute and the working path is /, or $path is
+      // relative and relative to the working path by definition.
+      $parent = $this->workingPath;
+    }
+    // If we get this far, $parent contains a normalized absolute path to the
+    // deepest directory of $path that already exists in the filesystem and is
+    // within the working path.
+    $existing_dirs = $parent;
 
-      // Locate the portion of $path that needs to be created.
-
+    foreach ($dirs_needed as $new_dir) {
+      $existing_dirs .= '/' . $new_dir;
+      $this->writeOps->mkdir($existing_dirs);
     }
   }
 
