@@ -111,6 +111,9 @@ class FSAccessManager {
    *
    * @return string
    * @throws FileNotFoundException
+   * @throws FileExistsException
+   *   When the specified path exists but is a directory or other object of a
+   *   non-readable type.
    * @throws FileException
    *   Resulting from permission or I/O errors.
    * @throws \InvalidArgumentException
@@ -118,7 +121,7 @@ class FSAccessManager {
    */
   public function fileGetContents($filename) {
     $filename = $this->normalizePath($filename);
-    if ($data = $this->readOps->fileGetContents($filename) === FALSE) {
+    if (($data = $this->readOps->fileGetContents($filename)) === FALSE) {
       throw new FileException(sprintf('Read file "%s" via %s failed.', $filename, $this->readOps->getAdapterName()));
     }
     return $data;

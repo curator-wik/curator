@@ -38,6 +38,15 @@ trait MockedFilesystemTrait {
     $this->contents = $contents;
   }
 
+  /**
+   * @return \Curator\Tests\FSAccess\Mocks\MockedFilesystemContents
+   *   The underlying filesystem contents data. Probably shouldn't be used for
+   *   much other than as a source for assertion expected values.
+   */
+  public function getFilesystemContents() {
+    return $this->contents;
+  }
+
   protected function _realPath($path, $relative_to, $throwOnMissingPath = TRUE) {
     if (static::_pathIsAbsolute($path)) {
       $path = $this->simplifyPath($path);
@@ -80,9 +89,14 @@ trait MockedFilesystemTrait {
     while(count($path_elements)) {
       $link_test = implode('/', $path_elements);
       if (array_key_exists($link_test, $this->contents->symlinks)) {
-        return $this->_resolveSymlinks(
-          $this->simplifyPath($this->contents->symlinks[$link_test] . '/' . implode('/', $nonsymlink_elements))
-        );
+        $readlink = $this->contents->symlinks[$link_test];
+        if (strncmp($readlink, './', 2) == 0 || strncmp($readlink, '../', 3) == 0) {
+          $resolved_path = $this->simplifyPath(dirname($link_test) . '/' . $readlink . '/' . implode('/', $nonsymlink_elements));
+        } else {
+          $resolved_path = $this->contents->symlinks[$link_test] . '/' . implode('/', $nonsymlink_elements);
+        }
+
+        return $this->_resolveSymlinks($resolved_path);
       } else {
         array_unshift($nonsymlink_elements, array_pop($path_elements));
       }
@@ -136,10 +150,7 @@ trait MockedFilesystemTrait {
     if ($this->_isFile($path, FALSE)) {
       return TRUE;
     }
-    if (array_key_exists($path, $this->contents->symlinks) && basename($path) != 'broken.link') {
-      return TRUE;
-    }
-    if (in_array($path, $this->contents->specials)) {
+    if ($this->_isSpecial($path, FALSE)) {
       return TRUE;
     }
 
@@ -202,6 +213,19 @@ trait MockedFilesystemTrait {
     if (self::_isInProjectRoot($path)) {
       $path = self::_toRelativePath($path);
       return array_key_exists($path, $this->contents->files);
+    } else {
+      return FALSE;
+    }
+  }
+
+  protected function _isSpecial($path, $translate_real = TRUE) {
+    if ($translate_real) {
+      $path = $this->_realPath($path, NULL, FALSE);
+    }
+
+    if (self::_isInProjectRoot($path)) {
+      $path = self::_toRelativePath($path);
+      return in_array($path, $this->contents->specials);
     } else {
       return FALSE;
     }

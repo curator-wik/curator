@@ -100,6 +100,7 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     );
   }
 
+  //<editor-fold desc="setWorkingPath">
   /**
    * @expectedException \InvalidArgumentException
    * @expectedExceptionMessage $dir must be an absolute path.
@@ -161,13 +162,15 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     $sut = static::sutFactory(FALSE, FALSE);
     $sut->setWorkingPath([self::PROJECT_PATH]);
   }
+  //</editor-fold>
 
+  //<editor-fold desc="mkdir">
   /**
    * @expectedException \InvalidArgumentException
    * @expectedExceptionMessage Path "/within/a/project/test" is not within working path "/within/a/project/test/a".
    */
   public function testMkdir_outsideWorkingPath_throws() {
-    $sut = static::sutFactory();
+    $sut = static::sutFactory(FALSE, FALSE);
 
     $sut->setWorkingPath(self::PROJECT_PATH . '/test/a');
     $sut->mkdir(self::PROJECT_PATH . '/test/b');
@@ -318,6 +321,105 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     $sut = static::sutFactory();
     $sut->mkdir('random/place');
   }
+  //</editor-fold>
+
+  //<editor-fold desc="fileGetContents">
+  /**
+   * @expectedException \InvalidArgumentException
+   * @expectedExceptionMessage Path "/within/a/project/README" is not within working path "/within/a/project/test/a".
+   */
+  function testFileGetContents_outsideWorkingPath_throws() {
+    $sut = static::sutFactory(FALSE, FALSE);
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test/a');
+    $sut->fileGetContents(self::PROJECT_PATH . '/README');
+  }
+
+  /**
+   * @expectedException \InvalidArgumentException
+   * @expectedExceptionMessage Path "root.link/README" is not within working path "/within/a/project/test/a".
+   */
+  function testFileGetContents_outsideWorkingPath_throws_2() {
+    $sut = static::sutFactory(FALSE, FALSE);
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test/a');
+    $sut->fileGetContents('root.link/README');
+  }
+
+  /**
+   * @expectedException \InvalidArgumentException
+   * @expectedExceptionMessage Path "/test/file_depth1" is not within working path "/test/a".
+   */
+  function testFileGetContents_outsideWorkingPath_throws_3() {
+    $sut = static::sutFactory(TRUE, FALSE);
+    $sut->setWorkingPath('/test/a');
+    $sut->fileGetContents('/test/file_depth1');
+  }
+
+  function testFileGetContents() {
+    $sut = static::sutFactory();
+    self::assertEquals(
+      self::$readAdapter_proj->getFilesystemContents()->files['README'],
+      $sut->fileGetContents('README')
+    );
+
+    self::assertEquals(
+      self::$readAdapter_proj->getFilesystemContents()->files['test/file_depth1'],
+      $sut->fileGetContents('test/file_depth1')
+    );
+  }
+
+  function testFileGetContents_handlesPathIndirection() {
+    $sut = static::sutFactory();
+    self::assertEquals(
+      self::$readAdapter_proj->getFilesystemContents()->files['README'],
+      $sut->fileGetContents('test/../README')
+    );
+  }
+
+  /**
+   * @expectedException \Curator\FSAccess\FileExistsException
+   */
+  function testFileGetContents_dir_throws() {
+    $sut = static::sutFactory();
+    $sut->fileGetContents('test');
+  }
+
+  /**
+   * @expectedException \Curator\FSAccess\FileExistsException
+   */
+  function testFileGetContents_dir_throws_2() {
+    $sut = static::sutFactory();
+    $sut->fileGetContents('socket_sim');
+  }
+
+  /**
+   * @expectedException \Curator\FSAccess\FileNotFoundException
+   */
+  function testFileGetContents_nonexistent_throws() {
+    $sut = static::sutFactory();
+    $sut->fileGetContents('nothing/here');
+  }
+
+  /**
+   * @expectedException \Curator\FSAccess\FileNotFoundException
+   */
+  function testFileGetContents_nonexistent_throws_2() {
+    $sut = static::sutFactory();
+    $sut->fileGetContents('broken.link');
+  }
+
+  function testFileGetContents_followsSymlinks() {
+    $sut = static::sutFactory();
+    self::assertEquals(
+      self::$readAdapter_proj->getFilesystemContents()->files['README'],
+      $sut->fileGetContents('README.link')
+    );
+
+    self::assertEquals(
+      self::$readAdapter_proj->getFilesystemContents()->files['README'],
+      $sut->fileGetContents('test/a/up.link/a/root.link/README')
+    );
+  }
+  //</editor-fold>
 
   // TODO: Test traversals of all those interesting symlinks
 

@@ -5,6 +5,7 @@ namespace Curator\Tests\FSAccess\Mocks;
 
 
 use Curator\FSAccess\FileException;
+use Curator\FSAccess\FileExistsException;
 use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\ReadAdapterInterface;
 
@@ -49,13 +50,13 @@ class ReadAdapterMock implements ReadAdapterInterface {
       throw new \LogicException('Relative paths not allowed');
     }
     if ($this->_isFile($filename)) {
-      $path = $this->_toRelativePath($this->_realPath($filename));
+      $path = $this->_toRelativePath($this->_realPath($filename, NULL));
       if (! array_key_exists($path, $this->contents->files)) {
         throw new \LogicException('File said to exist does not');
       }
       return $this->contents->files[$path];
     } else if ($this->_pathExists($filename)) {
-      throw new FileException(sprintf('"%s" is not a file', $filename));
+      throw new FileExistsException(sprintf('"%s" is not a file', $filename));
     } else {
       throw new FileNotFoundException(sprintf('File "%s" does not exist.', $filename));
     }
