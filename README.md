@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/curator-wik/curator.svg?branch=master)](https://travis-ci.org/curator-wik/curator)
 # What's this?
 
 Early-stage development of the server-side components for the Curator web install toolkit.
@@ -25,6 +26,6 @@ For development, Curator will also run unpackaged directly from its source tree.
  2. Hit /dist/web/curator.php in your browser.
  
  ## License
- The major components of the curator-wik project will likely be licensed under the GNU
- GPLv2, but license selection is ongoing. Make no licensing assumptions about this work
+ The major components of the curator-wik project will likely be licensed under the MIT
+ license, but license selection is ongoing. Make no licensing assumptions about this work
  until further notice.
