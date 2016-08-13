@@ -16,7 +16,7 @@ class WriteAdapterMock implements WriteAdapterInterface {
   }
 
   public function filePutContents($filename, $data, $lock_if_able = TRUE) {
-    if (! self::_pathIsAbsolute($filename)) {
+    if (! self::pathIsAbsolute($filename)) {
       throw new \LogicException('Relative paths not allowed');
     }
 
@@ -32,7 +32,7 @@ class WriteAdapterMock implements WriteAdapterInterface {
   }
 
   public function mkdir($path) {
-    if (! self::_pathIsAbsolute($path)) {
+    if (! self::pathIsAbsolute($path)) {
       throw new \LogicException('Relative paths not allowed');
     }
 

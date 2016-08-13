@@ -7,7 +7,7 @@ namespace Curator\FSAccess;
  * Interface FSReadInterface
  *   The operations which readable filesystem adapters must support.
  */
-interface ReadAdapterInterface {
+interface ReadAdapterInterface extends PathParserInterface {
   /**
    * Returns a well-known name for the underlying file access method.
    *
@@ -16,15 +16,6 @@ interface ReadAdapterInterface {
    * @return string
    */
   function getAdapterName();
-
-  /**
-   * Performs a syntactical examination of $path to determine if the file access
-   * method underlying this adapter would consider $path to be absolute.
-   *
-   * @param string $path
-   * @return bool
-   */
-  function pathIsAbsolute($path);
 
   /**
    * Returns an absolute pathname, canonicalized if the adapter supports it.

@@ -2,7 +2,6 @@
 
 namespace Curator\Tests\FSAccess;
 
-use Curator\FSAccess\FileExistsException;
 use Curator\FSAccess\FSAccessManager;
 use Curator\Tests\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\FSAccess\Mocks\ReadAdapterMock;
@@ -280,22 +279,6 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     $sut->setWorkingPath(self::PROJECT_PATH . '/test/a');
     $sut->mkdir('b');
     self::assertMockDirExists($sut, self::PROJECT_PATH  . '/test/a/b');
-  }
-
-  public function testMkdir_handlesBackslashes() {
-    $sut = static::sutFactory(FALSE, FALSE);
-    $sut->setWorkingPath(self::PROJECT_PATH . '\\test');
-    $sut->mkdir('a\\b');
-    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/a/b');
-
-    $sut->mkdir(self::PROJECT_PATH . '\\test\\c');
-    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/c');
-
-    $sut->mkdir(self::PROJECT_PATH . '\\test\\d\\e', TRUE);
-    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/d/e');
-
-    $sut->mkdir('f\\g', TRUE);
-    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/f/g');
   }
 
   public function testMkdir_handlesSymlinks() {

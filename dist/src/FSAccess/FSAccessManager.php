@@ -22,6 +22,13 @@ class FSAccessManager {
   }
 
   /**
+   * @return \Curator\FSAccess\PathParserInterface
+   */
+  protected function getPathParser() {
+    return $this->readOps;
+  }
+
+  /**
    * Sets the path where filesystem accesses with a relative path will be
    * performed relative to.
    *

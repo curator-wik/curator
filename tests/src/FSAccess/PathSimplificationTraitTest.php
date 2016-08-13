@@ -4,10 +4,25 @@
 namespace Curator\Tests\FSAccess;
 
 
+use Curator\FSAccess\PathParser\PosixPathParser;
 use Curator\FSAccess\PathSimplificationTrait;
 
 class PathSimplificationTraitTest extends \PHPUnit_Framework_TestCase {
   use PathSimplificationTrait;
+
+  public static function setUpBeforeClass() {
+    parent::setUpBeforeClass();
+    static::$pathParser = new PosixPathParser();
+  }
+
+  /**
+   * @var PosixPathParser $pathParser;
+   */
+  protected static $pathParser;
+
+  protected function getPathParser() {
+    return static::$pathParser;
+  }
 
   public function testRemovesSequentialDirectorySeparators() {
     self::assertEquals(

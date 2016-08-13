@@ -6,6 +6,8 @@ namespace Curator\Tests\FSAccess\Mocks;
 
 use Curator\FSAccess\FileException;
 use Curator\FSAccess\FileNotFoundException;
+use Curator\FSAccess\PathParser\PosixPathParser;
+use Curator\FSAccess\PathParserInterface;
 use Curator\FSAccess\PathSimplificationTrait;
 
 trait MockedFilesystemTrait {
@@ -17,21 +19,34 @@ trait MockedFilesystemTrait {
   protected $contents;
 
   /**
-   * @var string $proj_root
+   * @var string $projRoot
    *   The location in the mocked filesystem where our simulated contents start.
    */
-  protected $proj_root = '/';
+  protected $projRoot = '/';
+
+  /**
+   * @var PosixPathParser $pathParser
+   *   The mocked filesystem uses a PosixPathParser.
+   */
+  protected $pathParser;
 
   public function getAdapterName() {
     return 'test mock';
   }
 
+  protected function getPathParser() {
+    if (empty($this->pathParser)) {
+      $this->pathParser = new PosixPathParser();
+    }
+    return $this->pathParser;
+  }
+
   protected function _setProjectRoot($path) {
-    if (! static::_pathIsAbsolute($path)) {
+    if (! $this->pathIsAbsolute($path)) {
       throw new \InvalidArgumentException('Project root path must be absolute');
     }
 
-    $this->proj_root = $this->simplifyPath($path);
+    $this->projRoot = $this->simplifyPath($path);
   }
 
   public function setFilesystemContents(MockedFilesystemContents $contents) {
@@ -48,7 +63,7 @@ trait MockedFilesystemTrait {
   }
 
   protected function _realPath($path, $relative_to, $throwOnMissingPath = TRUE) {
-    if (static::_pathIsAbsolute($path)) {
+    if ($this->pathIsAbsolute($path)) {
       $path = $this->simplifyPath($path);
     } else if (empty($relative_to)) {
       throw new \LogicException('Cannot resolve canonical absolute path given a relative path and no $relative_to');
@@ -61,7 +76,7 @@ trait MockedFilesystemTrait {
       $path = $this->_toRelativePath($path);
 
       $converted_path = $this->simplifyPath(
-        $this->proj_root . '/' . $this->_resolveSymlinks($path));
+        $this->projRoot . '/' . $this->_resolveSymlinks($path));
       if ($throwOnMissingPath
         && $this->_isInProjectRoot($converted_path, TRUE)
         && ! $this->_pathExists($converted_path, FALSE)) {
@@ -79,7 +94,7 @@ trait MockedFilesystemTrait {
       return $path;
     }
 
-    if (static::_pathIsAbsolute($path)) {
+    if ($this->pathIsAbsolute($path)) {
       $path = $this->_toRelativePath($path);
     }
 
@@ -115,17 +130,17 @@ trait MockedFilesystemTrait {
    * @throws \LogicException
    */
   protected function _toRelativePath($path) {
-    if (! static::_pathIsAbsolute($path)) {
+    if (! $this->pathIsAbsolute($path)) {
       return $path;
     } else if (! $this->_isInProjectRoot($path)) {
       throw new \InvalidArgumentException('MockedFilesystemTrait::_toRelativePath invoked on an absolute path outside the project root');
     } else {
       $path = $this->simplifyPath($path);
       // We expect the $path to begin with the project root in this case
-      if (strncmp($path, $this->proj_root, strlen($this->proj_root)) !== 0) {
+      if (strncmp($path, $this->projRoot, strlen($this->projRoot)) !== 0) {
         throw new \LogicException('Failed expectation that path matches project root');
       }
-      $proj_root = $this->proj_root;
+      $proj_root = $this->projRoot;
       if (substr($proj_root, -1) !== '/') {
         $proj_root .= DIRECTORY_SEPARATOR;
       }
@@ -133,10 +148,6 @@ trait MockedFilesystemTrait {
 
       return empty($rel_path) ? '.' : $rel_path;
     }
-  }
-
-  protected static function _pathIsAbsolute($path) {
-    return strncmp($path, '/', 1) === 0;
   }
 
   protected function _pathExists($path, $translate_real = TRUE) {
@@ -172,18 +183,19 @@ trait MockedFilesystemTrait {
    * /foo/bar/test would be in that case, but not /baz.
    *
    * @param string $path
+   * @param bool $ignore_contract
    *
    * @return bool
    */
   protected function _isInProjectRoot($path, $ignore_contract = FALSE) {
-    if (! static::_pathIsAbsolute($path)) {
+    if (! $this->pathIsAbsolute($path)) {
       if ($ignore_contract) {
         return strncmp($path, './../', 5) !== 0;
       } else {
         throw new \LogicException('API contract violation: relative paths not allowed by the low-level read/write adapters.');
       }
     } else {
-      return strncmp($this->simplifyPath($path), $this->proj_root, strlen($this->proj_root)) === 0;
+      return strncmp($this->simplifyPath($path), $this->projRoot, strlen($this->projRoot)) === 0;
     }
   }
 
@@ -230,4 +242,32 @@ trait MockedFilesystemTrait {
       return FALSE;
     }
   }
+
+  //<editor-fold desc="PathParserInterface">
+  // We implement these because the adapters that use this trait need them.
+  /**
+   * @inheritDoc
+   */
+  function getAbsolutePrefix($path) {
+    return $this->getPathParser()->getAbsolutePrefix($path);
+  }
+
+  public function pathIsAbsolute($path) {
+    return $this->getPathParser()->pathIsAbsolute($path);
+  }
+
+  /**
+   * @inheritDoc
+   */
+  function getDirectorySeparators() {
+    return $this->getPathParser()->getDirectorySeparators();
+  }
+
+  /**
+   * @inheritDoc
+   */
+  function translate($path, PathParserInterface $translate_to) {
+    return $this->getPathParser()->translate($path, $translate_to);
+  }
+  //</editor-fold>
 }

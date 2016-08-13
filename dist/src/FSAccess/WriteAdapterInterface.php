@@ -7,7 +7,7 @@ namespace Curator\FSAccess;
  * Interface FSWriteInterface
  *   The operations which writable filesystem adapters must support.
  */
-interface WriteAdapterInterface {
+interface WriteAdapterInterface extends PathParserInterface {
   /**
    * Returns a well-known name for the underlying file access method.
    *
