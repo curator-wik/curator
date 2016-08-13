@@ -46,11 +46,11 @@ interface PathParserInterface {
    * to it.
    *
    * @param string $path
-   * @return string
+   * @return string|bool
    *   The first zero or more characters of the beginning of $path that
    *   identify a drive/network server/volume etc.
    *
-   *   Relative $paths will always result in the empty string.
+   *   Relative $paths will always result in a boolean FALSE.
    */
   function getAbsolutePrefix($path);
 }

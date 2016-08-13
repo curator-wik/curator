@@ -35,7 +35,7 @@ class PosixPathParser extends AbstractPathParser {
     if ($this->pathIsAbsolute($path)) {
       return '/';
     } else {
-      return '';
+      return FALSE;
     }
   }
 

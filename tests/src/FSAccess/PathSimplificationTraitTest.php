@@ -4,27 +4,35 @@
 namespace Curator\Tests\FSAccess;
 
 
+use Curator\FSAccess\PathParser\GenericPathParser;
+use Curator\FSAccess\PathParser\PathParserInterface;
 use Curator\FSAccess\PathParser\PosixPathParser;
+use Curator\FSAccess\PathParser\WindowsPathParser;
 use Curator\FSAccess\PathSimplificationTrait;
 
 class PathSimplificationTraitTest extends \PHPUnit_Framework_TestCase {
   use PathSimplificationTrait;
 
-  public static function setUpBeforeClass() {
-    parent::setUpBeforeClass();
-    static::$pathParser = new PosixPathParser();
+  /**
+   * @var PathParserInterface $pathParser
+   */
+  protected $pathParser;
+
+  public function setUp() {
+    // Default to a PosixPathParser
+    $this->setPathParser(new PosixPathParser());
   }
 
-  /**
-   * @var PosixPathParser $pathParser;
-   */
-  protected static $pathParser;
+  protected function setPathParser(PathParserInterface $parser) {
+    $this->pathParser = $parser;
+  }
 
   protected function getPathParser() {
-    return static::$pathParser;
+    return $this->pathParser;
   }
 
   public function testRemovesSequentialDirectorySeparators() {
+    $this->setPathParser(new GenericPathParser());
     self::assertEquals(
       "there's/no/place/like/home",
       $this->simplifyPath("there's\\no//place/\\like\\\\home"),
@@ -33,6 +41,7 @@ class PathSimplificationTraitTest extends \PHPUnit_Framework_TestCase {
   }
 
   public function testStripsCurrDirReferences() {
+    $this->setPathParser(new GenericPathParser());
     self::assertEquals(
       "there's/no/place/like/home",
       $this->simplifyPath("there's/./no\\.\\place//./like\\.//home/././"),
@@ -112,15 +121,16 @@ class PathSimplificationTraitTest extends \PHPUnit_Framework_TestCase {
 
   public function testWindowsAbsolutePaths() {
     // Might want to employ ReadAdapterInterface's pathIsAbsolute functionality
+    $this->setPathParser(new WindowsPathParser());
     self::assertEquals(
-      "c:/windows/system32",
+      "c:\\windows\\system32",
       $this->simplifyPath("c:\\windows\\system\\..\\system32"),
       'Drive-letter style Windows absolute paths are preserved.'
     );
 
     self::assertEquals(
-      "\\\\big.server/share/stuff",
-      $this->simplifyPath("\\\\big.server/share/stuff"),
+      "\\\\big.server\\share\\things",
+      $this->simplifyPath("\\\\big.server\\share\\stuff\\..\\things"),
       'UNC-style Windows absolute paths are preserved.'
     );
   }

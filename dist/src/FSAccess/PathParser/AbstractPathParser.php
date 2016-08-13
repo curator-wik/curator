@@ -8,7 +8,7 @@ abstract class AbstractPathParser implements PathParserInterface {
   /**
    * @inheritdoc
    */
-  function translate($path, PathParserInterface $translate_to) {
+  public function translate($path, PathParserInterface $translate_to) {
     if ($this->pathIsAbsolute($path)) {
       $abs_prefix = $this->getAbsolutePrefix($path);
       $translateable_path = substr($path, strlen($abs_prefix));
@@ -32,16 +32,18 @@ abstract class AbstractPathParser implements PathParserInterface {
   /**
    * @inheritDoc
    */
-  abstract function pathIsAbsolute($path);
+  public function pathIsAbsolute($path) {
+    return is_string($this->getAbsolutePrefix($path));
+  }
 
   /**
    * @inheritDoc
    */
-  abstract function getAbsolutePrefix($path);
+  public abstract function getAbsolutePrefix($path);
 
   /**
    * @inheritDoc
    */
-  abstract function getDirectorySeparators();
+  public abstract function getDirectorySeparators();
 
 }
