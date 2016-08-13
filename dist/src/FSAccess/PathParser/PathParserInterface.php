@@ -1,6 +1,6 @@
 <?php
 
-namespace Curator\FSAccess;
+namespace Curator\FSAccess\PathParser;
 
 /**
  * Interface PathInfoInterface
@@ -33,7 +33,7 @@ interface PathParserInterface {
    * E.g., converts directory separators from one file path format to another.
    *
    * @param string $path
-   * @param \Curator\FSAccess\PathParserInterface $translate_to
+   * @param \Curator\FSAccess\PathParser\PathParserInterface $translate_to
    * @return string
    */
   function translate($path, PathParserInterface $translate_to);

@@ -7,7 +7,7 @@ namespace Curator\Tests\FSAccess\Mocks;
 use Curator\FSAccess\FileException;
 use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\PathParser\PosixPathParser;
-use Curator\FSAccess\PathParserInterface;
+use Curator\FSAccess\PathParser\PathParserInterface;
 use Curator\FSAccess\PathSimplificationTrait;
 
 trait MockedFilesystemTrait {

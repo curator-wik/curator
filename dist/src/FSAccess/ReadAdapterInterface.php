@@ -7,7 +7,7 @@ namespace Curator\FSAccess;
  * Interface FSReadInterface
  *   The operations which readable filesystem adapters must support.
  */
-interface ReadAdapterInterface extends PathParserInterface {
+interface ReadAdapterInterface extends PathParser\PathParserInterface {
   /**
    * Returns a well-known name for the underlying file access method.
    *

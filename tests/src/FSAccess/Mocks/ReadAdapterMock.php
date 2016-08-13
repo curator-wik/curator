@@ -4,7 +4,6 @@
 namespace Curator\Tests\FSAccess\Mocks;
 
 
-use Curator\FSAccess\FileException;
 use Curator\FSAccess\FileExistsException;
 use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\ReadAdapterInterface;

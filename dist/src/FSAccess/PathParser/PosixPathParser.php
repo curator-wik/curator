@@ -8,8 +8,6 @@
 
 namespace Curator\FSAccess\PathParser;
 
-use Curator\FSAccess\AbstractPathParser;
-
 /**
  * Class PosixPathParser
  *   Path interpretation and resolution peculiarities to the POSIX standard.

@@ -22,7 +22,7 @@ class FSAccessManager {
   }
 
   /**
-   * @return \Curator\FSAccess\PathParserInterface
+   * @return \Curator\FSAccess\PathParser\PathParserInterface
    */
   protected function getPathParser() {
     return $this->readOps;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Curator\FSAccess;
+namespace Curator\FSAccess\PathParser;
 
 
 abstract class AbstractPathParser implements PathParserInterface {
