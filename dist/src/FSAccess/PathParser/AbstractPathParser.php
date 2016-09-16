@@ -19,7 +19,7 @@ abstract class AbstractPathParser implements PathParserInterface {
 
     // normalize directory separators
     $translateable_path = str_replace($this->getDirectorySeparators(),
-      reset($translate_to->getDirectorySeparators()),
+      $translate_to->getDirectorySeparators()[0],
       $translateable_path);
 
     if ($abs_prefix !== NULL) {
