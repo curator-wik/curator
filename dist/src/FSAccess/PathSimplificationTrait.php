@@ -12,9 +12,9 @@ trait PathSimplificationTrait {
   /**
    * Gets the path parser whose rules to use when simplifying paths.
    * 
-   * @return PathParserInterface
+   * @return PathParser\PathParserInterface
    */
-  protected abstract function getPathParser();
+  abstract function getPathParser();
   
   public function simplifyPath($path) {
     $is_absolute = $this->getPathParser()->pathIsAbsolute($path);

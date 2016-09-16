@@ -27,3 +27,4 @@ class WindowsPathParser extends AbstractPathParser {
     return ['\\', '/'];
   }
 }
+

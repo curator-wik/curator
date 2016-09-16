@@ -4,4 +4,16 @@
     bootstrap="vendor/autoload.php"
     colors="true"
     >
+    <testsuites>
+        <testsuite name="Curator Unit Tests">
+            <directory suffix="Test.php">tests/unit/</directory>
+        </testsuite>
+        <testsuite name="Curator Integration Tests">
+            <!--
+            These tests must be run in a curator/docker_test_env
+            docker container; in practice via `docker-compose up`
+             -->
+            <directory suffix="Test.php">tests/integration/</directory>
+        </testsuite>
+    </testsuites>
 </phpunit>

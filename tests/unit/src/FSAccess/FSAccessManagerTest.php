@@ -41,8 +41,8 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     self::$readAdapter_root = new ReadAdapterMock('/');
     self::$writeAdapter_root = new WriteAdapterMock('/');
 
-    self::$readAdapter_proj = new ReadAdapterMock(self::PROJECT_PATH, NULL);
-    self::$writeAdapter_proj = new WriteAdapterMock(self::PROJECT_PATH, NULL);
+    self::$readAdapter_proj = new ReadAdapterMock(self::PROJECT_PATH);
+    self::$writeAdapter_proj = new WriteAdapterMock(self::PROJECT_PATH);
   }
 
   public function setUp() {
@@ -51,6 +51,10 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     // Make fresh filesystem states before each test.
     $root_contents = new MockedFilesystemContents();
     $proj_contents = new MockedFilesystemContents();
+
+    // Reset the write cwd
+    self::$writeAdapter_root->setMockedCwd('/');
+    self::$writeAdapter_proj->setMockedCwd(self::PROJECT_PATH);
 
     self::$readAdapter_proj->setFilesystemContents($proj_contents);
     self::$writeAdapter_proj->setFilesystemContents($proj_contents);
@@ -61,23 +65,57 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
 
   /**
    * System under test factory.
-   * @param bool $sys_root
-   *   If TRUE, the test subject will be simulate its mocked filesystem at the
-   *   system root directory. Otherwise, the mocked files and structures are
-   *   simulated to exist at self::PROJECT_PATH.
+   * @param bool|string $sys_root
+   *   If TRUE, the test subject will be provided a mocked filesystem at the
+   *   system root directory, for both read and write adapters.
+   *
+   *   If FALSE, the mocked filesystem contents will begin at self::PROJECT_PATH
+   *   for both read and write adapters.
+   *
+   *   If "read", the mocked contents for the read adapter will begin at the
+   *   system root directory, but the write adapter will see the equivalent
+   *   filesystem contents at self::PROJECT_PATH, thus simulating a chroot()ed
+   *   read adapter.
+   *
+   *   If "write", the mocked contents for the write adapter will begin at the
+   *   root directory, but the read adapter will see the equivalent filesystem
+   *   contents at self::PROJECT_PATH, thus simulating a chroot()ed write
+   *   adapter.
    * @param bool $init_working_path
    *   If TRUE, the test subject will have setWorkingPath() called to align with
    *   the location where it is simulating mocked objects.
+   * @param MockedFilesystemContents $filesystem_contents
+   *   Optionally, you can provide customized filesystem contents.
    * @return FSAccessManager
    */
-  protected static function sutFactory($sys_root = FALSE, $init_working_path = TRUE) {
-    if ($sys_root) {
+  protected static function sutFactory($sys_root = FALSE, $init_working_path = TRUE, MockedFilesystemContents $filesystem_contents = NULL) {
+    if ($filesystem_contents != NULL) {
+      // Set it on all the adapters; they get sanitized by setUp() on next test.
+      self::$readAdapter_proj->setFilesystemContents($filesystem_contents);
+      self::$writeAdapter_proj->setFilesystemContents($filesystem_contents);
+      self::$readAdapter_root->setFilesystemContents($filesystem_contents);
+      self::$writeAdapter_root->setFilesystemContents($filesystem_contents);
+    }
+
+    if ($sys_root === TRUE) {
       $s = new FSAccessManager(self::$readAdapter_root, self::$writeAdapter_root);
       if ($init_working_path) {
         $s->setWorkingPath('/');
       }
     } else {
-      $s = new FSAccessManager(self::$readAdapter_proj, self::$writeAdapter_proj);
+      $read_adapter = self::$readAdapter_proj;
+      $write_adapter = self::$writeAdapter_proj;
+      $proj_fs = $read_adapter->getFilesystemContents();
+      if ($sys_root === 'write') {
+        $write_adapter = self::$writeAdapter_root;
+        $write_adapter->setFilesystemContents($proj_fs);
+      }
+      if ($sys_root === 'read') {
+        $read_adapter = self::$readAdapter_root;
+        $read_adapter->setFilesystemContents($proj_fs);
+      }
+
+      $s = new FSAccessManager($read_adapter, $write_adapter);
       if ($init_working_path) {
         $s->setWorkingPath(self::PROJECT_PATH);
       }
@@ -404,6 +442,135 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
   }
   //</editor-fold>
 
-  // TODO: Test traversals of all those interesting symlinks
+  //<editor-fold desc="autodetectWriteWorkingPath">
+  // Some basic checks without chroots or heterogeneous path parsers:
+  public function testAutodetectWriteWorkingPath() {
+    $sut = static::sutFactory(TRUE, TRUE);
+    $this->assertEquals('/', $sut->autodetectWriteWorkingPath());
+  }
 
+  public function testAutodetectWriteWorkingPath_2() {
+    $sut = static::sutFactory(TRUE, FALSE);
+    $sut->setWorkingPath('/test');
+    $this->assertEquals('/test', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_3() {
+    $sut = static::sutFactory(TRUE, FALSE);
+    $sut->setWorkingPath('/test/a');
+    $this->assertEquals('/test/a', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_4() {
+    $sut = static::sutFactory(FALSE, FALSE);
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test/a');
+    $this->assertEquals(self::PROJECT_PATH . '/test/a', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_5() {
+    $sut = static::sutFactory(FALSE, TRUE);
+    $this->assertEquals(self::PROJECT_PATH, $sut->autodetectWriteWorkingPath());
+  }
+
+  // Chroot()ed write adapter
+  public function testAutodetectWriteWorkingPath_6() {
+    $sut = static::sutFactory('write', TRUE);
+    $this->assertEquals('/', $sut->autodetectWriteWorkingPath());
+  }
+
+  // Chroot()ed write adapter, subdirectory
+  public function testAutodetectWriteWorkingPath_7() {
+    $sut = static::sutFactory('write', FALSE);
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test');
+    $this->assertEquals('/test', $sut->autodetectWriteWorkingPath());
+  }
+
+  // Chroot()ed write adapter, subdirectory
+  public function testAutodetectWriteWorkingPath_8() {
+    $sut = static::sutFactory('write', FALSE);
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test/a');
+    $this->assertEquals('/test/a', $sut->autodetectWriteWorkingPath());
+  }
+
+  // Contrived examples where differentiating path components is hard.
+  protected function createContrivedFSContents() {
+    $contrived_fs = new MockedFilesystemContents();
+    $contrived_fs->clearAll();
+    $contrived_fs->directories = array(
+      'test',
+      'test/test',
+      'test/test/test',
+      'test/test/test/test'
+    );
+    $contrived_fs->files = array(
+      'test/test/test/test/file' => 'stuff'
+    );
+    return $contrived_fs;
+  }
+
+  public function testAutodetectWriteWorkingPath_9() {
+    $sut = static::sutFactory('write', FALSE, $this->createContrivedFSContents());
+    $sut->setWorkingPath(self::PROJECT_PATH);
+    $this->assertEquals('/', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_10() {
+    $sut = static::sutFactory('write', FALSE, $this->createContrivedFSContents());
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test');
+    $this->assertEquals('/test', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_11() {
+    $sut = static::sutFactory('write', FALSE, $this->createContrivedFSContents());
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test/test');
+    $this->assertEquals('/test/test', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_12() {
+    $sut = static::sutFactory('write', FALSE, $this->createContrivedFSContents());
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test/test/test/test');
+    $this->assertEquals('/test/test/test/test', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_13() {
+    $sut = static::sutFactory(FALSE, TRUE, $this->createContrivedFSContents());
+    $this->assertEquals('/within/a/project', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_14() {
+    $sut = static::sutFactory(TRUE, FALSE, $this->createContrivedFSContents());
+    $sut->setWorkingPath('/test/test');
+    $this->assertEquals('/test/test', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_15() {
+    $sut = static::sutFactory(FALSE, FALSE, $this->createContrivedFSContents());
+    $sut->setWorkingPath(self::PROJECT_PATH . '/test/test');
+    $this->assertEquals(self::PROJECT_PATH . '/test/test', $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_WithNoCwd() {
+    $sut = static::sutFactory(FALSE, TRUE);
+    static::$writeAdapter_proj->setMockedCwd('');
+    $this->assertEquals(self::PROJECT_PATH, $sut->autodetectWriteWorkingPath());
+  }
+
+  public function testAutodetectWriteWorkingPath_WithNoCwd_chrooted() {
+    $sut = static::sutFactory('write', TRUE);
+    static::$writeAdapter_proj->setMockedCwd('');
+    $this->assertEquals('/', $sut->autodetectWriteWorkingPath());
+  }
+
+  /**
+   * @expectedException \Curator\FSAccess\FileException
+   * @expectedExceptionMessage Auto-detection could not locate the path for writing.
+   */
+  public function testAutodetectWriteWorkingPath_AbsentWorkingPath_throws() {
+    $contents = new MockedFilesystemContents();
+    $sut = static::sutFactory(TRUE, FALSE, $contents);
+    $sut->setWorkingPath('/test/a');
+    $contents->directories = ['test'];
+    $sut->autodetectWriteWorkingPath();
+  }
+  //</editor-fold>
 }

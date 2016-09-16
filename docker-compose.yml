@@ -1,0 +1,13 @@
+version: '2'
+services:
+  phpunit_runner:
+    image: curator/docker_test_env
+    environment:
+      - PHP_VERSION=7.0.10
+    volumes:
+      - .:/curator
+      - php-builds:/usr/local/phpenv/versions
+    tmpfs:
+      - /tmp
+volumes:
+  php-builds: {}

@@ -29,4 +29,13 @@ class MockedFilesystemContents {
     'socket_sim',
   ];
 
+  /**
+   * Makes the mocked filesystem completely empty.
+   */
+  public function clearAll() {
+    $this->directories = array();
+    $this->files = array();
+    $this->symlinks = array();
+    $this->specials = array();
+  }
 }

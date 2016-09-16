@@ -7,7 +7,6 @@ namespace Curator\Tests\FSAccess\Mocks;
 use Curator\FSAccess\FileException;
 use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\PathParser\PosixPathParser;
-use Curator\FSAccess\PathParser\PathParserInterface;
 use Curator\FSAccess\PathSimplificationTrait;
 
 trait MockedFilesystemTrait {
@@ -34,7 +33,7 @@ trait MockedFilesystemTrait {
     return 'test mock';
   }
 
-  protected function getPathParser() {
+  public function getPathParser() {
     if (empty($this->pathParser)) {
       $this->pathParser = new PosixPathParser();
     }
@@ -55,14 +54,13 @@ trait MockedFilesystemTrait {
 
   /**
    * @return \Curator\Tests\FSAccess\Mocks\MockedFilesystemContents
-   *   The underlying filesystem contents data. Probably shouldn't be used for
-   *   much other than as a source for assertion expected values.
+   *   The underlying filesystem contents data.
    */
   public function getFilesystemContents() {
     return $this->contents;
   }
 
-  protected function _realPath($path, $relative_to, $throwOnMissingPath = TRUE) {
+  protected function _realPath($path, $relative_to = NULL, $throwOnMissingPath = TRUE) {
     if ($this->pathIsAbsolute($path)) {
       $path = $this->simplifyPath($path);
     } else if (empty($relative_to)) {
@@ -243,31 +241,62 @@ trait MockedFilesystemTrait {
     }
   }
 
-  //<editor-fold desc="PathParserInterface">
-  // We implement these because the adapters that use this trait need them.
-  /**
-   * @inheritDoc
-   */
-  function getAbsolutePrefix($path) {
-    return $this->getPathParser()->getAbsolutePrefix($path);
+  protected function _ls($directory) {
+    if ($this->_isInProjectRoot($directory)) {
+      $directory = self::_toRelativePath($directory);
+      // A $directory == project root would be translated to '.'
+      if ($directory === '.') {
+        $directory = '';
+      }
+
+      // Now for the "fun" part...MockedFilesystemContents is so not optimized
+      // for ls().
+      $items = [];
+      $items = array_merge($items, $this->ls_content_type('directories', $directory));
+      $items = array_merge($items, $this->ls_content_type('files', $directory));
+      $items = array_merge($items, $this->ls_content_type('symlinks', $directory));
+      $items = array_merge($items, $this->ls_content_type('specials', $directory));
+      sort($items);
+      return array_unique($items);
+    } else {
+      // If it's a parent of the project root, the tests will need to see the
+      // next child towards the project root in the listing.
+      if (substr($directory, -1) !== DIRECTORY_SEPARATOR) {
+        $directory .= DIRECTORY_SEPARATOR;
+      }
+      if (strncmp($this->projRoot, $directory, strlen($directory)) === 0) {
+        $item = substr($this->projRoot, strlen($directory));
+        return array(explode(DIRECTORY_SEPARATOR, $item)[0]);
+      }
+    }
+    return array();
   }
 
-  public function pathIsAbsolute($path) {
+  protected function ls_content_type($type, $directory) {
+    $items = [];
+    foreach ($this->getFilesystemContents()->{$type} as $key => $value) {
+      if (in_array($type, array('directories', 'specials'))) {
+        $item = $value;
+      } else {
+        $item = $key;
+      }
+      if (strncmp($directory, $item, strlen($directory)) === 0) {
+        // Grab just the part after the requested $directory until the next
+        $item = substr($item, strlen($directory));
+        if (strncmp($item, DIRECTORY_SEPARATOR, strlen(DIRECTORY_SEPARATOR)) === 0) {
+          $item = substr($item, strlen(DIRECTORY_SEPARATOR));
+        }
+        $item = explode(DIRECTORY_SEPARATOR, $item)[0];
+        if (strlen($item)) {
+          $items[] = $item;
+        }
+      }
+    }
+    return $items;
+  }
+
+
+  protected function pathIsAbsolute($path) {
     return $this->getPathParser()->pathIsAbsolute($path);
   }
-
-  /**
-   * @inheritDoc
-   */
-  function getDirectorySeparators() {
-    return $this->getPathParser()->getDirectorySeparators();
-  }
-
-  /**
-   * @inheritDoc
-   */
-  function translate($path, PathParserInterface $translate_to) {
-    return $this->getPathParser()->translate($path, $translate_to);
-  }
-  //</editor-fold>
 }

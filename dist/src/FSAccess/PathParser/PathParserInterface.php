@@ -28,6 +28,12 @@ interface PathParserInterface {
   function getDirectorySeparators();
 
   /**
+   * @return string
+   *   Gets the preferred character(s) to use for directory separator.
+   */
+  //function getPreferredDirectorySeparator();
+
+  /**
    * Translates a $path to the format used by another PathParserInterface.
    *
    * E.g., converts directory separators from one file path format to another.

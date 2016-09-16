@@ -11,8 +11,17 @@ use Curator\FSAccess\WriteAdapterInterface;
 class WriteAdapterMock implements WriteAdapterInterface {
   use MockedFilesystemTrait;
 
+  /**
+   * @var string cwd
+   */
+  protected $cwd;
+
   public function __construct($project_root) {
     $this->_setProjectRoot($project_root);
+  }
+
+  public function ls($directory) {
+    return $this->_ls($directory);
   }
 
   public function filePutContents($filename, $data, $lock_if_able = TRUE) {
@@ -53,5 +62,13 @@ class WriteAdapterMock implements WriteAdapterInterface {
         }
       }
     }
+  }
+
+  public function setMockedCwd($cwd) {
+    $this->cwd = $cwd;
+  }
+
+  public function getCwd() {
+    return $this->cwd;
   }
 }

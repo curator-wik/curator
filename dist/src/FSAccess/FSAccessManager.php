@@ -5,7 +5,6 @@ namespace Curator\FSAccess;
 
 
 class FSAccessManager {
-  use PathSimplificationTrait;
 
   /**
    * @var ReadAdapterInterface $readOps
@@ -19,13 +18,6 @@ class FSAccessManager {
   public function __construct(ReadAdapterInterface $read_ops, WriteAdapterInterface $write_ops) {
     $this->readOps = $read_ops;
     $this->writeOps = $write_ops;
-  }
-
-  /**
-   * @return \Curator\FSAccess\PathParser\PathParserInterface
-   */
-  protected function getPathParser() {
-    return $this->readOps;
   }
 
   /**
@@ -50,7 +42,7 @@ class FSAccessManager {
     if (empty($dir) || ! is_string($dir)) {
       throw new \InvalidArgumentException('$dir must be a nonempty string.');
     }
-    if (! $this->readOps->pathIsAbsolute($dir)) {
+    if (! $this->readOps->getPathParser()->pathIsAbsolute($dir)) {
       throw new \InvalidArgumentException('$dir must be an absolute path.');
     }
     if (! $this->readOps->isDir($dir)) {
@@ -63,6 +55,155 @@ class FSAccessManager {
 
     // Fantastic! Make this the working path.
     $this->workingPath = $real_dir;
+  }
+
+  /**
+   * Probes the read and write adapters to try and identify the path
+   * prefix the write adapter uses to reference the working path.
+   *
+   * The working path is reported by the read adapter; write adapters
+   * may be chroot()ed ftp daemons etc.
+   *
+   * TODO: Do this processing in a batch once that API is in place.
+   *
+   * @return string
+   *   The absolute path that, to the write adapter, is the equivalent of the
+   *   working path.
+   * @throws FileException
+   *   If auto-detection could not identify the corresponding path on the
+   *   write adapter.
+   */
+  public function autodetectWriteWorkingPath() {
+    try {
+      $working_path_items = $this->readOps->ls($this->workingPath);
+      $separator = $this->readOps->getPathParser()
+        ->getDirectorySeparators()[0];
+
+      $working_path = str_replace($this->readOps->getPathParser()
+        ->getDirectorySeparators(),
+        $separator,
+        $this->workingPath);
+      $working_path_components = explode($separator, $working_path);
+      $working_path_components = array_values(
+        array_filter($working_path_components, function($v) {
+          return $v !== '';
+        })
+      );
+
+      // Is the start directory of the write adapter already the working path?
+      $write_cwd = $this->writeOps->getCwd();
+      if (! empty($write_cwd)) {
+        $write_path = $this->autodetectPath_descend($write_cwd, $working_path_components, $working_path_items);
+        if ($write_path !== NULL) {
+          return $write_path;
+        }
+      }
+
+      /* If that didn't find anything, also try the write adapter's root.
+       * This may fail on strange write adapters that don't describe their
+       * root by a single directory separator, or if we don't have permission,
+       * but at that point the thrown FileException is probably just fine.
+       */
+      $write_separator = $this->writeOps->getPathParser()->getDirectorySeparators()[0];
+      $write_path = $this->autodetectPath_descend($write_separator, $working_path_components, $working_path_items);
+      if ($write_path !== NULL) {
+        return $write_path;
+      }
+    } catch (\Exception $e) {
+      throw new FileException("Failed to auto-detect path for writing.", 1, $e);
+    }
+    throw new FileException('Auto-detection could not locate the path for writing.', 0);
+  }
+
+  protected function autodetectPath_descend($write_starting_point, $working_path_components, $working_path_items) {
+    $write_curr_dir_items = $this->writeOps->ls($write_starting_point);
+
+    // Is the starting point already the read working path?
+    if ($working_path_items === $write_curr_dir_items
+      && $this->verifyWriteWorkingPathCandidate($write_starting_point)
+    ) {
+      return $write_starting_point;
+    }
+
+    // Okay, let's look harder.
+    $working_path_starting_points = array_intersect($write_curr_dir_items, $working_path_components);
+    $write_separator = $this->writeOps->getPathParser()->getDirectorySeparators()[0];
+
+    for ($i = 0; $i < count($working_path_components); $i++) {
+      $component = $working_path_components[$i];
+      // Are any of the directories that make up the working path present
+      // in $write_curr_dir_items? If so, explore whether they contain the
+      // remainder of the tree.
+      if (in_array($component, $working_path_starting_points, TRUE)) {
+        $write_partial_path = $this->writeOps->simplifyPath($write_starting_point . $write_separator . $component);
+        $write_curr_dir_items = $this->writeOps->ls($write_partial_path);
+        $j = $i + 1;
+        while ($j < count($working_path_components)) {
+          if (in_array($working_path_components[$j], $write_curr_dir_items, TRUE)) {
+            $write_partial_path .= $write_separator . $working_path_components[$j];
+            $write_curr_dir_items = $this->writeOps->ls($write_partial_path);
+            $j++;
+          } else {
+            $j = PHP_INT_MAX;
+          }
+        }
+
+        if ($j != PHP_INT_MAX) {
+          // We've fully populated the $write_partial_path. Now just see if
+          // the resulting location is the same as the working path.
+          //$write_curr_dir_items = $this->writeOps->ls($write_partial_path);
+          if ($working_path_items === $write_curr_dir_items
+            && $this->verifyWriteWorkingPathCandidate($write_partial_path)) {
+            return $write_partial_path;
+          }
+        }
+      }
+    }
+    return NULL;
+  }
+
+  /**
+   * Tests whether a $candidate_write_path corresponds to the working path.
+   *
+   * The test involves a write to a file in $candidate_write_path, an attempt to
+   * read it back from the working path, and a deletion of the test file.
+   *
+   * @param $candidate_write_path
+   *   The write path that may correspond to the (read) working path.
+   * @return bool
+   *   TRUE if the $candidate_write_path tests out ok, FALSE otherwise.
+   */
+  protected function verifyWriteWorkingPathCandidate($candidate_write_path) {
+    $data = time() . "\t$candidate_write_path";
+    $filename = '.curator_path_verification.tmp';
+
+    try {
+      $path = $candidate_write_path
+        . $this->writeOps->getPathParser()->getDirectorySeparators()[0]
+        . $filename;
+      $this->writeOps->filePutContents($path, $data);
+    } catch (FileException $e) {
+      try {
+        // TODO: delete once write adapters support that operation
+        // $this->writeOps->rm($path);
+      } catch (FileException $e) { }
+      return FALSE;
+    }
+
+    $readback_data = FALSE;
+    try {
+      $read_path = $this->workingPath
+        . $this->readOps->getPathParser()->getDirectorySeparators()[0]
+        . $filename;
+      $readback_data = $this->readOps->fileGetContents($read_path);
+    } catch (FileException $e) { }
+
+    try {
+      // TODO: delete once write adapters support that operation
+      //$this->writeOps->rm($path);
+    } catch (FileException $e) { }
+
+    return $data === $readback_data;
   }
 
   /**
@@ -216,7 +357,7 @@ class FSAccessManager {
      * working path, but the ReadAdapterInterface's realPath() and by extension
      * $this->normalizePath() only work on paths that already exist.
      */
-    $path = $this->simplifyPath($path);
+    // TODO: removed this at cabin, seems redundant? $path = $this->simplifyPath($path);
     $dirs_needed = [];
     try {
       $this->normalizePath($path);

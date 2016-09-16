@@ -15,6 +15,10 @@ class ReadAdapterMock implements ReadAdapterInterface {
     $this->_setProjectRoot($project_root);
   }
 
+  public function ls($directory) {
+    return $this->_ls($directory);
+  }
+
   public function realPath($path, $relative_to = NULL) {
     return $this->_realPath($path, $relative_to);
   }

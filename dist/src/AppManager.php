@@ -126,7 +126,7 @@ class AppManager {
       set_include_path('phar://curator.phar');
     }
     require __DIR__.'/../vendor/autoload.php';
-    $app = new CuratorApplication($this->getConfiguration(), $this);
+    $app = new CuratorApplication($this->getConfiguration());
 
     // For now, nobody's running this outside a phar that isn't a developer
     if (! $this->isPhar()) {

@@ -7,7 +7,7 @@ namespace Curator\FSAccess;
  * Interface FSReadInterface
  *   The operations which readable filesystem adapters must support.
  */
-interface ReadAdapterInterface extends PathParser\PathParserInterface {
+interface ReadAdapterInterface {
   /**
    * Returns a well-known name for the underlying file access method.
    *
@@ -47,7 +47,7 @@ interface ReadAdapterInterface extends PathParser\PathParserInterface {
    * Determines whether anything exists at $path.
    *
    * @param string $path
-   *   Absolute path, or relative path under the working path.
+   *   Absolute path to test.
    * @return bool
    * @throws FileException
    */
@@ -57,7 +57,7 @@ interface ReadAdapterInterface extends PathParser\PathParserInterface {
    * Determines whether a directory exists at $path.
    *
    * @param string $path
-   *   Absolute path, or relative path under the working path.
+   *   Absolute path to test.
    * @return bool
    * @throws FileException
    */
@@ -67,7 +67,7 @@ interface ReadAdapterInterface extends PathParser\PathParserInterface {
    * Determines whether a regular file exists at $path.
    *
    * @param string $path
-   *   Absolute path, or relative path under the working path.
+   *   Absolute path to test.
    * @return bool
    * @throws FileException
    */
@@ -80,7 +80,7 @@ interface ReadAdapterInterface extends PathParser\PathParserInterface {
    * extension interface.
    *
    * @param string $filename
-   *   Absolute path, or relative path under the working path.
+   *   Absolute path of file to get.
    *
    * @return string
    * @throws FileNotFoundException
@@ -89,5 +89,42 @@ interface ReadAdapterInterface extends PathParser\PathParserInterface {
    */
   function fileGetContents($filename);
 
+  /**
+   * Gets a Path Parser for the path strings this adapter uses.
+   *
+   * @return PathParser\PathParserInterface
+   */
+  function getPathParser();
 
+  /**
+   * Gets an array of item names in the specified $directory.
+   *
+   * The FSAccessManager uses this during auto-detection of the write
+   * adapter path corresponding to the read adapter's working path.
+   *
+   * @param string $directory
+   *   The directory to list.
+   *   Unlike WriteAdapterInterface::ls(), relative paths are not allowed with
+   *   this method.
+   * @return string[]
+   *   Names found in the directory, in alphabetical order.
+   *   The '.' and '..' special entries are excluded.
+   * @throws FileException
+   *   Resulting from permission, I/O, and missing path errors.
+   */
+  function ls($directory);
+
+  /**
+   * Removes extraneous elements from a path by path parsing only.
+   *
+   * For example, paths that include consecutive directory separators or
+   * ascend towards the root with "../../" are rewritten. For filesystem-aware
+   * path simplification, e.g. resolution of symlinks, use realPath().
+   *
+   * @param string $path
+   *   The path to simplify.
+   * @return string
+   *   The simplified path.
+   */
+  function simplifyPath($path);
 }
