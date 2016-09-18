@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Curator\Tests\FSAccess\PathParser;
+namespace Curator\Tests\Unit\FSAccess\PathParser;
 
 
 use Curator\FSAccess\PathParser\PosixPathParser;

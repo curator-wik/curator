@@ -40,11 +40,17 @@ class pre_5_5 {
           break;
       }
     } catch (\Exception $e) {
-      set_error_handler(NULL, $error_types);
+      // return FALSE causes default handler to be run.
+      set_error_handler(function(){ return FALSE; }, $error_types);
       throw $e;
     }
 
-    set_error_handler(NULL, $error_types);
+    // return FALSE causes default handler to be run.
+    set_error_handler(function() { return FALSE; }, $error_types);
     return $result;
+  }
+
+  public static function emulateDefaultErrorHandling($severity, $errstr, $file, $line) {
+
   }
 }

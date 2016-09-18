@@ -13,6 +13,7 @@ class StreamWrapperFtpAdapter implements ReadAdapterInterface, WriteAdapterInter
 {
   use ReadAdapterStreamWrapperTrait;
   use WriteAdapterStreamWrapperTrait;
+  use CommonAdapterStreamWrapperTrait;
 
   /**
    * @var FtpConfigurationProviderInterface $ftp_config

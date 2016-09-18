@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Curator\Tests\FSAccess\Mocks;
+namespace Curator\Tests\Unit\FSAccess\Mocks;
 
 
 use Curator\FSAccess\FileException;

@@ -6,7 +6,7 @@
  * Time: 11:53 AM
  */
 
-namespace Curator\Tests\FSAccess\PathParser;
+namespace Curator\Tests\Unit\FSAccess\PathParser;
 
 
 use Curator\FSAccess\PathParser\WindowsPathParser;

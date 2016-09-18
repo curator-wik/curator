@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Curator\Tests\FSAccess;
+namespace Curator\Tests\Unit\FSAccess;
 
 
 use Curator\FSAccess\PathParser\GenericPathParser;

@@ -6,14 +6,14 @@
     >
     <testsuites>
         <testsuite name="Curator Unit Tests">
-            <directory suffix="Test.php">tests/unit/</directory>
+            <directory suffix="Test.php">tests/Unit/</directory>
         </testsuite>
         <testsuite name="Curator Integration Tests">
             <!--
             These tests must be run in a curator/docker_test_env
             docker container; in practice via `docker-compose up`
              -->
-            <directory suffix="Test.php">tests/integration/</directory>
+            <directory suffix="Test.php">tests/Integration/</directory>
         </testsuite>
     </testsuites>
 </phpunit>

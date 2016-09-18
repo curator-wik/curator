@@ -14,6 +14,7 @@ use Curator\FSAccess\PathParser\PathParserInterface;
 class StreamWrapperFileAdapter implements ReadAdapterInterface, WriteAdapterInterface {
   use ReadAdapterStreamWrapperTrait;
   use WriteAdapterStreamWrapperTrait;
+  use CommonAdapterStreamWrapperTrait;
 
   /**
    * @var PathParserInterface $pathParser
@@ -54,6 +55,10 @@ class StreamWrapperFileAdapter implements ReadAdapterInterface, WriteAdapterInte
   protected function alterPathForStreamWrapper($path) {
     // No changes needed for host filesystem.
     return $path;
+  }
+
+  public function getCwd() {
+    return getcwd();
   }
 
 }

@@ -58,7 +58,7 @@ class FSAccessTest extends PHPUnit_Framework_TestCase
        * @var FSAccessManager $fs
        */
       $fs = $this->app['fs_access'];
-      $fs->setWorkingPath('/www');
+      $fs->setWorkingPath('/home/ftptest/www');
 
       $test_data = "Data from integration test via $name";
       $fs->filePutContents("test-$name", $test_data);

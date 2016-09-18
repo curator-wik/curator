@@ -1,11 +1,11 @@
 <?php
 
-namespace Curator\Tests\FSAccess;
+namespace Curator\Tests\Unit\FSAccess;
 
 use Curator\FSAccess\FSAccessManager;
-use Curator\Tests\FSAccess\Mocks\MockedFilesystemContents;
-use Curator\Tests\FSAccess\Mocks\ReadAdapterMock;
-use Curator\Tests\FSAccess\Mocks\WriteAdapterMock;
+use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
+use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
+use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
 class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
 
