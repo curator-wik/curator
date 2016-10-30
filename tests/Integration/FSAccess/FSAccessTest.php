@@ -1,10 +1,12 @@
 <?php
 
+namespace Curator\Tests\Integration\FSAccess;
+
 use Curator\CuratorApplication;
 use Curator\IntegrationConfig;
 use \Curator\FSAccess\FSAccessManager;
 
-class FSAccessTest extends PHPUnit_Framework_TestCase
+class FSAccessTest extends \PHPUnit_Framework_TestCase
 {
   /**
    * @var CuratorApplication $app
@@ -12,7 +14,11 @@ class FSAccessTest extends PHPUnit_Framework_TestCase
   protected $app;
 
   function setUp() {
+    // Re-initialize service container to provide default services.
     $this->app = new CuratorApplication(IntegrationConfig::getNullConfig());
+    $this->app['fs_access.ftp_config'] = $this->app->share(function() {
+      return new TestFtpConfigurationProvider();
+    });
   }
 
   /**
@@ -32,7 +38,7 @@ class FSAccessTest extends PHPUnit_Framework_TestCase
   }
 
   /**
-   * @expectedException Curator\FSAccess\FileException
+   * @expectedException \Curator\FSAccess\FileException
    * @expectedExceptionMessage FTP server reports 553 Could not create file
    */
   function testFtpFileException() {
@@ -41,17 +47,32 @@ class FSAccessTest extends PHPUnit_Framework_TestCase
      * @var FSAccessManager $fs
      */
     $fs = $this->app['fs_access'];
-    // In the docker_test_env, '/' is chrooted to the user's homedir,
-    // and the chroot root isn't writable.
+    // In the docker_test_env, '/' isn't writable to the FTP user.
     $fs->setWorkingPath('/');
+    $fs->setWriteWorkingPath('/');
 
     $fs->filePutContents('test', 'this data from integration tests.');
+  }
+
+  function testFileExists() {
+    $this->app['fs_access.read_adapter'] = $this->app['fs_access.read_adapter.filesystem'];
+    /**
+     * @var FSAccessManager $fs
+     */
+    $fs = $this->app['fs_access'];
+    $fs->setWorkingPath('/');
+    $fs->setWriteWorkingPath('/');
+
+    $fs->isFile('/root/test');
   }
 
   function testFilePut() {
     $adapters_tested = 0;
     foreach ($this->getAdapterServices('write') as $writeAdapterService) {
-      $this->app['fs_access.write_adapter'] = $this->app[$writeAdapterService];
+      // FSAccessManager needs to be reinitialized for each write adapter
+      $this->setUp();
+
+      $this->app['fs_access.write_adapter'] = $this->app->raw($writeAdapterService);
       $name = $this->app['fs_access.write_adapter']->getAdapterName();
 
       /**
@@ -59,6 +80,7 @@ class FSAccessTest extends PHPUnit_Framework_TestCase
        */
       $fs = $this->app['fs_access'];
       $fs->setWorkingPath('/home/ftptest/www');
+      $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
 
       $test_data = "Data from integration test via $name";
       $fs->filePutContents("test-$name", $test_data);
@@ -71,5 +93,31 @@ class FSAccessTest extends PHPUnit_Framework_TestCase
     }
 
     $this->assertGreaterThan(0, $adapters_tested);
+  }
+
+  function testFilePut_chroot() {
+    $this->app['fs_access.ftp_config'] = $this->app->share(function() {
+      return new TestFtpConfigurationProvider('ftptest_chroot');
+    });
+    $this->app['fs_access.write_adapter'] = $this->app->raw('fs_access.write_adapter.ftp');
+
+    /**
+     * @var FSAccessManager $fs
+     */
+    $fs = $this->app['fs_access'];
+    $fs->setWorkingPath('/home/ftptest_chroot/www');
+    $this->assertEquals(
+      '/www',
+      $fs->autodetectWriteWorkingPath()
+    );
+    $fs->setWriteWorkingPath('/www');
+
+    $test_data = 'Data from integration test via chrooted ftp';
+    $fs->filePutContents('test-ftp-chroot', $test_data);
+    $this->assertEquals(
+      $test_data,
+      $fs->fileGetContents('test-ftp-chroot'),
+      'Simple file can be written via chrooted ftp and read back.'
+    );
   }
 }

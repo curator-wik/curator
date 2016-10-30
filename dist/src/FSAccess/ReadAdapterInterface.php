@@ -34,6 +34,14 @@ interface ReadAdapterInterface {
    *   The path to make absolute.
    * @param string $relative_to
    *   When $path is relative, the path to resolve it relative to.
+   * @param bool $resolve_symlink
+   *   If the file specified by the path is a symlink, whether to resolve it.
+   *
+   *   Passing FALSE is useful when you wish to operate on the symbolic link,
+   *   and not the file it points to.
+   *
+   *   Note that this affects only the last element of $path; symlinked parent
+   *   directories are always resolved.
    * @return string
    *   The absolute pathname.
    * @throws FileNotFoundException
@@ -41,7 +49,7 @@ interface ReadAdapterInterface {
    * @throws FileException
    *   On permission or I/O errors.
    */
-  function realPath($path, $relative_to = NULL);
+  function realPath($path, $relative_to = NULL, $resolve_symlink = TRUE);
 
   /**
    * Determines whether anything exists at $path.
@@ -125,6 +133,10 @@ interface ReadAdapterInterface {
    *   The path to simplify.
    * @return string
    *   The simplified path.
+   *
+   *   If the path includes more "up one level" references than there
+   *   are regular directories in the path, the result will begin with
+   *   './'. For example, "/fred/../.." will result in "./..".
    */
   function simplifyPath($path);
 }

@@ -126,6 +126,10 @@ class AppManager {
       set_include_path('phar://curator.phar');
     }
     require __DIR__.'/../vendor/autoload.php';
+
+    // Engage conversion of errors to ErrorExceptions.
+    \Symfony\Component\Debug\ErrorHandler::register();
+
     $app = new CuratorApplication($this->getConfiguration());
 
     // For now, nobody's running this outside a phar that isn't a developer

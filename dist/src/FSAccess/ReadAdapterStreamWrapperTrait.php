@@ -18,6 +18,32 @@ trait ReadAdapterStreamWrapperTrait
   public abstract function getStreamContext();
 
   /**
+   * Helper method that attempts to determine a specific reason a path is
+   * invalid and throw the most appropriate exception.
+   *
+   * PHP stream wrappers give you enough detail to reliably know if an
+   * operation worked or not for any underlying stream type, but they aren't as
+   * good at consistently providing information about the problem when there is
+   * one.
+   *
+   * This method gives stream wrapper based read/write adapters a chance to dig
+   * deeper after an operation has failed.
+   *
+   * @param string $path
+   *   The path that an operation failed on.
+   * @param string $read_write
+   *   'r' if the operation was a read, 'w' if a write.
+   * @param string $operation_description
+   *   A string describing the operation that failed.
+   * @param ErrorException $error_exception
+   *   Optional ErrorException from the failed operation.
+   *
+   * @throws FileException
+   * @throws FileNotFoundException
+   */
+  protected abstract function failPath($path, $read_write, $operation_description, \ErrorException $error_exception = NULL);
+
+  /**
    * Performs path transformations necessary for the stream wrapper to
    * function.
    *
@@ -34,7 +60,15 @@ trait ReadAdapterStreamWrapperTrait
    */
   protected abstract function alterPathForStreamWrapper($path);
 
-  public function realPath($path, $relative_to = NULL) {
+  /**
+   * @see ReadAdapterInterface::realPath().
+   *
+   * @param string $path
+   * @param string|NULL $relative_to
+   * @param bool $resolve_symlink
+   * @return string
+   */
+  public function realPath($path, $relative_to = NULL, $resolve_symlink = TRUE) {
     if (! $this->getPathParser()->pathIsAbsolute($path)) {
       $separator = $this->getPathParser()->getDirectorySeparators();
       $separator = reset($separator);
@@ -45,8 +79,31 @@ trait ReadAdapterStreamWrapperTrait
 
     if ($this->getStreamContext()->getScheme() === 'file://') {
       // We can resolve symlinks and such if using the filesystem.
-      return realpath($path);
-    } else {
+      if ($resolve_symlink) {
+        $true_real_path = realpath($path);
+      } else {
+        $parent = $this->simplifyPath($path . $this->getPathParser()->getDirectorySeparators()[0] . '..');
+        $true_real_path = realpath($parent);
+        if ($true_real_path !== FALSE) {
+          $true_real_path .= $this->getPathParser()->getDirectorySeparators()[0]
+            . $this->getPathParser()->baseName($path);
+
+          try {
+            $exists = lstat($true_real_path);
+            if (! $exists) {
+              $true_real_path = FALSE;
+            }
+          } catch (\ErrorException $e) {
+            $this->failPath($true_real_path, 'r', 'Unable to access the path. This may occur if directories in the path are missing, or due to permission or I/O errors.', $e);
+          }
+        }
+      }
+      if ($true_real_path !== FALSE) {
+        return $true_real_path;
+      } else {
+        $this->failPath($path, 'r', 'Unable to access the path. This may occur if directories in the path are missing, or due to permission or I/O errors.');
+      }
+    } else  {
       // Best we can do is to clean up redundant things in the path.
       return $this->simplifyPath($path);
     }

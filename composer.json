@@ -15,7 +15,8 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Curator\\Tests\\Unit\\": "tests/Unit/src"
+      "Curator\\Tests\\Unit\\": "tests/Unit/src",
+      "Curator\\Tests\\Integration\\": "tests/Integration"
     }
   },
   "config": {

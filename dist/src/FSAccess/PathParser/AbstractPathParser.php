@@ -18,9 +18,7 @@ abstract class AbstractPathParser implements PathParserInterface {
     }
 
     // normalize directory separators
-    $translateable_path = str_replace($this->getDirectorySeparators(),
-      $translate_to->getDirectorySeparators()[0],
-      $translateable_path);
+    $translateable_path = $this->normalizeDirectorySeparators($path, $translate_to);
 
     if ($abs_prefix !== NULL) {
       return $abs_prefix . $translateable_path;
@@ -30,10 +28,42 @@ abstract class AbstractPathParser implements PathParserInterface {
   }
 
   /**
+   * @inheritdoc
+   */
+  public function normalizeDirectorySeparators($path, PathParserInterface $target_style = NULL) {
+    if (empty($target_style)) {
+      $target_style = $this;
+    }
+
+    return str_replace($this->getDirectorySeparators(),
+      $target_style->getDirectorySeparators()[0],
+      $path
+    );
+  }
+
+  /**
    * @inheritDoc
    */
   public function pathIsAbsolute($path) {
     return is_string($this->getAbsolutePrefix($path));
+  }
+
+  /**
+   * @inheritdoc
+   */
+  public function baseName($path) {
+    $parts = explode(
+      $this->getDirectorySeparators()[0],
+      str_replace($this->getDirectorySeparators(), $this->getDirectorySeparators()[0], $path)
+    );
+
+    for($i = count($parts) - 1; $i >= 0; $i--) {
+      if (! empty($parts[$i])) {
+        return $parts[$i];
+      }
+    }
+
+    return '';
   }
 
   /**

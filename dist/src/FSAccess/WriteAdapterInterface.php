@@ -74,6 +74,50 @@ interface WriteAdapterInterface {
   function mkdir($path);
 
   /**
+   * Renames a file or directory, possibly relocating it in the filesystem.
+   *
+   * // TODO: Determine best semantics for existng file at $new_name:
+   * // overwrite or fail based on ease of implementation in the adapters.
+   *
+   * @param $old_name
+   *   Absolute path of file to rename.
+   * @param $new_name
+   *   Absolute path of new name.
+   * @return void
+   * @throws FileNotFoundException
+   *   When $old_name or parent directories of $new_name do not exist.
+   * @throws FileException
+   *   On permission or I/O errors.
+   */
+  function rename($old_name, $new_name);
+
+  /**
+   * Unlinks (deletes) a non-directory filesystem object.
+   *
+   * @param string $filename
+   *   Absolute path of file to unlink.
+   * @return void
+   * @throws FileNotFoundException
+   *   When $filename does not exist.
+   * @throws FileNotFoundException
+   *   On permission or I/O errors, or if $filename is a directory.
+   */
+  function unlink($filename);
+
+  /**
+   * Deletes an empty directory from the filesystem.
+   *
+   * @param string $path
+   *   Absolute path of the directory to delete.
+   * @return void
+   * @throws FileNotFoundException
+   *   When $path does not exist.
+   * @throws FileNotFoundException
+   *   On permission or I/O errors, or if $path is not a directory.
+   */
+  function rmDir($path);
+
+  /**
    * Gets a Path Parser for the path strings this adapter uses.
    *
    * @return PathParser\PathParserInterface

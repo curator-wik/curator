@@ -7,7 +7,8 @@ namespace Curator\Tests\Unit\FSAccess\Mocks;
 class MockedFilesystemContents {
   public $directories = [
     'test',
-    'test/a'
+    'test/a',
+    'test/empty_dir'
   ];
 
   public $files = [

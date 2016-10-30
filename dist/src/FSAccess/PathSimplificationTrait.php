@@ -15,7 +15,10 @@ trait PathSimplificationTrait {
    * @return PathParser\PathParserInterface
    */
   abstract function getPathParser();
-  
+
+  /**
+   * @see ReadAdapterInterface::simplifyPath()
+   */
   public function simplifyPath($path) {
     $is_absolute = $this->getPathParser()->pathIsAbsolute($path);
 

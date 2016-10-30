@@ -6,9 +6,10 @@
 
 cd /curator
 echo "Running PHPUnit tests..."
-if [ -z $PHPUNIT ]
+if [ -z "$PHPUNIT" ]
 then
-  ./vendor/bin/phpunit
-else
-  $PHPUNIT
+  PHPUNIT="./vendor/bin/phpunit"
+  export PHPUNIT
 fi
+
+$PHPUNIT

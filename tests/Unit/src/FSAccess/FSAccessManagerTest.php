@@ -375,6 +375,16 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     $sut->fileGetContents('/test/file_depth1');
   }
 
+  /**
+   * @expectedException \InvalidArgumentException
+   * @expectedExceptionMessage Path "/within/a/projectfoo/test/file_depth1" is not within working path "/within/a/project".
+   */
+  function testFileGetContents_outsideWorkingPath_throws_4() {
+    $sut = static::sutFactory(FALSE, FALSE);
+    $sut->setWorkingPath(self::PROJECT_PATH);
+    $sut->fileGetContents(self::PROJECT_PATH . 'foo/test/file_depth1');
+  }
+
   function testFileGetContents() {
     $sut = static::sutFactory();
     self::assertEquals(
@@ -439,6 +449,40 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
       self::$readAdapter_proj->getFilesystemContents()->files['README'],
       $sut->fileGetContents('test/a/up.link/a/root.link/README')
     );
+  }
+  //</editor-fold>
+
+  //<editor-fold desc="mv">
+  public function testMv() {
+    $sut = static::sutFactory();
+    $contents = $sut->fileGetContents('README');
+    $sut->mv('README', 'README.txt');
+    $this->assertEquals($contents, $sut->fileGetContents('README.txt'));
+
+    $sut->mv('README.txt', 'README');
+    $this->assertEquals($contents, $sut->fileGetContents('README'));
+
+    $sut->mv('README.link', 'test/README.link');
+    $this->assertEquals($contents, $sut->fileGetContents('test/README.link'));
+    $this->assertEquals($contents, $sut->fileGetContents('README'));
+    $this->assertFalse($sut->isFile('README.link'));
+  }
+  //</editor-fold>
+
+  //<editor-fold desc="rm, unlink, rmDir">
+  public function testRm() {
+    $sut = static::sutFactory();
+    $this->assertTrue($sut->isFile('README.link'));
+    $sut->rm('README.link');
+    $this->assertFalse($sut->isFile('README.link'));
+
+    $this->assertTrue($sut->isFile('README'));
+    $sut->rm('README');
+    $this->assertFalse($sut->isFile('README'));
+
+    $this->assertTrue($sut->isDir('test/empty_dir'));
+    $sut->rmDir('test/empty_dir');
+    $this->assertFalse($sut->isDir('test/empty_dir'));
   }
   //</editor-fold>
 

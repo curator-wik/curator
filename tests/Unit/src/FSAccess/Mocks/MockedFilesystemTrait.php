@@ -53,14 +53,14 @@ trait MockedFilesystemTrait {
   }
 
   /**
-   * @return \Curator\Tests\FSAccess\Mocks\MockedFilesystemContents
+   * @return \Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents
    *   The underlying filesystem contents data.
    */
   public function getFilesystemContents() {
     return $this->contents;
   }
 
-  protected function _realPath($path, $relative_to = NULL, $throwOnMissingPath = TRUE) {
+  protected function _realPath($path, $relative_to = NULL, $throwOnMissingPath = TRUE, $resolve_symlink = TRUE) {
     if ($this->pathIsAbsolute($path)) {
       $path = $this->simplifyPath($path);
     } else if (empty($relative_to)) {
@@ -74,10 +74,10 @@ trait MockedFilesystemTrait {
       $path = $this->_toRelativePath($path);
 
       $converted_path = $this->simplifyPath(
-        $this->projRoot . '/' . $this->_resolveSymlinks($path));
+        $this->projRoot . '/' . $this->_resolveSymlinks($path, $resolve_symlink));
       if ($throwOnMissingPath
         && $this->_isInProjectRoot($converted_path, TRUE)
-        && ! $this->_pathExists($converted_path, FALSE)) {
+        && ! $this->_pathExists($converted_path, FALSE, $resolve_symlink)) {
         throw new FileNotFoundException($path);
       } else {
         return $converted_path;
@@ -87,7 +87,8 @@ trait MockedFilesystemTrait {
     }
   }
 
-  protected function _resolveSymlinks($path) {
+  protected function _resolveSymlinks($path, $resolve_leaf = TRUE) {
+    $skip_resolve = !$resolve_leaf;
     if (! $this->_isInProjectRoot($path, TRUE)) {
       return $path;
     }
@@ -99,9 +100,9 @@ trait MockedFilesystemTrait {
     $location = $this->simplifyPath($path);
     $nonsymlink_elements = [];
     $path_elements = explode('/', $location);
-    while(count($path_elements)) {
+    while (count($path_elements)) {
       $link_test = implode('/', $path_elements);
-      if (array_key_exists($link_test, $this->contents->symlinks)) {
+      if (!$skip_resolve && array_key_exists($link_test, $this->contents->symlinks)) {
         $readlink = $this->contents->symlinks[$link_test];
         if (strncmp($readlink, './', 2) == 0 || strncmp($readlink, '../', 3) == 0) {
           $resolved_path = $this->simplifyPath(dirname($link_test) . '/' . $readlink . '/' . implode('/', $nonsymlink_elements));
@@ -113,6 +114,7 @@ trait MockedFilesystemTrait {
       } else {
         array_unshift($nonsymlink_elements, array_pop($path_elements));
       }
+      $skip_resolve = FALSE;
     }
     return $path;
   }
@@ -148,11 +150,22 @@ trait MockedFilesystemTrait {
     }
   }
 
-  protected function _pathExists($path, $translate_real = TRUE) {
+  /**
+   * @param string $path
+   * @param bool $translate_real
+   * @param bool $resolve_symlink
+   *   If TRUE, any symlinks found in $path must be valid. If FALSE, it is
+   *   sufficient for the symlinks themselves to be present, valid or broken.
+   * @return bool
+   */
+  protected function _pathExists($path, $translate_real = TRUE, $resolve_symlink = TRUE) {
     if ($translate_real) {
-      $path = $this->_realPath($path, NULL, FALSE);
+      $path = $this->_realPath($path, NULL, FALSE, $resolve_symlink);
     }
 
+    if ($resolve_symlink === FALSE && array_key_exists($this->_toRelativePath($path), $this->contents->symlinks)) {
+      return TRUE;
+    }
     if ($this->_isDir($path, FALSE)) {
       return TRUE;
     }
@@ -164,7 +177,7 @@ trait MockedFilesystemTrait {
     }
 
     if ($path == 'inaccessible') {
-      throw new FileException();
+      throw new FileException('Permission denied.');
     }
 
     return FALSE;
@@ -193,7 +206,10 @@ trait MockedFilesystemTrait {
         throw new \LogicException('API contract violation: relative paths not allowed by the low-level read/write adapters.');
       }
     } else {
-      return strncmp($this->simplifyPath($path), $this->projRoot, strlen($this->projRoot)) === 0;
+      $simplified_path = $this->simplifyPath($path);
+      $nextPathChar = substr($simplified_path, strlen($this->projRoot), 1);
+      return strncmp($simplified_path, $this->projRoot, strlen($this->projRoot)) === 0 &&
+        (substr($this->projRoot, -1, 1) === '/' || $simplified_path === $this->projRoot || $nextPathChar === '/');
     }
   }
 
@@ -294,7 +310,6 @@ trait MockedFilesystemTrait {
     }
     return $items;
   }
-
 
   protected function pathIsAbsolute($path) {
     return $this->getPathParser()->pathIsAbsolute($path);

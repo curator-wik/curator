@@ -11,13 +11,39 @@ class FSAccessManager {
    */
   protected $readOps;
 
+  /**
+   * @var WriteAdapterInterface $writeOps
+   */
   protected $writeOps;
 
+  /**
+   * @var string $workingPath
+   */
   protected $workingPath;
+
+  /**
+   * @var string $writeWorkingPath
+   */
+  protected $writeWorkingPath;
+
+  /**
+   * @var string $readSeparator
+   *   The preferred directory separator character(s) for the read adapter.
+   */
+  protected $readSeparator;
+
+  /**
+   * @var string $writeSeparator
+   *   The preferred directory separator character(s) for the write adapter.
+   */
+  protected $writeSeparator;
 
   public function __construct(ReadAdapterInterface $read_ops, WriteAdapterInterface $write_ops) {
     $this->readOps = $read_ops;
     $this->writeOps = $write_ops;
+
+    $this->readSeparator = $this->readOps->getPathParser()->getDirectorySeparators()[0];
+    $this->writeSeparator = $this->writeOps->getPathParser()->getDirectorySeparators()[0];
   }
 
   /**
@@ -55,6 +81,10 @@ class FSAccessManager {
 
     // Fantastic! Make this the working path.
     $this->workingPath = $real_dir;
+  }
+
+  public function setWriteWorkingPath($dir) {
+    $this->writeWorkingPath = $dir;
   }
 
   /**
@@ -110,9 +140,9 @@ class FSAccessManager {
         return $write_path;
       }
     } catch (\Exception $e) {
-      throw new FileException("Failed to auto-detect path for writing.", 1, $e);
+      throw new FileException("Failed to auto-detect path for writing.", NULL, 1, $e);
     }
-    throw new FileException('Auto-detection could not locate the path for writing.', 0);
+    throw new FileException('Auto-detection could not locate the path for writing.', NULL, 0);
   }
 
   protected function autodetectPath_descend($write_starting_point, $working_path_components, $working_path_items) {
@@ -216,6 +246,14 @@ class FSAccessManager {
    * @param string $alt_wd
    *   An optional alternate path to resolve relative paths from, instead of
    *   the working path.
+   * @param bool $resolve_symlink
+   *   If the file specified by the path is a symlink, whether to resolve it.
+   *
+   *   Passing FALSE is useful when you wish to operate on the symbolic link,
+   *   and not the file it points to.
+   *
+   *   Note that this affects only the last element of $path; symlinked parent
+   *   directories are always resolved.
    * @return string
    *   The normalized path.
    * @throws FileNotFoundException
@@ -229,7 +267,7 @@ class FSAccessManager {
    *   If this method is invoked before setWorkingPath() has been called and no
    *   $alt_wd was supplied.
    */
-  protected function normalizePath($path, $alt_wd = NULL) {
+  protected function normalizePath($path, $alt_wd = NULL, $resolve_symlink = TRUE) {
     $wd = $this->workingPath;
     if ($alt_wd !== NULL) {
       $wd = $alt_wd;
@@ -239,13 +277,49 @@ class FSAccessManager {
       throw new \LogicException('setWorkingPath() must have been called as a precondition to using normalizePath()');
     }
 
-    $abs_path = $this->readOps->realPath($path, $wd);
+    $abs_path = $this->readOps->realPath($path, $wd, $resolve_symlink);
 
+    // ensureTerminatingSeparator() to avoid similarly-named dir attacks.
     // On case-insensitive systems, this could result in false positives.
-    if (strpos($abs_path, $wd) !== 0) {
+    if (strpos(
+      $this->ensureTerminatingSeparator($abs_path),
+      $this->ensureTerminatingSeparator($wd)
+    ) !== 0) {
       throw new \InvalidArgumentException(sprintf('Path "%s" is not within working path "%s".', $path, $wd));
     }
+
     return $abs_path;
+  }
+
+  protected function ensureTerminatingSeparator($path) {
+    $n_path = $this->readOps->getPathParser()->normalizeDirectorySeparators($path);
+    foreach ($this->readOps->getPathParser()->getDirectorySeparators() as $sep) {
+      if (strrpos($sep, $n_path) === strlen($n_path) - 1) {
+        return $path;
+      }
+    }
+
+    return $path . $this->readOps->getPathParser()->getDirectorySeparators()[0];
+  }
+
+  /**
+   * Precondition: Both the working path and write working path have been set.
+   *
+   * @param string $normalized_path
+   *   A path that has been successfully passed through
+   *   FSAccessManager::normalizePath() without an $alt_wd.
+   */
+  protected function toWritePath($normalized_path) {
+    // Path by def'n begins with $this->workingPath; make a relative path.
+    $relative_path = substr($normalized_path, strlen($this->workingPath));
+    if ($this->readOps->getPathParser()->pathIsAbsolute($relative_path)) {
+      // TODO
+    }
+    $write_path = $this->writeWorkingPath
+      . $this->writeOps->getPathParser()->getDirectorySeparators()[0]
+      . $this->readOps->getPathParser()->translate($relative_path, $this->writeOps->getPathParser());
+
+    return $write_path;
   }
 
   /**
@@ -270,7 +344,7 @@ class FSAccessManager {
   public function fileGetContents($filename) {
     $filename = $this->normalizePath($filename);
     if (($data = $this->readOps->fileGetContents($filename)) === FALSE) {
-      throw new FileException(sprintf('Read file "%s" via %s failed.', $filename, $this->readOps->getAdapterName()));
+      throw new FileException(sprintf('Read via %s failed.', $filename, $this->readOps->getAdapterName()), $filename);
     }
     return $data;
   }
@@ -292,16 +366,20 @@ class FSAccessManager {
    *   If $filename is outside the working path.
    */
   public function filePutContents($filename, $data) {
-    $location = $this->normalizePath(dirname($filename));
-    $filename = $location . DIRECTORY_SEPARATOR . basename($filename);
-    $bytes = $this->writeOps->filePutContents($filename, $data);
+    // Normalize the path of the directory, because normalized paths must exist.
+    $location = $this->readOps->simplifyPath($filename . $this->readSeparator . '..');
+    $location = $this->normalizePath($location);
+    $filename = $location . $this->readSeparator . basename($filename);
+    $write_filename = $this->toWritePath($filename);
+    // todo: Swap out absolute base of read path with that of write adapter.
+    $bytes = $this->writeOps->filePutContents($write_filename, $data);
     if ($bytes != strlen($data)) {
       throw new FileException(sprintf('Write file "%s" via %s incomplete: %d of %d bytes were written.',
-        $filename,
+        $write_filename,
         $this->writeOps->getAdapterName(),
         $bytes,
         strlen($data)
-      ), 1);
+      ), $filename, 1);
     }
     return $bytes;
   }
@@ -322,11 +400,72 @@ class FSAccessManager {
    * @throws \InvalidArgumentException
    *   If $old_name or $new_name is outside the working path.
    */
-  function mv($old_name, $new_name) {
-    $old_name = $this->normalizePath($old_name);
-    $new_location = $this->normalizePath(dirname($new_name));
-    $new_name = $new_location . DIRECTORY_SEPARATOR . basename($new_name);
+  public function mv($old_name, $new_name) {
+    $old_name = $this->normalizePath($old_name, NULL, FALSE);
+    $new_location = $this->readOps->simplifyPath($new_name . $this->readSeparator . '..');
+    $new_location = $this->normalizePath($new_location);
+    $new_name = $new_location . $this->readSeparator . $this->readOps->getPathParser()->baseName($new_name);
+
+    $new_name = $this->readOps->getPathParser()->translate($new_name, $this->writeOps->getPathParser());
+    $old_name = $this->readOps->getPathParser()->translate($old_name, $this->writeOps->getPathParser());
     $this->writeOps->rename($old_name, $new_name);
+  }
+
+  /**
+   * Deletes the item at $path from the filesystem.
+   *
+   * This convenience method performs a read to determine the type of $path,
+   * and calls unlink() or rmDir() as appropriate.
+   *
+   * @param string $path
+   *   The path to delete.
+   * @return void
+   * @throws FileNotFoundException
+   *   When the $path to delete does not exist.
+   * @throws FileException
+   *   On permission or I/O errors.
+   */
+  public function rm($path) {
+    $path = $this->normalizePath($path, NULL, FALSE);
+    if ($this->readOps->isDir($path)) {
+      $this->rmDir($path);
+    } else {
+      $this->unlink($path);
+    }
+  }
+
+  /**
+   * Unlinks (deletes) a non-directory filesystem object.
+   *
+   * @param string $filename
+   *   Absolute path, or relative path under the working path of file to unlink.
+   * @return void
+   * @throws FileNotFoundException
+   *   When the file to delete does not exist.
+   * @throws FileException
+   *   On permission or I/O errors.
+   */
+  public function unlink($filename) {
+    $filename = $this->normalizePath($filename, NULL, FALSE);
+    $filename = $this->readOps->getPathParser()->translate($filename, $this->writeOps->getPathParser());
+    $this->writeOps->unlink($filename);
+  }
+
+  /**
+   * Deletes an empty directory from the filesystem.
+   *
+   * @param string $path
+   *   Absolute path, or relative path under the working path of dir to delete.
+   * @return void
+   * @throws FileNotFoundException
+   *   When the directory to delete does not exist.
+   * @throws FileException
+   *   On permission or I/O errors.
+   */
+  public function rmDir($path) {
+    $path = $this->normalizePath($path, NULL, FALSE);
+    $path = $this->readOps->getPathParser()->translate($path, $this->writeOps->getPathParser());
+    $this->writeOps->rmDir($path);
   }
 
   /**
@@ -363,8 +502,8 @@ class FSAccessManager {
       $this->normalizePath($path);
       throw new FileExistsException($path, 0);
     } catch (FileNotFoundException $e) {
-      array_unshift($dirs_needed, basename($path));
-      $parent = dirname($path);
+      array_unshift($dirs_needed, $this->readOps->getPathParser()->baseName($path));
+      $parent = $this->readOps->simplifyPath($path . $this->readSeparator . '..');
     }
 
     while ($parent != '.') {
@@ -375,8 +514,8 @@ class FSAccessManager {
         if ($create_parents !== TRUE) {
           throw $e;
         }
-        array_unshift($dirs_needed, basename($parent));
-        $parent = dirname($parent);
+        array_unshift($dirs_needed, $this->readOps->getPathParser()->baseName($parent));
+        $parent = $this->readOps->simplifyPath($parent . $this->readSeparator . '..');
       }
     }
     if ($parent == '.') {
@@ -388,10 +527,10 @@ class FSAccessManager {
     // If we get this far, $parent contains a normalized absolute path to the
     // deepest directory of $path that already exists in the filesystem and is
     // within the working path.
-    $existing_dirs = $parent;
+    $existing_dirs = $this->readOps->getPathParser()->translate($parent, $this->writeOps->getPathParser());
 
     foreach ($dirs_needed as $new_dir) {
-      $existing_dirs .= '/' . $new_dir;
+      $existing_dirs .= $this->writeSeparator . $new_dir;
       $this->writeOps->mkdir($existing_dirs);
     }
   }
@@ -412,7 +551,11 @@ class FSAccessManager {
    *   If $path is outside the working path.
    */
   public function isFile($filename) {
-    $filename = $this->normalizePath($filename);
+    try {
+      $filename = $this->normalizePath($filename);
+    } catch (FileNotFoundException $e) {
+      return FALSE;
+    }
     return $this->readOps->isFile($filename);
   }
 
@@ -432,7 +575,11 @@ class FSAccessManager {
    *   If $path is outside the working path.
    */
   public function isDir($path) {
-    $path = $this->normalizePath($path);
+    try {
+      $path = $this->normalizePath($path);
+    } catch (FileNotFoundException $e) {
+      return FALSE;
+    }
     return $this->readOps->isDir($path);
   }
 

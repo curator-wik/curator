@@ -7,6 +7,16 @@ use Curator\Util\ErrorHandling;
 trait WriteAdapterStreamWrapperTrait
 {
   /**
+   * @see ReadAdapterStreamWrapperTrait::failPath().
+   *
+   * @param string $path
+   * @param string $read_write
+   * @param string $operation_description
+   * @param \ErrorException|NULL $error_exception
+   */
+  protected abstract function failPath($path, $read_write, $operation_description, \ErrorException $error_exception = NULL);
+
+  /**
    * @return StreamContextWrapper
    */
   public abstract function getStreamContext();
@@ -34,17 +44,14 @@ trait WriteAdapterStreamWrapperTrait
       ? LOCK_EX : 0);
 
     try {
-      return ErrorHandling::withErrorException('file_put_contents',
-        E_ALL & ~E_NOTICE,
-        array(
-          $this->alterPathForStreamWrapper($filename),
-          $data,
-          $flags,
-          $this->getStreamContext()->getContext()
-        )
+      return file_put_contents(
+        $this->alterPathForStreamWrapper($filename),
+        $data,
+        $flags,
+        $this->getStreamContext()->getContext()
       );
     } catch (\ErrorException $e) {
-      throw new FileException($e->getMessage(), 0, $e);
+      throw new FileException($e->getMessage(), $filename, 0, $e);
     }
   }
 
@@ -55,6 +62,55 @@ trait WriteAdapterStreamWrapperTrait
       FALSE,
       $this->getStreamContext()->getContext()
     );
+  }
+
+  public function rename($old_name, $new_name) {
+    $old_name = $this->alterPathForStreamWrapper($old_name);
+    $new_name = $this->alterPathForStreamWrapper($new_name);
+    try {
+      $result = rename(
+        $old_name,
+        $new_name,
+        $this->getStreamContext()->getContext());
+    } catch (\ErrorException $e) {
+      // We are, unfortunately, not in a position to know which path is broken.
+      $this->failPath($old_name, 'w', sprintf('Renaming %s to %s', $old_name, $new_name), $e);
+    }
+    if (! $result) {
+      $this->failPath($old_name, 'w', sprintf('Renaming %s to %s', $old_name, $new_name));
+    }
+  }
+
+  public function rmDir($path) {
+    $path = $this->alterPathForStreamWrapper($path);
+
+    try {
+      $result = rmdir(
+        $path,
+        $this->getStreamContext()->getContext()
+      );
+    } catch (\ErrorException $e) {
+      $this->failPath($path, 'w', sprintf('Removing directory at "%s". If no other reason is given, perhaps this is not an empty directory?', $path), $e);
+    }
+    if (! $result) {
+      $this->failPath($path, 'w', sprintf('Removing directory at "%s". If no other reason is given, perhaps this is not an empty directory?', $path));
+    }
+  }
+
+  public function unlink($filename) {
+    $filename = $this->alterPathForStreamWrapper($filename);
+
+    try {
+      $result = unlink(
+        $filename,
+        $this->getStreamContext()->getContext()
+      );
+    } catch (\ErrorException $e) {
+      $this->failPath($filename, 'w', sprintf('Removing file at "%s". If no other reason is given, perhaps this is a directory?', $filename), $e);
+    }
+    if (! $result) {
+      $this->failPath($filename, 'w', sprintf('Removing file at "%s". If no other reason is given, perhaps this is a directory?', $filename));
+    }
   }
 
 }

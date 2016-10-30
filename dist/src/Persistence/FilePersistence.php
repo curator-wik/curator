@@ -2,6 +2,7 @@
 
 
 namespace Curator\Persistence;
+use Curator\IntegrationConfig;
 
 /**
  * Class FilePersistence
@@ -20,7 +21,7 @@ class FilePersistence implements PersistenceInterface {
    * @param \Curator\Persistence\ReaderWriterLockInterface $lock
    *   The ReaderWriterLock service.
    */
-  public function __construct(FSAccessInterface $fs_access, ReaderWriterLockInterface $lock) {
+  public function __construct(FSAccessInterface $fs_access, ReaderWriterLockInterface $lock, IntegrationConfig $integration_config) {
 
   }
 

@@ -27,7 +27,7 @@ class PathSimplificationTraitTest extends \PHPUnit_Framework_TestCase {
     $this->pathParser = $parser;
   }
 
-  protected function getPathParser() {
+  public function getPathParser() {
     return $this->pathParser;
   }
 
@@ -116,6 +116,11 @@ class PathSimplificationTraitTest extends \PHPUnit_Framework_TestCase {
     self::assertEquals(
       './../kittens!',
       $this->simplifyPath("the/../../quick/brown/fox/../jumps/../../../kittens!")
+    );
+
+    self::assertEquals(
+      '/absolute',
+      $this->simplifyPath('/absolute/path/..')
     );
   }
 

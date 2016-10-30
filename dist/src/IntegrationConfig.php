@@ -21,7 +21,12 @@ class IntegrationConfig {
    */
   protected $taskBuilder;
 
-  protected $appRootPath;
+  /**
+   * @var string $siteRootPath
+   *   The path to the root of the site on the host filesystem or custom
+   *   filesystem read adapter.
+   */
+  protected $siteRootPath;
 
   protected $appVersion;
 
@@ -29,6 +34,14 @@ class IntegrationConfig {
 
   public function __construct() {
     $this->taskBuilder = NULL;
+  }
+
+  public function setSiteRootPath($site_root_path) {
+    $this->siteRootPath = $site_root_path;
+  }
+
+  public function getSiteRootPath() {
+    return $this->siteRootPath;
   }
 
   /**

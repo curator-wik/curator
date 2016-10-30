@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Curator Integration Tests (docker)" type="PHPUnitRunConfigurationType" factoryName="PHPUnit" singleton="true">
+    <CommandLine parameters="-dxdebug.remote_enable=0 -r passthru('./debug-integration-tests.sh');" workingDirectory="$PROJECT_DIR$" />
+    <TestRunner scope="XML" />
+    <option name="workingDirectory" value="$PROJECT_DIR$" />
+    <method />
+  </configuration>
+</component>

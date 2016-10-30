@@ -19,8 +19,8 @@ class ReadAdapterMock implements ReadAdapterInterface {
     return $this->_ls($directory);
   }
 
-  public function realPath($path, $relative_to = NULL) {
-    return $this->_realPath($path, $relative_to);
+  public function realPath($path, $relative_to = NULL, $resolve_symlink = TRUE) {
+    return $this->_realPath($path, $relative_to, TRUE, $resolve_symlink);
   }
 
   public function pathExists($path) {

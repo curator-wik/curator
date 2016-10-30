@@ -28,10 +28,18 @@ interface PathParserInterface {
   function getDirectorySeparators();
 
   /**
-   * @return string
-   *   Gets the preferred character(s) to use for directory separator.
+   * Replaces all character sequences in $path that are recognized as directory
+   * separators by this PathParserInterface with the primary directory separator
+   * character (or sequence) of the $target_style.
+   *
+   * @param $path
+   *   The path to normalize directory separators on.
+   * @param \Curator\FSAccess\PathParser\PathParserInterface|NULL $target_style
+   *   Optional PathParserInterface modeling the target style. If not provided,
+   *   this PathParserInterface implementation is assumed.
+   * @return mixed
    */
-  //function getPreferredDirectorySeparator();
+  function normalizeDirectorySeparators($path, PathParserInterface $target_style = NULL);
 
   /**
    * Translates a $path to the format used by another PathParserInterface.
@@ -59,4 +67,14 @@ interface PathParserInterface {
    *   Relative $paths will always result in a boolean FALSE.
    */
   function getAbsolutePrefix($path);
+
+  /**
+   * Extracts the final (deepest in tree) portion of a file path.
+   *
+   * @param $path
+   *   The full path to extract the base name from.
+   * @return string
+   *   The base name from the path.
+   */
+  function baseName($path);
 }

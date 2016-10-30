@@ -40,4 +40,21 @@ class AbstractPathParserTest extends \PHPUnit_Framework_TestCase {
     $this->translate('.', $p, $w, '.');
   }
 
+  public function testBaseName_posix() {
+    $p = new PosixPathParser();
+
+    $this->assertEquals('', $p->baseName(''));
+    $this->assertEquals('', $p->baseName('/'));
+    $this->assertEquals('fred', $p->baseName('fred'));
+    $this->assertEquals('b', $p->baseName('a/b/'));
+    $this->assertEquals('b', $p->baseName('a/b//'));
+    $this->assertEquals('c.txt', $p->baseName('/a/b/c.txt'));
+  }
+
+  public function testBaseName_windows() {
+    $w = new WindowsPathParser();
+
+    $this->assertEquals('rainbow', $w->baseName('c:\\somewhere/over/the\\rainbow'));
+  }
+
 }
