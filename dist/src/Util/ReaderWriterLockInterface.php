@@ -35,4 +35,15 @@ interface ReaderWriterLockInterface {
    *   exception.
    */
   function release();
+
+  /**
+   * Gets the current locking level that is held.
+   *
+   * @return int
+   *   One of the following PHP-defined constants:
+   *   - LOCK_UN: No lock is held.
+   *   - LOCK_SH: A shared lock is held.
+   *   - LOCK_EX: An exclusive lock is held.
+   */
+  function getLockLevel();
 }

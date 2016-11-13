@@ -25,7 +25,7 @@ if (! $app_manager->isPhar()) {
    * make copies of index.php and hit those. For example, to use standalone
    * mode, cp index.php curator.php. (Symlinks are resolved so won't work.)
    */
-  $app_manager->determineRunMode(basename(__FILE__));
+  $app_manager->determineRunMode(__FILE__);
   if ($app_manager->getRunMode() == \Curator\AppManager::RUNMODE_STANDALONE) {
     $app_manager->run();
     return;

@@ -36,6 +36,11 @@ class AppManager {
   protected $isPhar;
 
   /**
+   * @var string $curator_filename
+   */
+  protected $curator_filename;
+
+  /**
    * @var \Silex\Application $silexApp
    */
   protected $silexApp;
@@ -85,13 +90,31 @@ class AppManager {
     return $this->isPhar;
   }
 
-  public function determineRunMode($filename) {
+  /**
+   * Determines whether this is a standalone or embedded Curator, and records
+   * the path to the Curator source code on disk, in case it needs to be used
+   * as the fallback site root.
+   *
+   * Called exactly once, typically by the phar stub or alternatively by
+   * index.php when running from unarchived source tree.
+   *
+   * @param string $filename
+   *   The name of the file calling this function.
+   *   A .phar or .php.
+   * @param string $default_site_root
+   *   The path to use as the fallback site root should no IntegrationConfig
+   *   be provided. Should be the directory curator itself lives at.
+   */
+  public function determineRunMode($curator_filename) {
+    $filename = basename($curator_filename);
+    $curator_directory = dirname($curator_filename);
     if ($this->runMode !== self::RUNMODE_UNSET) {
       throw new \LogicException('Run mode already determined, cannot be changed.');
     }
-    if (! is_string($filename)) {
+    if (! is_string($curator_filename)) {
       throw new \InvalidArgumentException('AppManager::determineRunMode expects a string, got ' . gettype($filename));
     }
+    $this->curator_filename = $curator_filename;
 
     if (strtolower($filename) === 'curator.phar'
       || strtolower($filename) === 'curator.php') {
@@ -99,6 +122,12 @@ class AppManager {
     } else {
       $this->runMode = self::RUNMODE_EMBEDDED;
     }
+
+    $default_site_root = (array_key_exists('DOCUMENT_ROOT', $_SERVER) && !empty($_SERVER['DOCUMENT_ROOT'])) ?
+      $_SERVER['DOCUMENT_ROOT']
+      : $curator_directory;
+    // Record fallback site root in "null" configuration.
+    IntegrationConfig::getNullConfig()->setSiteRootPath($default_site_root);
   }
 
   public function getRunMode() {
@@ -122,6 +151,9 @@ class AppManager {
     if ($this->hasRun()) {
       throw new \LogicException('Curator has already been run().');
     }
+    if ($this->runMode === self::RUNMODE_UNSET) {
+      throw new \LogicException('Must call determineRunMode() before run().');
+    }
     if ($this->isPhar()) {
       set_include_path('phar://curator.phar');
     }
@@ -130,7 +162,11 @@ class AppManager {
     // Engage conversion of errors to ErrorExceptions.
     \Symfony\Component\Debug\ErrorHandler::register();
 
-    $app = new CuratorApplication($this->getConfiguration());
+
+    // Engage conversion of errors to ErrorExceptions.
+    \Symfony\Component\Debug\ErrorHandler::register();
+
+    $app = new CuratorApplication($this->getConfiguration(), $this->curator_filename);
 
     // For now, nobody's running this outside a phar that isn't a developer
     if (! $this->isPhar()) {

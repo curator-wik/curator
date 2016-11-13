@@ -2,6 +2,7 @@
 
 namespace Curator\Tests\Integration\FSAccess;
 
+use Curator\AppManager;
 use Curator\CuratorApplication;
 use Curator\IntegrationConfig;
 use \Curator\FSAccess\FSAccessManager;
@@ -15,7 +16,7 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
 
   function setUp() {
     // Re-initialize service container to provide default services.
-    $this->app = new CuratorApplication(IntegrationConfig::getNullConfig());
+    $this->app = new CuratorApplication(IntegrationConfig::getNullConfig(), AppManager::singleton());
     $this->app['fs_access.ftp_config'] = $this->app->share(function() {
       return new TestFtpConfigurationProvider();
     });
@@ -42,7 +43,7 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
    * @expectedExceptionMessage FTP server reports 553 Could not create file
    */
   function testFtpFileException() {
-    // TODO: Once multiple adapters exist, specify FTP
+    $this->app['fs_access.write_adapter'] = $this->app->raw('fs_access.write_adapter.ftp');
     /**
      * @var FSAccessManager $fs
      */

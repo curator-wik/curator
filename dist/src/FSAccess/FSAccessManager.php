@@ -4,7 +4,7 @@
 namespace Curator\FSAccess;
 
 
-class FSAccessManager {
+class FSAccessManager implements FSAccessInterface {
 
   /**
    * @var ReadAdapterInterface $readOps
@@ -291,7 +291,7 @@ class FSAccessManager {
     return $abs_path;
   }
 
-  protected function ensureTerminatingSeparator($path) {
+  public function ensureTerminatingSeparator($path) {
     $n_path = $this->readOps->getPathParser()->normalizeDirectorySeparators($path);
     foreach ($this->readOps->getPathParser()->getDirectorySeparators() as $sep) {
       if (strrpos($sep, $n_path) === strlen($n_path) - 1) {

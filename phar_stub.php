@@ -17,7 +17,7 @@ if (in_array('phar', stream_get_wrappers()) && class_exists('Phar', 0)) {
   $app_manager = AppManager::singleton();
   $app_manager->setIsPhar();
   // in phar stub, basename(__FILE__) == name of archive file
-  $app_manager->determineRunMode(basename(__FILE__));
+  $app_manager->determineRunMode(__FILE__);
 
   if ($app_manager->getRunMode() == AppManager::RUNMODE_STANDALONE) {
     $app_manager->run();

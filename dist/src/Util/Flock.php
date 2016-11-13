@@ -9,7 +9,7 @@ class Flock implements ReaderWriterLockInterface {
    * @var resource $fh
    *   File handle to perform advisory locks on.
    */
-  protected $fh;
+  protected $filename;
 
   /**
    * @var string $key
@@ -17,29 +17,41 @@ class Flock implements ReaderWriterLockInterface {
    */
   protected $key;
 
+  /**
+   * @var int $lock_level
+   *   The current lock level that is held (LOCK_UN/LOCK_SH/LOCK_EX.)
+   */
+  protected $lock_level;
+
   protected static $keys_to_handles = array();
 
   public function __construct($key) {
     $this->key = $key;
-    if (array_key_exists($key, static::$keys_to_handles)) {
-      $this->fh = static::$keys_to_handles[$key];
-    } else {
-      $filename = sys_get_temp_dir()
-        . DIRECTORY_SEPARATOR
-        . 'curator_lock_'
-        . md5($key);
+    $this->lock_level = LOCK_UN;
+    $this->filename = sys_get_temp_dir()
+      . DIRECTORY_SEPARATOR
+      . 'curator_lock_'
+      . md5($key);
+  }
 
-      $this->fh = fopen($filename, 'w+');
-      static::$keys_to_handles[$key] = $this->fh;
+  protected function getFileHandle() {
+    if (array_key_exists($this->key, static::$keys_to_handles)) {
+      return static::$keys_to_handles[$this->key];
+    } else {
+      $fh = fopen($this->filename, 'w+');
+      static::$keys_to_handles[$this->key] = $fh;
+      return $fh;
     }
   }
 
   protected function acquire($flags, &$would_block) {
     $would_block = FALSE;
+    $fh = $this->getFileHandle();
     try {
-      return flock($this->fh, $flags, $would_block);
+      return flock($fh, $flags, $would_block);
     } catch (\ErrorException $e) {
-      throw new \RuntimeException('Failed to acquire lock: ' . $e->getMessage(), 0, $e);
+      $r = print_r($fh, TRUE);
+      throw new \RuntimeException("Failed to acquire lock using $r: " . $e->getMessage(), 0, $e);
     }
   }
 
@@ -50,6 +62,8 @@ class Flock implements ReaderWriterLockInterface {
     if (! $locked && ! $would_block) {
       throw new \RuntimeException('Failed to acquire lock.', 1);
     } else {
+      // TODO: Investigate accuracy of this when already held LOCK_EX.
+      $this->lock_level = $locked ? LOCK_SH : LOCK_UN;
       return $locked;
     }
   }
@@ -61,6 +75,7 @@ class Flock implements ReaderWriterLockInterface {
     if (! $locked && ! $would_block) {
       throw new \RuntimeException('Failed to acquire lock.', 1);
     } else {
+      $this->lock_level = $locked ? LOCK_EX : LOCK_UN;
       return $locked;
     }
   }
@@ -71,10 +86,15 @@ class Flock implements ReaderWriterLockInterface {
     if (! $unlocked) {
       throw new \RuntimeException('Failed to release lock.', 1);
     } else {
-      fclose($this->fh);
+      fclose($this->getFileHandle());
       unset(static::$keys_to_handles[$this->key]);
+      $this->lock_level = LOCK_UN;
       return $unlocked;
     }
+  }
+
+  public function getLockLevel() {
+    return $this->lock_level;
   }
 
 }

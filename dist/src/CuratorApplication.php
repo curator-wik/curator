@@ -4,6 +4,7 @@
 namespace Curator;
 
 use Curator\Controller\SinglePageHostController;
+use Curator\FSAccess\DefaultFtpConfigurationProvider;
 use Curator\FSAccess\FSAccessManager;
 use Curator\FSAccess\PathParser\PosixPathParser;
 use Curator\FSAccess\PathParser\WindowsPathParser;
@@ -22,11 +23,24 @@ class CuratorApplication extends Application {
    */
   protected $integrationConfig;
 
-  public function __construct(IntegrationConfig $integration_config) {
+  /**
+   * @var string $curator_filename
+   *   The path to the file containing the first line of curator PHP code.
+   */
+  protected $curator_filename;
+
+  /**
+   * CuratorApplication constructor.
+   *
+   * @param \Curator\IntegrationConfig $integration_config
+   * @param string $curator_filename
+   *   The path to the file containing the first line of curator PHP code.
+   *   This file captures the value of __FILE__ and passes it along. It's
+   *   generally along the lines of /something/curator.phar.
+   */
+  public function __construct(IntegrationConfig $integration_config, $curator_filename) {
     parent::__construct();
     $this->integrationConfig = $integration_config;
-
-    // TODO: do we need this? It's in parameter syntax which is weird: $this['app_manager'] = $app_manager;
 
     $this->defineServices();
     $this->prepareRoutes();
@@ -51,6 +65,15 @@ class CuratorApplication extends Application {
     return $this->integrationConfig;
   }
 
+  /**
+   * The path to the file containing the first line of curator PHP code.
+   *
+   * @return string
+   */
+  public function getCuratorFilename() {
+    return $this->curator_filename;
+  }
+
   protected function prepareRoutes() {
     $this->get('/', '\Curator\Controller\SinglePageHostController::generateSinglePageHost');
   }
@@ -72,11 +95,9 @@ class CuratorApplication extends Application {
       }
     });
 
-    /*
-    $this['fs_access.ftp_config'] = $this->share(function() {
-      return new TempFtpConfigurationProvider();
+    $this['fs_access.ftp_config'] = $this->share(function($app) {
+      return new DefaultFtpConfigurationProvider($app['persistence']);
     });
-    */
 
     $ftp_adapter = $this->share(function($app) {
       return new StreamWrapperFtpAdapter($app['fs_access.ftp_config']);
@@ -91,21 +112,23 @@ class CuratorApplication extends Application {
     });
 
     $this['fs_access.read_adapter'] = $this->raw('fs_access.read_adapter.filesystem');
-    $this['fs_access.write_adapter'] = $this->raw('fs_access.write_adapter.ftp');
+    $this['fs_access.write_adapter'] = $this->raw('fs_access.write_adapter.filesystem');
 
     $this['persistence.lock'] = $this->share(function($app) {
       /**
        * @var CuratorApplication $app
        */
       $key = 'persistence:' . $app->getIntegrationConfig()->getSiteRootPath();
-      return new Flock($key);
+      return new Util\Flock($key);
     });
 
-    $this['persistence'] = $this->share(function($app) {
+    $this['persistence.file'] = $this->share(function($app) {
       /**
        * @var CuratorApplication $app
        */
-      return new FilePersistence($app['fs_access'], $app['persistence.lock'], $app->getIntegrationConfig());
+      $safe_extension = pathinfo($this->getCuratorFilename(), PATHINFO_EXTENSION);
+      return new FilePersistence($app['fs_access'], $app['persistence.lock'], $app->getIntegrationConfig(), $safe_extension);
     });
+    $this['persistence'] = $this->raw('persistence.file');
   }
 }
