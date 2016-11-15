@@ -11,6 +11,7 @@ use Curator\FSAccess\PathParser\WindowsPathParser;
 use Curator\FSAccess\StreamWrapperFileAdapter;
 use Curator\FSAccess\StreamWrapperFtpAdapter;
 use Curator\Persistence\FilePersistence;
+use Curator\Provider\APIControllerProvider;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -76,6 +77,7 @@ class CuratorApplication extends Application {
 
   protected function prepareRoutes() {
     $this->get('/', '\Curator\Controller\SinglePageHostController::generateSinglePageHost');
+    $this->mount('/api', new APIControllerProvider());
   }
 
   protected function defineServices() {
