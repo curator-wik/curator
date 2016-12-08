@@ -2,7 +2,7 @@
 
 $here = dirname(__FILE__);
 
-// Delete any existing phars kicking around from a past run
+echo "Deleting any existing phars kicking around from a past run\n";
 foreach (array_map(function($n) use($here) { return "$here/$n";},
   ['curator.phar', 'curator.phar.gz', 'curator.phar.bz2', 'backdrop-curator.phar']) as $path) {
   if (file_exists($path)) {
@@ -10,7 +10,10 @@ foreach (array_map(function($n) use($here) { return "$here/$n";},
   }
 }
 
+echo "Creating distribution version of vendor/ directory...\n";
+`composer install --no-dev --optimize-autoloader -d dist/`;
 
+echo "Creating new .phar and setting stub...\n";
 $p = new Phar(dirname(__FILE__) . '/curator.phar', 0, 'curator');
 $p->setStub(file_get_contents($here . '/phar_stub.php'));
 
@@ -48,8 +51,8 @@ class PharFilter extends FilterIterator {
       '/Test/',
       '/tests/',
       'phpunit',
-      '^composer\.json$',
-      '^composer\.lock$',
+      'composer\.json$',
+      'composer\.lock$',
       '^\.gitignore$',
       '^\.travis\.yml$',
     ];

@@ -12,7 +12,11 @@ use \Curator\AppManager;
 $web = '/web/index.php';
 
 if (in_array('phar', stream_get_wrappers()) && class_exists('Phar', 0)) {
-  require_once 'phar://curator/integration_include.php';
+  function load_integration_resources() {
+    $prefix = 'phar://curator';
+    require_once 'phar://curator/integration_include.php';
+  }
+  load_integration_resources();
 
   $app_manager = AppManager::singleton();
   $app_manager->setIsPhar();

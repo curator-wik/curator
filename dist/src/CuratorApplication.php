@@ -49,7 +49,11 @@ class CuratorApplication extends Application {
     /**
      * When no other route matches, see if it is a file under web/curator-gui
      */
-    $this->error(function(NotFoundHttpException $e, Request $request) {
+    $this->error(function(NotFoundHttpException $e) {
+      /**
+       * @var Request $request
+       */
+      $request = $this['request_stack']->getCurrentRequest();
       $file_response = SinglePageHostController::serveStaticFile($request);
       if ($file_response) {
         return $file_response;
@@ -77,7 +81,7 @@ class CuratorApplication extends Application {
 
   protected function prepareRoutes() {
     $this->get('/', '\Curator\Controller\SinglePageHostController::generateSinglePageHost');
-    $this->mount('/api', new APIControllerProvider());
+    // $this->mount('/api', new APIControllerProvider());
   }
 
   protected function defineServices() {

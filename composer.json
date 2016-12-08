@@ -10,11 +10,12 @@
   },
   "autoload": {
     "psr-4": {
-      "Curator\\": "dist/src/"
+      "Curator\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
+      "Curator\\": "dist/src/",
       "Curator\\Tests\\Unit\\": "tests/Unit/src",
       "Curator\\Tests\\Integration\\": "tests/Integration",
       "Curator\\Tests\\SharedTraits\\": "tests/SharedTraits"

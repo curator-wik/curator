@@ -156,11 +156,10 @@ class AppManager {
     }
     if ($this->isPhar()) {
       set_include_path('phar://curator.phar');
+      require __DIR__.'/../vendor/autoload.php';
+    } else {
+      require __DIR__.'/../../vendor/autoload.php';
     }
-    require __DIR__.'/../vendor/autoload.php';
-
-    // Engage conversion of errors to ErrorExceptions.
-    \Symfony\Component\Debug\ErrorHandler::register();
 
 
     // Engage conversion of errors to ErrorExceptions.

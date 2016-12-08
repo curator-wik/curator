@@ -1,4 +1,5 @@
 /vendor
+/dist/vendor
 /dist/web/curator.php
 /dist/web/curator-gui
 *.phar

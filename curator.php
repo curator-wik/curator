@@ -1,4 +1,9 @@
 <?php
+/**
+ * @file curator.php
+ * Fallback entry point for .phar distributions, when server does not support
+ * interpreting .phar files directly.
+ */
 
 use Curator\AppManager;
 use Curator\IntegrationConfig;
