@@ -12,7 +12,7 @@ $closure = function() {
   /**
    * @var AppManager $app_manager
    */
-  $app_manager = require './backdrop-curator.phar';
+  $app_manager = require './curator.phar';
 
   $config = new IntegrationConfig();
   $config->taskIs()

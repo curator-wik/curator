@@ -5,4 +5,4 @@ services:
 
 install: composer install
 script:
-  - ./run-tests.sh
+  - ./docker-all_tests.sh

@@ -9,6 +9,8 @@ if (!defined('PHP_VERSION_ID') || PHP_MAJOR_VERSION < 5 || (PHP_MAJOR_VERSION ==
 }
 
 require_once '../src/AppManager.php';
+require_once '../src/IntegrationConfig.php';
+
 /**
  * @var \Curator\AppManager $app_manager
  */

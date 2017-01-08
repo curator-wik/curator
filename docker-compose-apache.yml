@@ -1,0 +1,18 @@
+# Additional service definitions that host the source tree in an apache container, e.g. for development of the gui.
+version: '2'
+services:
+  host_7_0:
+      image: curatorwik/docker_host_env
+      environment:
+        - PHP_VERSION=7.0.14
+      volumes:
+        - .:/var/www/html
+        - /tmp:/host_tmp
+        - php-builds:/usr/local/phpenv/versions
+      ports:
+        - "8080:80"
+      tmpfs:
+        - /tmp
+
+volumes:
+  php-builds: {}
