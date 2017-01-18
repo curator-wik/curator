@@ -7,3 +7,4 @@
 *.phar.bz2
 /phpdoc.xml
 /phpdoc/
+/.idea/workspace.xml
