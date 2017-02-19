@@ -8,6 +8,11 @@ use Curator\IntegrationConfig;
 
 class CuratorApplicationTest extends \PHPUnit_Framework_TestCase  {
   public function testCuratorApplicationInstantiates() {
-    new CuratorApplication(IntegrationConfig::getNullConfig(), AppManager::singleton());
+    /**
+     * @var AppManager $app_manager
+     */
+    $app_manager = require __DIR__ . '/../../../dist/web/index.php';
+    $app = $app_manager->createApplication();
+    $this->assertInstanceOf('Curator\CuratorApplication', $app);
   }
 }

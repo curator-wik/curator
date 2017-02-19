@@ -1,12 +1,16 @@
 {
+  "type": "project",
   "require": {
     "php": ">=5.4.0",
+    "mbaynton/batch-framework": "dev-master",
     "silex/silex": "~1.3",
     "symfony/translation": "~2.8",
     "yetanotherape/diff-match-patch": "~1.0"
   },
   "require-dev": {
-    "phpunit/phpunit": "~4.8"
+    "phpunit/phpunit": "~4.8",
+    "symfony/browser-kit": "^2.8",
+    "symfony/css-selector": "^2.8"
   },
   "autoload": {
     "psr-4": {
@@ -18,9 +22,16 @@
       "Curator\\": "dist/src/",
       "Curator\\Tests\\Unit\\": "tests/Unit/src",
       "Curator\\Tests\\Integration\\": "tests/Integration",
-      "Curator\\Tests\\SharedTraits\\": "tests/SharedTraits"
+      "Curator\\Tests\\Functional\\": "tests/Functional",
+      "Curator\\Tests\\Shared\\": "tests/Shared"
     }
   },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/mbaynton/batch-framework"
+    }
+  ],
   "config": {
     "platform": {
       "php": "5.4.0"

@@ -3,7 +3,9 @@
 
 namespace Curator;
 
-use Curator\Controller\SinglePageHostController;
+use Curator\Authorization\InstallationAge;
+use Curator\Batch\RunnerService;
+use Curator\Controller\StaticContentController;
 use Curator\FSAccess\DefaultFtpConfigurationProvider;
 use Curator\FSAccess\FSAccessManager;
 use Curator\FSAccess\PathParser\PosixPathParser;
@@ -11,7 +13,8 @@ use Curator\FSAccess\PathParser\WindowsPathParser;
 use Curator\FSAccess\StreamWrapperFileAdapter;
 use Curator\FSAccess\StreamWrapperFtpAdapter;
 use Curator\Persistence\FilePersistence;
-use Curator\Provider\APIv1Provider;
+use Curator\Status\StatusService;
+use Curator\Authorization\AuthorizationMiddleware;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -33,16 +36,26 @@ class CuratorApplication extends Application {
   /**
    * CuratorApplication constructor.
    *
-   * @param \Curator\IntegrationConfig $integration_config
+   * @param AppManager $app_manager
    * @param string $curator_filename
    *   The path to the file containing the first line of curator PHP code.
-   *   This file captures the value of __FILE__ and passes it along. It's
+   *   Capture the value of __FILE__ and pass it along. It's
    *   generally along the lines of /something/curator.phar.
    */
-  public function __construct(IntegrationConfig $integration_config, $curator_filename) {
+  public function __construct(AppManager $app_manager, $curator_filename) {
     parent::__construct();
-    $this->integrationConfig = $integration_config;
+    $this->integrationConfig = $app_manager->getConfiguration();
+    $this->curator_filename = $curator_filename;
+    $this->configureDefaultTimezone();
+    $this->register(new \Silex\Provider\SessionServiceProvider(), ['session.test' => getenv('PHPUNIT-TEST') === '1']);
+    $this->register(new \Silex\Provider\ServiceControllerServiceProvider());
+    $this->register(new \Silex\Provider\TranslationServiceProvider(), array(
+      'locale_fallbacks' => array('en'),
+    ));
 
+    $this['app_manager'] = $this->share(function() use($app_manager) {
+      return $app_manager;
+    });
     $this->defineServices();
     $this->prepareRoutes();
 
@@ -54,13 +67,22 @@ class CuratorApplication extends Application {
        * @var Request $request
        */
       $request = $this['request_stack']->getCurrentRequest();
-      $file_response = SinglePageHostController::serveStaticFile($request);
+      $file_response = $this['static_content_controller']->serveStaticFile($request);
       if ($file_response) {
         return $file_response;
       } else {
         return NULL;
       }
     }, -4);
+  }
+
+  protected function configureDefaultTimezone() {
+    if (
+      ! is_string($this->integrationConfig->getDefaultTimeZone())
+      || ! date_default_timezone_set($this->integrationConfig->getDefaultTimezone())
+    ) {
+      date_default_timezone_set('UTC');
+    }
   }
 
   /**
@@ -80,17 +102,27 @@ class CuratorApplication extends Application {
   }
 
   protected function prepareRoutes() {
-    $this->get('/', '\Curator\Controller\SinglePageHostController::generateSinglePageHost');
-    $this->mount('/api/v1', new APIv1Provider());
+    $this->get('/', 'static_content_controller:generateSinglePageHost');
+    $this->mount('/api/v1', new Provider\APIv1\UnauthenticatedEndpointsProvider());
+    $this->mount('/api/v1', new Provider\APIv1\AuthenticatedOrUnconfiguredEndpointsProvider());
   }
 
   protected function defineServices() {
-    $this->register(new \Silex\Provider\TranslationServiceProvider(), array(
-      'locale_fallbacks' => array('en'),
-    ));
+    $this['static_content_controller'] = $this->share(function($app) {
+      return new StaticContentController($app['app_manager']);
+    });
+
+    $this['authorization.middleware'] = $this->share(function($app) {
+      return new AuthorizationMiddleware($app['session'], $app['status'], $app['persistence'], $app['app_manager'], $app['authorization.installation_age'], $this->getCuratorFilename());
+    });
+    $this['authorization.installation_age'] = function() {
+      return new InstallationAge();
+    };
 
     $this['fs_access'] = $this->share(function($app) {
-      return new FSAccessManager($app['fs_access.read_adapter'], $app['fs_access.write_adapter']);
+      $manager = new FSAccessManager($app['fs_access.read_adapter'], $app['fs_access.write_adapter']);
+      $manager->setWorkingPath($this->integrationConfig->getSiteRootPath());
+      return $manager;
     });
 
     $this['fs_access.path_parser.system'] = $this->share(function() {
@@ -136,5 +168,13 @@ class CuratorApplication extends Application {
       return new FilePersistence($app['fs_access'], $app['persistence.lock'], $app->getIntegrationConfig(), $safe_extension);
     });
     $this['persistence'] = $this->raw('persistence.file');
+
+    $this['status'] = $this->share(function($app) {
+      return new StatusService($app['persistence'], $app['session']);
+    });
+
+    $this['batch.runner_service'] = function($app) {
+      return new RunnerService($app['persistence'], $app['status']);
+    };
   }
 }

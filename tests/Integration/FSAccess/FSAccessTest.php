@@ -16,7 +16,8 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
 
   function setUp() {
     // Re-initialize service container to provide default services.
-    $this->app = new CuratorApplication(IntegrationConfig::getNullConfig(), AppManager::singleton());
+    $app_manager = new AppManager(AppManager::RUNMODE_STANDALONE);
+    $this->app = $app_manager->createApplication();
     $this->app['fs_access.ftp_config'] = $this->app->share(function() {
       return new TestFtpConfigurationProvider();
     });

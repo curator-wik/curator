@@ -24,12 +24,7 @@ namespace Curator;
  *
  * @package Curator
  */
-class AppManager {
-  /**
-   * @var AppManager $singleton
-   */
-  private static $singleton = NULL;
-
+class  AppManager {
   /**
    * @var bool $isPhar
    */
@@ -61,21 +56,24 @@ class AppManager {
   const RUNMODE_STANDALONE = 1;
   const RUNMODE_EMBEDDED   = 2;
 
-  protected function __construct() {
+
+  /**
+   * AppManager constructor.
+   *   Should be used only by self::create(), and by tests.
+   *
+   * @param $runmode
+   */
+  public function __construct($runmode) {
     // Until a phar stub tells us otherwise, we're not one.
     $this->isPhar = FALSE;
-    $this->runMode = self::RUNMODE_UNSET;
+    $this->runMode = $runmode;
     $this->hasRun = FALSE;
     $this->silexApp = NULL;
     $this->integration_configuration = NULL;
   }
 
-  public static function singleton() {
-    if (AppManager::$singleton == NULL) {
-      AppManager::$singleton = new static();
-    }
-
-    return AppManager::$singleton;
+  public static function create() {
+    return new static(self::RUNMODE_UNSET);
   }
 
   public function setIsPhar() {
@@ -131,13 +129,10 @@ class AppManager {
   }
 
   public function getRunMode() {
-    if ($this->runMode === self::RUNMODE_UNSET) {
-      throw new \LogicException('Precondition violation: getRunMode() called before determineRunMode()');
-    }
     return $this->runMode;
   }
 
-  public function applyConfiguration(IntegrationConfig $integration_configuration) {
+  public function applyIntegrationConfig(IntegrationConfig $integration_configuration) {
     $this->integration_configuration = $integration_configuration;
   }
 
@@ -148,12 +143,28 @@ class AppManager {
   }
 
   public function run() {
-    if ($this->hasRun()) {
-      throw new \LogicException('Curator has already been run().');
-    }
     if ($this->runMode === self::RUNMODE_UNSET) {
       throw new \LogicException('Must call determineRunMode() before run().');
     }
+
+    if ($this->hasRun()) {
+      throw new \LogicException('Curator has already been run().');
+    }
+
+    if (php_sapi_name() == 'cli') {
+      die("Curator cannot be used from the command line.\n");
+    }
+
+    if (!defined('PHP_VERSION_ID') || PHP_MAJOR_VERSION < 5 || (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION < 4)) {
+      die("Curator requires PHP 5.4+\n");
+    }
+
+    $this->silexApp = $this->createApplication();
+
+    $this->silexApp->run();
+  }
+
+  public function createApplication() {
     if ($this->isPhar()) {
       set_include_path('phar://curator.phar');
       require __DIR__.'/../vendor/autoload.php';
@@ -165,21 +176,17 @@ class AppManager {
     // Engage conversion of errors to ErrorExceptions.
     \Symfony\Component\Debug\ErrorHandler::register();
 
-    $app = new CuratorApplication($this->getConfiguration(), $this->curator_filename);
+    $app = new CuratorApplication($this, $this->curator_filename);
 
     // For now, nobody's running this outside a phar that isn't a developer
     if (! $this->isPhar()) {
       $app['debug'] = TRUE;
     }
-
-    $this->silexApp = $app;
-
-    $app->run();
+    return $app;
   }
 
   public function hasRun() {
     return $this->silexApp !== NULL;
   }
-
 
 }

@@ -32,6 +32,11 @@ class IntegrationConfig {
 
   protected $siteName;
 
+  /**
+   * @var string $defaultTimeZone
+   */
+  protected $defaultTimeZone;
+
   public function __construct() {
     $this->taskBuilder = NULL;
   }
@@ -42,6 +47,14 @@ class IntegrationConfig {
 
   public function getSiteRootPath() {
     return $this->siteRootPath;
+  }
+
+  public function setDefaultTimezone($tz_string) {
+    $this->defaultTimeZone = $tz_string;
+  }
+
+  public function getDefaultTimezone() {
+    return $this->defaultTimeZone;
   }
 
   /**

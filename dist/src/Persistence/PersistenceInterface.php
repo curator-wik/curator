@@ -48,6 +48,15 @@ interface PersistenceInterface {
   function end();
 
   /**
+   * Decrements a counter of beginReadOnly() / beginReadWrite() calls, and
+   * releases any locks if the counter reaches 0.
+   *
+   * @return void
+   * @throws PersistenceException
+   */
+  function popEnd();
+
+  /**
    * Sets (or overwrites) a key and its corresponding value.
    *
    * Calls to this method must occur after calling beginReadWrite() and before

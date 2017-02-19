@@ -7,7 +7,7 @@ use Curator\AppManager;
 use Curator\CuratorApplication;
 use Curator\FSAccess\FSAccessInterface;
 use Curator\IntegrationConfig;
-use Curator\Tests\SharedTraits\Persistence\PersistenceTestsTrait;
+use Curator\Tests\Shared\Traits\Persistence\PersistenceTestsTrait;
 
 class PersistenceTest extends \PHPUnit_Framework_TestCase {
   /**
@@ -20,9 +20,14 @@ class PersistenceTest extends \PHPUnit_Framework_TestCase {
   public function setUp() {
     parent::setUp();
 
+    /**
+     * @var AppManager $app_manager
+     */
+    $app_manager = require __DIR__ . '/../../../dist/web/index.php';
     $integration_config = new IntegrationConfig();
     $integration_config->setSiteRootPath(self::TEST_PATH);
-    $this->appContainer = new CuratorApplication($integration_config, AppManager::singleton());
+    $app_manager->applyIntegrationConfig($integration_config);
+    $this->appContainer = $app_manager->createApplication();
     // Always test file persistence for now, until there's others
     $this->appContainer['persistence'] = $this->appContainer->raw('persistence.file');
 

@@ -42,6 +42,12 @@ class FilePersistence implements PersistenceInterface {
   protected $lock;
 
   /**
+   * @var int $lock_counter
+   *   Number of repeated calls to beginReadOnly() and/or beginReadWrite().
+   */
+  protected $lock_counter;
+
+  /**
    * @var IntegrationConfig $integration_config
    *   Injected dependency.
    */
@@ -81,7 +87,8 @@ class FilePersistence implements PersistenceInterface {
     $this->integration_config = $integration_config;
 
     $this->filename = $this->fs_access->ensureTerminatingSeparator($this->integration_config->getSiteRootPath())
-      . '.curator-data' . $safe_extension;
+      . '.curator-data.' . $safe_extension;
+    $this->lock_counter = 0;
   }
 
   protected function ensureValuesDictionary() {
@@ -150,18 +157,34 @@ class FilePersistence implements PersistenceInterface {
   }
 
   public function beginReadOnly() {
-    try {
-      $this->lock->acquireShared();
-    } catch (\Exception $e) {
-      throw new PersistenceException('An error occurred while attempting to obtain a read lock. Inner exception may have specifics.', 0, $e);
+    $this->lock_counter++;
+    if ($this->lock->getLockLevel() == LOCK_UN) {
+      try {
+        $this->lock->acquireShared();
+      } catch (\Exception $e) {
+        throw new PersistenceException('An error occurred while attempting to obtain a read lock. Inner exception may have specifics.', 0, $e);
+      }
     }
   }
 
   public function beginReadWrite() {
-    try {
-      $this->lock->acquireExclusive();
-    } catch (\Exception $e) {
-      throw new PersistenceException('An error occurred while attempting to obtain a write lock. Inner exception may have specifics.', 0, $e);
+    $this->lock_counter++;
+    if ($this->lock->getLockLevel() != LOCK_EX) {
+      try {
+        $this->lock->acquireExclusive();
+      } catch (\Exception $e) {
+        throw new PersistenceException('An error occurred while attempting to obtain a write lock. Inner exception may have specifics.', 0, $e);
+      }
+    }
+  }
+
+  public function popEnd() {
+    if ($this->lock_counter == 0) {
+      return;
+    } else if ($this->lock_counter == 1) {
+      $this->end();
+    } else {
+      $this->lock_counter--;
     }
   }
 
@@ -184,5 +207,6 @@ class FilePersistence implements PersistenceInterface {
 
     $this->_values = NULL;
     $this->lock->release();
+    $this->lock_counter = 0;
   }
 }

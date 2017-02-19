@@ -9,6 +9,8 @@ docker-compose ps -q | xargs docker inspect -f '{{ .Name }} exited with code {{ 
 failed_containers=`docker-compose ps -q | xargs docker inspect -f '{{ .State.ExitCode }}' | grep -v '^0$' | wc -l`
 if [ $failed_containers -eq '0' ]
 then
+  echo
+  echo " *** Tests passed against all versions. ***"
   exit 0
 else
   echo ""

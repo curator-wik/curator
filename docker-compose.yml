@@ -1,9 +1,21 @@
 version: '2'
 services:
+  phpunit_runner_7_1:
+    image: curatorwik/docker_test_env
+    environment:
+      - PHP_VERSION=7.1.0
+      - PHPUNIT=/usr/local/bin/phpunit-5.5
+    volumes:
+      - .:/curator
+      - /tmp:/host_tmp
+      - php-builds:/usr/local/phpenv/versions
+    tmpfs:
+      - /tmp
+
   phpunit_runner_7_0:
     image: curatorwik/docker_test_env
     environment:
-      - PHP_VERSION=7.0.12
+      - PHP_VERSION=7.0.14
       - PHPUNIT=/usr/local/bin/phpunit-5.5
     volumes:
       - .:/curator
@@ -15,7 +27,7 @@ services:
   phpunit_runner_5_6:
     image: curatorwik/docker_test_env
     environment:
-      - PHP_VERSION=5.6.25
+      - PHP_VERSION=5.6.29
       - PHPUNIT=/usr/local/bin/phpunit-5.5
     volumes:
       - .:/curator

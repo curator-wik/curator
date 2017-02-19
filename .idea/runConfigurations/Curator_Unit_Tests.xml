@@ -1,8 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Curator Unit Tests" type="PHPUnitRunConfigurationType" factoryName="PHPUnit">
-    <CommandLine workingDirectory="$PROJECT_DIR$" />
-    <TestRunner configuration_file="./phpunit.xml.dist" directory="$PROJECT_DIR$/tests" scope="XML" options="--testsuite &quot;Curator Unit Tests&quot;" />
-    <option name="workingDirectory" value="$PROJECT_DIR$" />
-    <method />
-  </configuration>
-</component>

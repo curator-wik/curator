@@ -2,8 +2,10 @@
 
 
 namespace Curator\APIController\v1;
-use Curator\APIModel\v1\StatusModel;
+use Curator\APIModel\v1\StatusModel as APIStatus;
+use Curator\Status;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Class StatusController
@@ -13,8 +15,18 @@ use Symfony\Component\HttpFoundation\JsonResponse;
  *   that must be satisfied before code can be installed.
  */
 class StatusController {
+  /**
+   * @var Status\StatusService $statusService
+   */
+  private $statusService;
+
+  function __construct(Status\StatusService $statusService) {
+    $this->statusService = $statusService;
+  }
+
   public function handleRequest() {
-    $status = new StatusModel();
-    return new JsonResponse($status);
+    $status = $this->statusService->getStatus();
+    $response = new APIStatus($status);
+    return new JsonResponse($response);
   }
 }

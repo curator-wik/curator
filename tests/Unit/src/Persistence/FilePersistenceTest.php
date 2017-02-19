@@ -4,11 +4,11 @@ namespace Curator\Tests\Unit\Persistence;
 use Curator\FSAccess\FSAccessManager;
 use Curator\IntegrationConfig;
 use Curator\Persistence\FilePersistence;
-use Curator\Tests\SharedTraits\Persistence\PersistenceTestsTrait;
+use Curator\Tests\Shared\Traits\Persistence\PersistenceTestsTrait;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
-use Curator\Tests\Unit\Util\Mocks\ReaderWriterLockMock;
+use Curator\Tests\Shared\Mocks\ReaderWriterLockMock;
 
 class FilePersistenceTest extends \PHPUnit_Framework_TestCase {
 

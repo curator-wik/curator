@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Curator\Tests\SharedTraits\Persistence;
+namespace Curator\Tests\Shared\Traits\Persistence;
 
 
 use Curator\Persistence\PersistenceInterface;

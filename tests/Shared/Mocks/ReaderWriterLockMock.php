@@ -1,6 +1,6 @@
 <?php
 
-namespace Curator\Tests\Unit\Util\Mocks;
+namespace Curator\Tests\Shared\Mocks;
 
 use Curator\Util\ReaderWriterLockInterface;
 
@@ -12,7 +12,9 @@ class ReaderWriterLockMock implements ReaderWriterLockInterface {
   }
 
   function acquireShared($nonblocking = FALSE) {
-    $this->lock_level = LOCK_SH;
+    if ($this->lock_level != LOCK_EX) {
+      $this->lock_level = LOCK_SH;
+    }
     return TRUE;
   }
 

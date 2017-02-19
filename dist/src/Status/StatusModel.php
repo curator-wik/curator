@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Curator\APIModel\v1;
+namespace Curator\Status;
 
 
 class StatusModel {
@@ -23,11 +23,16 @@ class StatusModel {
    */
   public $is_authenticated = FALSE;
 
-  public function __construct(\Curator\Status\StatusModel $copy_from = NULL) {
-    if ($copy_from !== NULL) {
-      $this->ready = $copy_from->ready;
-      $this->is_configured = $copy_from->is_configured;
-      $this->is_authenticated = $copy_from->is_authenticated;
-    }
-  }
+  /**
+   * @var bool $alarm_signal_works
+   *   Whether pcntl_alarm and related functions are available & operational.
+   */
+  public $alarm_signal_works = FALSE;
+
+  /**
+   * @var bool $flush_works
+   *   Whether the built-in flush() function is operational in this environment.
+   */
+  public $flush_works = FALSE;
+
 }

@@ -9,9 +9,18 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-class SinglePageHostController {
+class StaticContentController {
 
-  public static function generateSinglePageHost(Request $request) {
+  /**
+   * @var AppManager $app_manager
+   */
+  protected $app_manager;
+
+  public function __construct(AppManager $app_manager) {
+    $this->app_manager = $app_manager;
+  }
+
+  public function generateSinglePageHost(Request $request) {
     /*
     $template = <<<TPL
 <!doctype html>
@@ -61,7 +70,7 @@ TPL;
     }
   }
 
-  public static function serveStaticFile(Request $request) {
+  public function serveStaticFile(Request $request) {
     // See if the request matches a file that we have
     $root = static::getGuiPath();
     $presumed_path = sprintf('%s%s', $root, urldecode($request->getPathInfo()));
@@ -87,7 +96,7 @@ TPL;
     );
   }
 
-  public static function mapExtToMimeType($filename) {
+  public function mapExtToMimeType($filename) {
     $map = [
       'js'    => 'text/javascript',
       'css'   => 'text/css',
@@ -106,10 +115,8 @@ TPL;
     return NULL;
   }
 
-  protected static function getGuiPath() {
-    $app_manager = AppManager::singleton();
-
-    if ($app_manager->isPhar()) {
+  protected function getGuiPath() {
+    if ($this->app_manager->isPhar()) {
       $root = 'phar://curator.phar/web/curator-gui';
     } else {
       $root = 'curator-gui';
