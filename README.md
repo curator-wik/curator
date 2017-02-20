@@ -64,6 +64,18 @@ and [curator-gui](https://github.com/curator-wik/curator-gui). To build a .phar 
  4. Your server likely is not configured to run .phar archives directly from web requests, but
     you can try hitting /curator.phar in your browser. If that doesn't work, hit the script /curator.php
     which basically `include`s the phar and launches the application it contains.
+
+## System Requirements
+ * PHP 5.4.0 or newer on a Linux operating system. Windows is not officially supported at
+   this time.
+ * Ability for the webserver to write to the system's temporary file location (for 
+   temporary storage of update packages.)
+ * Ability to write in the application's document root, via either FTP or mounted
+   filesystem.
+
+Your installation of PHP must also support extraction of either .zip or .tar format
+archive files. Zip is marginally preferable as it is an indexed format offering better 
+random access performance.
  
 ## License
 MIT
