@@ -2,6 +2,7 @@
 
 
 namespace Curator\Cpkg;
+use Curator\AppTargeting\TargeterInterface;
 
 /**
  * Class BatchTaskTranslationService
@@ -9,6 +10,12 @@ namespace Curator\Cpkg;
  *   to apply the archive.
  */
 class BatchTaskTranslationService {
+
+  /**
+   * @var TargeterInterface $app_targeter
+   */
+  protected $app_targeter;
+
   /**
    * @var array $versionCache
    *   Keyed by phar path.
@@ -21,32 +28,77 @@ class BatchTaskTranslationService {
    */
   protected $prevVersionsCache = [];
 
+  public function __construct(TargeterInterface $app_targeter) {
+    $this->app_targeter = $app_targeter;
+  }
+
   /**
    * @param string $path_to_cpkg
    *
    * @throws \UnexpectedValueException
    *   When the $path_to_cpkg does not reference a valid cpkg archive.
+   * @throws \InvalidArgumentException
+   *   When the cpkg does not contain upgrades for the application.
    */
   public function makeBatchTasks($path_to_cpkg) {
-    /*
-     * Up to two tasks may be scheduled, in this order, depending on the
-     * contents of the cpkg:
-     * 1. Deletions and renames
-     * 2. Verbatim file writes and patches
-     */
     $phar = new \PharData($path_to_cpkg);
     $phar_path = $phar->getPath();
     if (empty($phar_path)) {
       throw new \LogicException('Missing path of already-opened cpkg.');
     }
-    $this->validateCpkg($phar);
+
+    $this->validateCpkgStructure($phar);
+    $this->validateCpkgIsApplicable($phar);
+
+    /*
+     * Up to two tasks may be scheduled per upgrade, in this order, depending on
+     * the contents of the cpkg:
+     * 1. Deletions and renames
+     * 2. Verbatim file writes and patches
+     */
+
+
+  }
+
+  protected function validateCpkgIsApplicable(\PharData $phar) {
+    $cpkg_application = trim($phar['application']->getContent());
+    if (strcasecmp($cpkg_application, $this->app_targeter->getAppName()) !== 0) {
+      throw new \InvalidArgumentException(
+        sprintf('The update package is for "%s", but you are running %s.',
+          $cpkg_application,
+          $this->app_targeter->getAppName()
+        )
+      );
+    }
+
+    $current_version = (string) $this->app_targeter->getCurrentVersion();
+
+    if ($this->getVersion() === $current_version) {
+      throw new \InvalidArgumentException('The update the package provides has already been applied.');
+    }
+
+    $prev_versions = $this->getPrevVersions($phar);
+    if (! in_array($current_version, $prev_versions)) {
+      if (count($prev_versions) == 1) {
+        $supported_range = 'version ' . reset($prev_versions);
+      } else {
+        $supported_range = sprintf('versions %s through %s', reset($prev_versions), end($prev_versions));
+      }
+      throw new \InvalidArgumentException(
+        sprintf('The update package does not contain updates to your version of %s. You are running version %s; the package upgrades %s.',
+          $this->app_targeter->getAppName(),
+          $this->app_targeter->getCurrentVersion(),
+          $supported_range
+        )
+      );
+    }
   }
 
   /**
    * @param \PharData $phar
    * @throws \UnexpectedValueException
    */
-  protected function validateCpkg(\PharData $phar) {
+  protected function validateCpkgStructure(\PharData $phar) {
     $required_files = [
       'application' => '/.+/',
       'package-format-version' => '/^(1\.0)?\s+$/',

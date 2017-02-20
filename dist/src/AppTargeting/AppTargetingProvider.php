@@ -1,9 +1,10 @@
 <?php
 
 namespace Curator\AppTargeting;
+use Curator\CuratorApplication;
+use Silex\Application;
+use Silex\ServiceProviderInterface;
 
-
-use Pimple\ServiceProviderInterface;
 
 /**
  * Class AppTargetingProvider
@@ -17,9 +18,9 @@ class AppTargetingProvider implements ServiceProviderInterface {
   /**
    * @inheritdoc
    */
-  public function register(Container $c) {
+  public function register(Application $c) {
     $c['app_targeting.app_detector'] = function ($c) {
-      return new Detector();
+      return new Detector($c['integration_config']);
     };
   }
 }

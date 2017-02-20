@@ -18,8 +18,8 @@ class Detector {
    */
   protected $request_path;
 
-  function __construct(IntegrationConfigInterface $wit_config, $request_path) {
-    $this->curatorConfig = $wit_config;
+  function __construct(IntegrationConfigInterface $curator_config, $request_path) {
+    $this->curatorConfig = $curator_config;
     $this->request_path = $request_path;
   }
 

@@ -22,12 +22,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 class CuratorApplication extends Application {
 
   /**
-   * @var IntegrationConfig $integrationConfig
-   *   Configuration from an application integration script, if present.
-   */
-  protected $integrationConfig;
-
-  /**
    * @var string $curator_filename
    *   The path to the file containing the first line of curator PHP code.
    */
@@ -44,7 +38,7 @@ class CuratorApplication extends Application {
    */
   public function __construct(AppManager $app_manager, $curator_filename) {
     parent::__construct();
-    $this->integrationConfig = $app_manager->getConfiguration();
+    $this['integration_config'] = $app_manager->getConfiguration();
     $this->curator_filename = $curator_filename;
     $this->configureDefaultTimezone();
     $this->register(new \Silex\Provider\SessionServiceProvider(), ['session.test' => getenv('PHPUNIT-TEST') === '1']);
@@ -78,18 +72,11 @@ class CuratorApplication extends Application {
 
   protected function configureDefaultTimezone() {
     if (
-      ! is_string($this->integrationConfig->getDefaultTimeZone())
-      || ! date_default_timezone_set($this->integrationConfig->getDefaultTimezone())
+      ! is_string($this['integration_config']->getDefaultTimeZone())
+      || ! date_default_timezone_set($this['integration_config']->getDefaultTimezone())
     ) {
       date_default_timezone_set('UTC');
     }
-  }
-
-  /**
-   * @return \Curator\IntegrationConfig
-   */
-  public function getIntegrationConfig() {
-    return $this->integrationConfig;
   }
 
   /**
@@ -121,7 +108,7 @@ class CuratorApplication extends Application {
 
     $this['fs_access'] = $this->share(function($app) {
       $manager = new FSAccessManager($app['fs_access.read_adapter'], $app['fs_access.write_adapter']);
-      $manager->setWorkingPath($this->integrationConfig->getSiteRootPath());
+      $manager->setWorkingPath($this['integration_config']->getSiteRootPath());
       return $manager;
     });
 
@@ -156,7 +143,7 @@ class CuratorApplication extends Application {
       /**
        * @var CuratorApplication $app
        */
-      $key = 'persistence:' . $app->getIntegrationConfig()->getSiteRootPath();
+      $key = 'persistence:' . $this['integration_config']->getSiteRootPath();
       return new Util\Flock($key);
     });
 
@@ -165,7 +152,7 @@ class CuratorApplication extends Application {
        * @var CuratorApplication $app
        */
       $safe_extension = pathinfo($this->getCuratorFilename(), PATHINFO_EXTENSION);
-      return new FilePersistence($app['fs_access'], $app['persistence.lock'], $app->getIntegrationConfig(), $safe_extension);
+      return new FilePersistence($app['fs_access'], $app['persistence.lock'], $app['integration_config'], $safe_extension);
     });
     $this['persistence'] = $this->raw('persistence.file');
 
