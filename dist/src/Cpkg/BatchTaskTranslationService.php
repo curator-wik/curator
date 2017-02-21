@@ -116,7 +116,7 @@ class BatchTaskTranslationService {
           throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Data in %s file is corrupt or unsupported.'));
         }
       } catch (\BadMethodCallException $e) {
-        throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Required file %s is absent from the cpkg structure.', $filename), 0, $e);
+        throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Required file "%s" is absent from the cpkg structure.', $filename), 0, $e);
       }
     }
 
