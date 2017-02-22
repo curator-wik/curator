@@ -64,6 +64,33 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
   }
 
   /**
+   * @expectedException \UnexpectedValueException
+   * @expectedExceptionMessage Data in version file is corrupt or unsupported
+   */
+  public function testInvalidVersionFileIsRejected() {
+    $sut = $this->sutFactory();
+    $sut->makeBatchTasks($this->p('invalid-version.zip'));
+  }
+
+  /**
+   * @expectedException \UnexpectedValueException
+   * @expectedExceptionMessage Data in prev-versions-inorder file is corrupt or unsupported
+   */
+  public function testEmptyPrevVersionsFileIsRejected() {
+    $sut = $this->sutFactory();
+    $sut->makeBatchTasks($this->p('empty-prev-versions.zip'));
+  }
+
+  /**
+   * @expectedException \UnexpectedValueException
+   * @expectedExceptionMessage Data in prev-versions-inorder file is corrupt or unsupported
+   */
+  public function testInvalidPrevVersionsFileIsRejected() {
+    $sut = $this->sutFactory();
+    $sut->makeBatchTasks($this->p('invalid-prev-versions.zip'));
+  }
+
+  /**
    * No assertions currently, but the absence of exceptions is worth testing.
    */
   public function testMinimalValidCpkg() {
