@@ -73,7 +73,7 @@ class BatchTaskTranslationService {
 
     $current_version = (string) $this->app_targeter->getCurrentVersion();
 
-    if ($this->getVersion() === $current_version) {
+    if ($this->getVersion($phar) === $current_version) {
       throw new \InvalidArgumentException('The update the package provides has already been applied.');
     }
 
@@ -113,7 +113,7 @@ class BatchTaskTranslationService {
          */
         $finfo = $phar[$filename];
         if (! preg_match($valid_pattern, $finfo->getContent())) {
-          throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Data in %s file is corrupt or unsupported.'));
+          throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Data in %s file is corrupt or unsupported.', $filename));
         }
       } catch (\BadMethodCallException $e) {
         throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Required file "%s" is absent from the cpkg structure.', $filename), 0, $e);

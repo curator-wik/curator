@@ -53,4 +53,23 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
     $sut = $this->sutFactory();
     $sut->makeBatchTasks($this->p('not-a-cpkg.tar'));
   }
+
+  /**
+   * @expectedException \UnexpectedValueException
+   * @expectedExceptionMessage Data in application file is corrupt or unsupported
+   */
+  public function testEmptyApplicationFileIsRejected() {
+    $sut = $this->sutFactory();
+    $sut->makeBatchTasks($this->p('empty-application-file.zip'));
+  }
+
+  /**
+   * No assertions currently, but the absence of exceptions is worth testing.
+   */
+  public function testMinimalValidCpkg() {
+    $sut = $this->sutFactory();
+    $sut->makeBatchTasks($this->p('minimal-valid-cpkg.zip'));
+  }
+
+
 }
