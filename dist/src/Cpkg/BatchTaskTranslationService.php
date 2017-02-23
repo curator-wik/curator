@@ -112,7 +112,9 @@ class BatchTaskTranslationService {
          * @var \PharFileInfo $finfo
          */
         $finfo = $phar[$filename];
-        if (! preg_match($valid_pattern, $finfo->getContent())) {
+        // Work around a segfault in php 5.4 when getting empty file content.
+        $content = $finfo->getSize() === 0 ? '' : $finfo->getContent();
+        if (! preg_match($valid_pattern, $content)) {
           throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Data in %s file is corrupt or unsupported.', $filename));
         }
       } catch (\BadMethodCallException $e) {
