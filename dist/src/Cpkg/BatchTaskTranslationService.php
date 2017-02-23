@@ -51,7 +51,7 @@ class BatchTaskTranslationService {
     $this->validateCpkgIsApplicable($phar);
 
     /*
-     * Up to two tasks may be scheduled per upgrade, in this order, depending on
+     * Up to two tasks may be scheduled per version, in this order, depending on
      * the contents of the cpkg:
      * 1. Deletions and renames
      * 2. Verbatim file writes and patches
@@ -74,7 +74,7 @@ class BatchTaskTranslationService {
     $current_version = (string) $this->app_targeter->getCurrentVersion();
 
     if ($this->getVersion($phar) === $current_version) {
-      throw new \InvalidArgumentException('The update the package provides has already been applied.');
+      throw new \InvalidArgumentException(sprintf('The update package provides version "%s", but it is already installed.', $current_version));
     }
 
     $prev_versions = $this->getPrevVersions($phar);
@@ -85,7 +85,7 @@ class BatchTaskTranslationService {
         $supported_range = sprintf('versions %s through %s', reset($prev_versions), end($prev_versions));
       }
       throw new \InvalidArgumentException(
-        sprintf('The update package does not contain updates to your version of %s. You are running version %s; the package upgrades %s.',
+        sprintf('The update package does not contain updates to your version of %s. You are running version %s; the package updates %s.',
           $this->app_targeter->getAppName(),
           $this->app_targeter->getCurrentVersion(),
           $supported_range

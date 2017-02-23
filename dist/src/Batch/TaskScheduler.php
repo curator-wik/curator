@@ -5,6 +5,9 @@ namespace Curator\Batch;
 
 
 use Curator\Persistence\PersistenceInterface;
+use mbaynton\BatchFramework\ScheduledTask;
+use mbaynton\BatchFramework\TaskInterface;
+use mbaynton\BatchFramework\TaskSchedulerInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class TaskScheduler implements TaskSchedulerInterface {
