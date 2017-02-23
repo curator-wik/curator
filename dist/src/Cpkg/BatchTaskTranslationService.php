@@ -3,6 +3,7 @@
 
 namespace Curator\Cpkg;
 use Curator\AppTargeting\TargeterInterface;
+use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
 
 /**
  * Class BatchTaskTranslationService
@@ -41,14 +42,9 @@ class BatchTaskTranslationService {
    *   When the cpkg does not contain upgrades for the application.
    */
   public function makeBatchTasks($path_to_cpkg) {
-    $phar = new \PharData($path_to_cpkg);
-    $phar_path = $phar->getPath();
-    if (empty($phar_path)) {
-      throw new \LogicException('Missing path of already-opened cpkg.');
-    }
-
-    $this->validateCpkgStructure($phar);
-    $this->validateCpkgIsApplicable($phar);
+    $reader = new ArchiveFileReader($path_to_cpkg);
+    $this->validateCpkgStructure($reader);
+    $this->validateCpkgIsApplicable($reader);
 
     /*
      * Up to two tasks may be scheduled per version, in this order, depending on
@@ -60,8 +56,8 @@ class BatchTaskTranslationService {
 
   }
 
-  protected function validateCpkgIsApplicable(\PharData $phar) {
-    $cpkg_application = trim($phar['application']->getContent());
+  protected function validateCpkgIsApplicable(ArchiveFileReader $reader) {
+    $cpkg_application = trim($reader->getContent('application'));
     if (strcasecmp($cpkg_application, $this->app_targeter->getAppName()) !== 0) {
       throw new \InvalidArgumentException(
         sprintf('The update package is for "%s", but you are running %s.',
@@ -73,11 +69,11 @@ class BatchTaskTranslationService {
 
     $current_version = (string) $this->app_targeter->getCurrentVersion();
 
-    if ($this->getVersion($phar) === $current_version) {
+    if ($this->getVersion($reader) === $current_version) {
       throw new \InvalidArgumentException(sprintf('The update package provides version "%s", but it is already installed.', $current_version));
     }
 
-    $prev_versions = $this->getPrevVersions($phar);
+    $prev_versions = $this->getPrevVersions($reader);
     if (! in_array($current_version, $prev_versions)) {
       if (count($prev_versions) == 1) {
         $supported_range = 'version ' . reset($prev_versions);
@@ -98,7 +94,7 @@ class BatchTaskTranslationService {
    * @param \PharData $phar
    * @throws \UnexpectedValueException
    */
-  protected function validateCpkgStructure(\PharData $phar) {
+  protected function validateCpkgStructure(ArchiveFileReader $reader) {
     $required_files = [
       'application' => '/.+/',
       'package-format-version' => '/^(1\.0)?\s+$/',
@@ -108,51 +104,44 @@ class BatchTaskTranslationService {
 
     foreach ($required_files as $filename => $valid_pattern) {
       try {
-        /**
-         * @var \PharFileInfo $finfo
-         */
-        $finfo = $phar[$filename];
-        // Work around a segfault in php 5.4 when getting empty file content.
-        $content = $finfo->getSize() === 0 ? '' : $finfo->getContent();
-        if (! preg_match($valid_pattern, $content)) {
+        if (! preg_match($valid_pattern, $reader->getContent($filename))) {
           throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Data in %s file is corrupt or unsupported.', $filename));
         }
-      } catch (\BadMethodCallException $e) {
+      } catch (FileNotFoundException $e) {
         throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Required file "%s" is absent from the cpkg structure.', $filename), 0, $e);
       }
     }
 
     $required_directories = ['payload'];
-    $prev_versions = $this->getPrevVersions($phar);
+    $prev_versions = $this->getPrevVersions($reader);
     array_shift($prev_versions);
     foreach ($prev_versions as $prev_version) {
       $required_directories[] = sprintf('payload/%s', $prev_version);
     }
-    $version = $this->getVersion($phar);
+    $version = $this->getVersion($reader);
     $required_directories[] = sprintf('payload/%s', $version);
 
     foreach ($required_directories as $required_directory) {
-      try {
-        $finfo = $phar[$required_directory];
-        if (! $finfo->isDir()) {
+      if (! $reader->isDir($required_directory)) {
+        if ($reader->isFile($required_directory)) {
           throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Update payload directory "%s" is not a directory.', $required_directory));
+        } else {
+          throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Update payload directory "%s" is absent.', $required_directory));
         }
-      } catch (\BadMethodCallException $e) {
-        throw new \UnexpectedValueException(sprintf('Provided cpkg is invalid: Update payload directory "%s" is absent.', $required_directory), 0, $e);
       }
     }
   }
 
-  protected function getVersion(\PharData $phar) {
-    if (! array_key_exists($phar->getPath(), $this->versionCache)) {
-      $version = trim($phar['version']->getContent());
+  protected function getVersion(ArchiveFileReader $reader) {
+    if (! array_key_exists($reader->getArchivePath(), $this->versionCache)) {
+      $version = trim($reader->getContent('version'));
       if ($version === '') {
         throw new \LogicException('Newest version in cpkg not found.');
       }
-      $this->versionCache[$phar->getPath()] = $version;
+      $this->versionCache[$reader->getArchivePath()] = $version;
     }
 
-    return $this->versionCache[$phar->getPath()];
+    return $this->versionCache[$reader->getArchivePath()];
   }
 
   /**
@@ -162,9 +151,9 @@ class BatchTaskTranslationService {
    *   order listed in the prev-versions-inorder file (that is, earliest to
    *   latest.)
    */
-  protected function getPrevVersions(\PharData $phar) {
-    if (! array_key_exists($phar->getPath(), $this->prevVersionsCache)) {
-      $prev_versions = $phar['prev-versions-inorder']->getContent();
+  protected function getPrevVersions(ArchiveFileReader $reader) {
+    if (! array_key_exists($reader->getArchivePath(), $this->prevVersionsCache)) {
+      $prev_versions = $reader->getContent('prev-versions-inorder');
       $prev_versions = explode("\n", $prev_versions);
       $prev_versions = array_filter($prev_versions, function($v) {
         return trim($v) !== '';
@@ -174,9 +163,9 @@ class BatchTaskTranslationService {
         // Should not happen because validateCpkg should have rejected.
         throw new \LogicException('No previous versions found.');
       }
-      $this->prevVersionsCache[$phar->getPath()] = $prev_versions;
+      $this->prevVersionsCache[$reader->getArchivePath()] = $prev_versions;
     }
 
-    return $this->prevVersionsCache[$phar->getPath()];
+    return $this->prevVersionsCache[$reader->getArchivePath()];
   }
 }

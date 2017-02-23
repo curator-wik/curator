@@ -28,6 +28,15 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
   }
 
   /**
+   * @expectedException \Symfony\Component\HttpFoundation\File\Exception\FileException
+   * @expectedExceptionMessage Archive at baz.tar does not exist or is empty.
+   */
+  public function testInvalidPathToArchive() {
+    $sut = $this->sutFactory();
+    $sut->makeBatchTasks('baz.tar');
+  }
+
+  /**
    * @expectedException \UnexpectedValueException
    * @expectedExceptionMessage internal corruption of phar
    */
