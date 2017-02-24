@@ -130,6 +130,8 @@ class BatchTaskTranslationService {
         }
       }
     }
+
+    // TODO: Verify that within a version, no file is both deleted and renamed (from or to). Results would be undefined.
   }
 
   protected function getVersion(ArchiveFileReader $reader) {

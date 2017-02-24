@@ -6,6 +6,7 @@ namespace Curator\Cpkg;
 
 use Curator\Task\TaskInterface;
 use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
+use mbaynton\BatchFramework\RunnerInterface;
 
 /**
  * Class DeleteRenameBatchTask
@@ -18,6 +19,15 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
    * @var int $runnable_count_cache
    */
   protected $runnable_count_cache;
+
+  /**
+   * The character in renamed_files and deleted_files that separates entries.
+   * v1.0 of cpkg spec only provides for newline, but future versions may
+   * provide the option for e.g. the null byte.
+   *
+   * @var string $entry_delimiter
+   */
+  protected $entry_delimiter = "\n";
 
   /**
    * DeleteRenameBatchTask constructor.
@@ -50,7 +60,7 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
         if (! empty($list)) {
           // First line doesn't require newline
           $count++;
-          $count += substr_count($list, "\n");
+          $count += substr_count($list, $this->entry_delimiter);
         }
         unset($list);
       }
@@ -68,6 +78,8 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
     return 4;
   }
 
-
+  public function getRunnableIterator(RunnerInterface $runner, $runner_rank, $num_total_runners, $last_processed_runnable_id) {
+    // TODO: Implement getRunnableIterator() method.
+  }
 
 }
