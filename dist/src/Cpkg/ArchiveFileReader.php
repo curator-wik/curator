@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
 /**
  * Class ArchiveFileReader
  *   At present, this class basically wraps PharData methods. It exists because
- *   I don't particularly like the stroring of cpkg's in /tmp while they are
+ *   I don't particularly like the storing of cpkg's in /tmp while they are
  *   getting extracted. This class acts as an abstraction layer to a future
  *   alternative means of handling archive file I/O.
  */

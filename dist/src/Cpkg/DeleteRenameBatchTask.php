@@ -21,13 +21,12 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
   protected $runnable_count_cache;
 
   /**
-   * The character in renamed_files and deleted_files that separates entries.
-   * v1.0 of cpkg spec only provides for newline, but future versions may
-   * provide the option for e.g. the null byte.
-   *
-   * @var string $entry_delimiter
+   * @var int $max_runners
+   *   Retains whether the deletes/renames in this cpkg are safe to run in
+   *   parallel.
    */
-  protected $entry_delimiter = "\n";
+  protected $max_runners;
+
 
   /**
    * DeleteRenameBatchTask constructor.
@@ -37,12 +36,18 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
   public function __construct($cpkg_path, $version) {
     parent::__construct($cpkg_path, $version);
     $this->runnable_count_cache = NULL;
+
+    if ($this->isParallelizable()) {
+      $this->max_runners = 4;
+    } else {
+      $this->max_runners = 1;
+    }
   }
 
   protected function _getSerializedProperties() {
     return array_merge(
       parent::_getSerializedProperties(),
-      ['runnable_count_cache']
+      ['runnable_count_cache', 'max_runners']
     );
   }
 
@@ -76,6 +81,15 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
 
   public function getMaxRunners() {
     return 4;
+  }
+
+  protected function isParallelizable() {
+    /*
+     * Not safe to run in parallel if:
+     * - A directory is renamed to X, and other renames are into or out of X/.
+     * - X is renamed to Y, then Z is renamed to X.
+     */
+
   }
 
   public function getRunnableIterator(RunnerInterface $runner, $runner_rank, $num_total_runners, $last_processed_runnable_id) {
