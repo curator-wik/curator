@@ -3,6 +3,10 @@
 
 namespace Curator\Cpkg;
 use Curator\AppTargeting\TargeterInterface;
+use Curator\Batch\TaskGroupManager;
+use Curator\Batch\TaskScheduler;
+use Curator\Persistence\PersistenceInterface;
+use mbaynton\BatchFramework\TaskSchedulerInterface;
 
 /**
  * Class BatchTaskTranslationService
@@ -21,9 +25,33 @@ class BatchTaskTranslationService {
    */
   protected $cpkg_reader;
 
-  public function __construct(TargeterInterface $app_targeter, CpkgReaderInterface $cpkg_reader) {
+  /**
+   * @var TaskGroupManager $task_group_mgr
+   */
+  protected $task_group_mgr;
+
+  /**
+   * @var \Curator\Batch\TaskScheduler $task_scheduler
+   */
+  protected $task_scheduler;
+
+  /**
+   * @var \Curator\Persistence\PersistenceInterface $persistence
+   */
+  protected $persistence;
+
+  public function __construct(
+    TargeterInterface $app_targeter,
+    CpkgReaderInterface $cpkg_reader,
+    TaskGroupManager $task_group_mgr,
+    TaskScheduler $task_scheduler,
+    PersistenceInterface $persistence
+  ) {
     $this->app_targeter = $app_targeter;
     $this->cpkg_reader = $cpkg_reader;
+    $this->task_group_mgr = $task_group_mgr;
+    $this->task_scheduler = $task_scheduler;
+    $this->persistence = $persistence;
   }
 
   /**
@@ -38,14 +66,45 @@ class BatchTaskTranslationService {
     $this->cpkg_reader->validateCpkgStructure($path_to_cpkg);
     $this->validateCpkgIsApplicable($path_to_cpkg);
 
-    /*
-     * Up to two tasks may be scheduled per version, in this order, depending on
-     * the contents of the cpkg:
-     * 1. Deletions and renames
-     * 2. Verbatim file writes and patches
+    // Find the versions we'll upgrade through.
+    $versions = $this->cpkg_reader->getVersion($path_to_cpkg);
+    $prev_versions_reversed = array_reverse($this->cpkg_reader->getPrevVersions($path_to_cpkg));
+    while (current($prev_versions_reversed) !== $this->app_targeter->getCurrentVersion()) {
+      $versions[] = array_shift($prev_versions_reversed);
+    }
+    // Put in order that upgrades must be applied.
+    $versions = array_reverse($versions);
+
+    // Assemble a Task Group to capture all tasks in the required order.
+    $this->persistence->beginReadWrite();
+    /**
+     * @var \Curator\Batch\TaskGroup $group
      */
+    $group = $this->task_group_mgr->makeNewGroup(
+      sprintf('Update %s from %s to %s',
+        $this->cpkg_reader->getApplication($path_to_cpkg),
+        $this->app_targeter->getCurrentVersion(),
+        $this->cpkg_reader->getVersion($path_to_cpkg))
+    );
 
+    foreach ($versions as $version) {
+      /*
+       * Up to two tasks may be scheduled per version, in this order, depending on
+       * the contents of the cpkg:
+       * 1. Deletions and renames
+       * 2. Verbatim file writes and patches
+       */
+      $num_renames = count($this->cpkg_reader->getRenames($path_to_cpkg, $version));
+      $num_deletes = count($this->cpkg_reader->getDeletes($path_to_cpkg, $version));
+      if ($num_renames + $num_deletes > 0) {
+        $task_id = $this->task_scheduler->assignTaskInstanceId();
+        $del_rename_task = new CpkgBatchTaskInstanceState('Cpkg.DeleteRenameBatchTask', $task_id, $num_renames + $num_deletes, $path_to_cpkg, $version);
+        $this->task_group_mgr->appendTaskInstance($group, $del_rename_task);
+      }
+    }
 
+    $this->task_scheduler->scheduleGroupInSession($group);
+    $this->persistence->end();
   }
 
   protected function validateCpkgIsApplicable($cpkg_path) {

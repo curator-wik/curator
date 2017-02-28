@@ -7,9 +7,9 @@ namespace Curator\Cpkg;
  *   Service offering an API for easy traversal of the cpkg format.
  */
 interface CpkgReaderInterface {
-  public function validateCpkgStructure($cpkg_path);
+  function validateCpkgStructure($cpkg_path);
 
-  public function getVersion($cpkg_path);
+  function getVersion($cpkg_path);
 
   /**
    * @param string $cpkg_path ;
@@ -19,7 +19,7 @@ interface CpkgReaderInterface {
    *   order listed in the prev-versions-inorder file (that is, earliest to
    *   latest.)
    */
-  public function getPrevVersions($cpkg_path);
+  function getPrevVersions($cpkg_path);
 
   /**
    * @param string $cpkg_path
@@ -27,7 +27,7 @@ interface CpkgReaderInterface {
    * @return string
    *   The application name the cpkg identifies itself as for.
    */
-  public function getApplication($cpkg_path);
+  function getApplication($cpkg_path);
 
   /**
    * @param string $cpkg_path
@@ -39,5 +39,15 @@ interface CpkgReaderInterface {
    *   version, in the order they appear in the cpkg's rename file.
    *   Keys are the files' original names, values are new names.
    */
-  public function getRenames($cpkg_path, $version);
+  function getRenames($cpkg_path, $version);
+
+  /**
+   * @param string $cpkg_path
+   *   Path to an archive file containing a cpkg structure.
+   * @param string $version
+   *   Version of interest.
+   * @return string[]
+   *   An indexed array of paths to be deleted, relative to the component root.
+   */
+  function getDeletes($cpkg_path, $version);
 }

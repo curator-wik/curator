@@ -10,6 +10,11 @@ use Curator\APIModel\v1\BatchRunnerUpdateMessage;
 use Curator\Batch\BatchRunnerResponse;
 use Curator\Batch\DescribedRunnableInterface;
 use Curator\Batch\RunnerService;
+use Curator\Batch\TaskGroup;
+use Curator\Batch\TaskGroupManager;
+use Curator\Batch\TaskInstanceState;
+use Curator\Batch\TaskScheduler;
+use Curator\CuratorApplication;
 use Curator\Persistence\PersistenceInterface;
 use mbaynton\BatchFramework\Controller\HttpRunnerControllerTrait;
 use mbaynton\BatchFramework\Controller\RunnerControllerInterface;
@@ -35,9 +40,9 @@ class BatchRunnerController implements RunnerControllerInterface {
   const CHATTER_FLUSH_INTERVAL = 1e5; // 1/10th second.
 
   /**
-   * @var TaskInterface $task
+   * @var TaskInstanceState $task
    */
-  protected $task;
+  protected $task_instance;
 
   /**
    * @var ScheduledTaskInterface $scheduledTask
@@ -70,7 +75,7 @@ class BatchRunnerController implements RunnerControllerInterface {
    */
   protected $progress;
 
-  public function __construct(SessionInterface $session, PersistenceInterface $persistence, RunnerService $runner_service) {
+  public function __construct(SessionInterface $session, PersistenceInterface $persistence, RunnerService $runner_service, TaskScheduler $task_scheduler, TaskGroupManager $taskgroup_mgr) {
     // $persistence is used only grudgingly in the controller, and only here
     // in the constructor for synchronization.
     $this->session = $session;
@@ -85,49 +90,29 @@ class BatchRunnerController implements RunnerControllerInterface {
     $this->progress->timeElapsed = $this->progress->runnablesExecuted = 0;
     $this->last_chatter_flush = -1 * static::CHATTER_FLUSH_INTERVAL;
 
-    // Each session may have at most one active Batch Task. Attach to the
-    // current one.
-    $batch_task_ids = $this->session->get('BatchTaskQueue', []);
-    $current_task_id = reset($batch_task_ids);
-    $scheduled_task = $this->runner_service->loadTask($current_task_id);
-
-
-    if ($scheduled_task !== NULL && $scheduled_task->getOwnerSession() !== $this->session->getId()) {
-      // The Task was stolen from us.
-      // Other Runners are very likely to concurrently encounter this.
-      $persistence->beginReadWrite();
-      $reread_batch_task_ids = $this->session->get('BatchTaskQueue', []);
-      if ($current_task_id === reset($reread_batch_task_ids)) {
-        // We're the first Runnable to notice. Remove this Task from queue.
-        while ($scheduled_task !== NULL
-            && $scheduled_task->getOwnerSession() !== $this->session->getId()) {
-          array_shift($reread_batch_task_ids);
-          $current_task_id = reset($batch_task_ids);
-          $scheduled_task = $this->runner_service->loadTask($current_task_id);
-        }
-
-        $this->session->set('BatchTaskQueue', $reread_batch_task_ids);
-        $this->session->save();
-      }
-      $persistence->end();
-
-      $this->scheduledTask = $scheduled_task;
-      if ($this->scheduledTask !== NULL) {
-        $this->task = $this->scheduledTask->getTask();
-      } else {
-        $this->task = NULL;
-      }
+    // Get the session's current TaskGroup
+    /**
+     * @var TaskGroup $group
+     */
+    $group = $task_scheduler->getCurrentGroupInSession();
+    if ($group !== NULL) {
+      /**
+       * @var TaskInstanceState $task_instance
+       */
+      $this->task_instance = $taskgroup_mgr->getActiveTaskInstance($group);
+    } else {
+      $this->task_instance = NULL;
     }
   }
 
-  public function handleRequest(Request $request) {
+  public function handleRequest(Request $request, CuratorApplication $app_container) {
     $runner_id = $this->getRunnerId($request);
     if ($runner_id === NULL) {
       throw new BadRequestHttpException('X-Runner-Id header required.');
     }
     $this->runner_service->setRunnerId($runner_id);
 
-    if ($this->task === NULL) {
+    if ($this->task_instance === NULL) {
       // No pending tasks for our session, just tell them not to call back.
       return new BatchRunnerResponse([
         new BatchRunnerControlMessage($runner_id, FALSE)
@@ -141,7 +126,10 @@ class BatchRunnerController implements RunnerControllerInterface {
       /**
        * @var Response $response
        */
-      $response = $this->runner_service->run($this->scheduledTask);
+      $response = $this->runner_service->run(
+        $app_container[$this->task_instance->getTaskServiceName()],
+        $this->task_instance
+      );
 
       if ($response !== NULL) {
         // Task done, send final outcome.

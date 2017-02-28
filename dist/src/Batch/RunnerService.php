@@ -62,22 +62,24 @@ class RunnerService extends AbstractRunner {
   }
 
   /**
-   * @param int $task_id
-   * @return ScheduledTaskInterface
+   * @param int $taskgroup_id
+   * @return TaskGroup
    */
-  public function loadTask($task_id) {
-    if ($task_id === FALSE) {
+  public function loadTask($taskgroup_id) {
+    if ($taskgroup_id === FALSE) {
       return NULL;
     }
     else {
       $this->persistence->beginReadOnly();
-      $task_serialization = $this->persistence->get("BatchTask.$task_id");
-      $this->persistence->popEnd();
+      $taskgroup_serialization = $this->persistence->get("BatchTask.$taskgroup_id");
       /**
-       * @var ScheduledTaskInterface $scheduled_task
+       * @var TaskGroup $task_group
        */
-      $scheduled_task = unserialize($task_serialization);
-      return $scheduled_task;
+      $task_group = unserialize($taskgroup_serialization);
+
+
+
+      $this->persistence->popEnd();
     }
   }
 

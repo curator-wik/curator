@@ -42,6 +42,12 @@ class CpkgReader implements CpkgReaderInterface {
   protected $renamesCache = [];
 
   /**
+   * @var array $deletesCache
+   *   Delete operations keyed by a phar path and version compound key.
+   */
+  protected $deletesCache = [];
+
+  /**
    * The character in renamed_files and deleted_files that separates entries.
    * v1.0 of cpkg spec only provides for newline, but future versions may
    * provide the option for e.g. the null byte.
@@ -216,5 +222,29 @@ class CpkgReader implements CpkgReaderInterface {
     }
 
     return $this->renamesCache[$cache_key];
+  }
+
+  public function getDeletes($cpkg_path, $version) {
+    return $this->_getDeletes($cpkg_path, $version);
+  }
+
+  protected function _getDeletes($cpkg_path, $version, $skip_structural_validation = FALSE) {
+    if (! $skip_structural_validation) {
+      $this->validateCpkgStructure($cpkg_path);
+    }
+
+    $reader = new ArchiveFileReader($cpkg_path);
+    $cache_key = $cpkg_path . $version;
+    if (! array_key_exists($cache_key, $this->deletesCache)) {
+      $deletes = $reader->tryGetContent("payload/$version/deleted_files");
+      $deletes = array_filter(
+        explode($this->entry_delimiter, $deletes),
+        function($line) {
+          return trim($line) !== '';
+        }
+      );
+      $this->deletesCache[$cache_key] = $deletes;
+    }
+    return $this->deletesCache[$cache_key];
   }
 }

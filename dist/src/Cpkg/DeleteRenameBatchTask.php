@@ -83,7 +83,7 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
     return 4;
   }
 
-  protected function isParallelizable() {
+  protected function isParallelizable($cpkg_path, $version) {
     /*
      * Not safe to run in parallel if:
      * - A directory is renamed to X, and other renames are into or out of X/.
