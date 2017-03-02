@@ -15,8 +15,11 @@ class TaskGroupManager {
 
   protected $persistence;
 
-  public function __construct(PersistenceInterface $persistence) {
+  protected $task_scheduler;
+
+  public function __construct(PersistenceInterface $persistence, TaskScheduler $task_scheduler) {
     $this->persistence = $persistence;
+    $this->task_scheduler = $task_scheduler;
   }
 
   /**
@@ -29,6 +32,7 @@ class TaskGroupManager {
    */
   public function makeNewGroup($friendlyDescription) {
     $group = new TaskGroup();
+    $group->friendlyDescription = $friendlyDescription;
     $this->persistence->beginReadWrite();
     $next_id = $this->persistence->get('BatchTaskGroup.NextId', 1);
     $this->persistence->set('BatchTaskGroup.NextId', $next_id++);
@@ -39,7 +43,8 @@ class TaskGroupManager {
   }
 
   /**
-   * Adds a new task to the end of the group and persists the task state.
+   * Adds a new task to the end of the group, ensures runner ids are assigned,
+   * and persists the task state.
    *
    * Takes out an exclusive persistence lock. If you anticipate adding several
    * tasks in succession, obtain an exclusive lock outside this method for
@@ -50,6 +55,12 @@ class TaskGroupManager {
    */
   public function appendTaskInstance(TaskGroup $group, TaskInstanceState $task_instance) {
     $this->persistence->beginReadWrite();
+
+    // Add runner ids if they are not present.
+    if ($task_instance->getRunnerIds() === NULL) {
+      $this->task_scheduler->assignRunnerIdsToTaskInstance($task_instance);
+    }
+
     $this->persistence->set(
       sprintf('BatchTask.%d', $task_instance->getTaskId()),
       $task_instance->serialize()

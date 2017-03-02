@@ -76,8 +76,6 @@ class BatchRunnerController implements RunnerControllerInterface {
   protected $progress;
 
   public function __construct(SessionInterface $session, PersistenceInterface $persistence, RunnerService $runner_service, TaskScheduler $task_scheduler, TaskGroupManager $taskgroup_mgr) {
-    // $persistence is used only grudgingly in the controller, and only here
-    // in the constructor for synchronization.
     $this->session = $session;
     $this->runner_service = $runner_service;
 

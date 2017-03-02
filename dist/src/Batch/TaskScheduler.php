@@ -93,4 +93,31 @@ class TaskScheduler {
     $this->persistence->popEnd();
     return $new_task_id;
   }
+
+  /**
+   * Assigns new unique runner ids to a task instance.
+   *
+   * Takes out an exclusive persistence lock with popEnd().
+   *
+   * @param \Curator\Batch\TaskInstanceState $task_instance
+   *   The task instance requiring runner ids.
+   * @throws \RuntimeException
+   *   If the TaskIntanceState given has already been assigned runner ids.
+   */
+  public function assignRunnerIdsToTaskInstance(TaskInstanceState $task_instance) {
+    if ($task_instance->getRunnerIds() !== NULL) {
+      throw new \RuntimeException('Runner IDs have already been assigned.');
+    }
+    $this->persistence->beginReadWrite();
+    $next_available_id = $this->persistence->get('BatchRunner.NextId', 1);
+    $new_next = $next_available_id + $task_instance->getNumRunners();
+    $this->persistence->set('BatchRunner.NextId', $new_next);
+    $this->persistence->popEnd();
+
+    $id_array = [];
+    for ($id = $next_available_id; $id < $new_next; $id++) {
+      $id_array[] = $id;
+    }
+    $task_instance->setRunnerIds($id_array);
+  }
 }
