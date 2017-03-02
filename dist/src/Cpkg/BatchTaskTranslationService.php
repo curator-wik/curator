@@ -40,18 +40,25 @@ class BatchTaskTranslationService {
    */
   protected $persistence;
 
+  /**
+   * @var DeleteRenameBatchTask $delete_rename_task
+   */
+  protected $delete_rename_task;
+
   public function __construct(
     TargeterInterface $app_targeter,
     CpkgReaderInterface $cpkg_reader,
     TaskGroupManager $task_group_mgr,
     TaskScheduler $task_scheduler,
-    PersistenceInterface $persistence
+    PersistenceInterface $persistence,
+    DeleteRenameBatchTask $delete_rename_task
   ) {
     $this->app_targeter = $app_targeter;
     $this->cpkg_reader = $cpkg_reader;
     $this->task_group_mgr = $task_group_mgr;
     $this->task_scheduler = $task_scheduler;
     $this->persistence = $persistence;
+    $this->delete_rename_task = $delete_rename_task;
   }
 
   /**
@@ -97,8 +104,16 @@ class BatchTaskTranslationService {
       $num_renames = count($this->cpkg_reader->getRenames($path_to_cpkg, $version));
       $num_deletes = count($this->cpkg_reader->getDeletes($path_to_cpkg, $version));
       if ($num_renames + $num_deletes > 0) {
+        $num_runners = $this->delete_rename_task->isParallelizable($path_to_cpkg, $version) ? 4 : 1;
         $task_id = $this->task_scheduler->assignTaskInstanceId();
-        $del_rename_task = new CpkgBatchTaskInstanceState('Cpkg.DeleteRenameBatchTask', $task_id, $num_renames + $num_deletes, $path_to_cpkg, $version);
+        $del_rename_task = new CpkgBatchTaskInstanceState(
+          'Cpkg.DeleteRenameBatchTask',
+          $task_id,
+          $num_runners,
+          $num_renames + $num_deletes,
+          $path_to_cpkg,
+          $version
+        );
         $this->task_group_mgr->appendTaskInstance($group, $del_rename_task);
       }
     }

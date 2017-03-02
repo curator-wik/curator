@@ -16,11 +16,12 @@ class TaskInstanceState extends \mbaynton\BatchFramework\TaskInstanceState imple
    *
    * @param string $task_service_name
    * @param int $task_id
+   * @param int $num_runners
    * @param int $num_runnables_estimate
    */
-  public function __construct($task_service_name, $task_id, $num_runnables_estimate) {
+  public function __construct($task_service_name, $task_id, $num_runners, $num_runnables_estimate) {
     $this->taskServiceName = $task_service_name;
-    parent::__construct($task_id, $num_runnables_estimate);
+    parent::__construct($task_id, $num_runners, $num_runnables_estimate);
   }
 
   public function getTaskServiceName() {
