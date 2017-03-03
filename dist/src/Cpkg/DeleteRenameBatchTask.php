@@ -4,8 +4,7 @@
 namespace Curator\Cpkg;
 
 
-use Curator\Task\TaskInterface;
-use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
+use Curator\FSAccess\FSAccessManager;
 use mbaynton\BatchFramework\RunnerInterface;
 
 /**
@@ -16,84 +15,59 @@ use mbaynton\BatchFramework\RunnerInterface;
 class DeleteRenameBatchTask extends CpkgBatchTask {
 
   /**
-   * @var int $runnable_count_cache
+   * @var FSAccessManager $fs_access
    */
-  protected $runnable_count_cache;
-
-  /**
-   * @var int $max_runners
-   *   Retains whether the deletes/renames in this cpkg are safe to run in
-   *   parallel.
-   */
-  protected $max_runners;
-
+  protected $fs_access;
 
   /**
    * DeleteRenameBatchTask constructor.
-   * @param string $cpkg_path
-   * @param string $version
    */
-  public function __construct($cpkg_path, $version) {
-    parent::__construct($cpkg_path, $version);
-    $this->runnable_count_cache = NULL;
+  public function __construct(CpkgReader $reader, FSAccessManager $fs_access) {
+    parent::__construct($reader);
+    $this->fs_access = $fs_access;
+  }
 
-    if ($this->isParallelizable()) {
-      $this->max_runners = 4;
+  public function getRunnerCount($cpkg_path, $version) {
+    if ($this->isParallelizable(
+      $cpkg_path,
+      $version
+    )) {
+      return 4;
     } else {
-      $this->max_runners = 1;
+      return 1;
     }
-  }
-
-  protected function _getSerializedProperties() {
-    return array_merge(
-      parent::_getSerializedProperties(),
-      ['runnable_count_cache', 'max_runners']
-    );
-  }
-
-  public function getNumRunnables() {
-    if ($this->runnable_count_cache === NULL) {
-      // Count lines in the delete and rename files.
-      $count = 0;
-      $reader = new ArchiveFileReader($this->cpkg_path);
-      foreach (['renamed_files', 'deleted_files'] as $filename) {
-        $list = trim($reader->tryGetContent(sprintf('payload/%s/%s',
-          $this->version,
-          $filename
-          )
-        ));
-        if (! empty($list)) {
-          // First line doesn't require newline
-          $count++;
-          $count += substr_count($list, $this->entry_delimiter);
-        }
-        unset($list);
-      }
-      $this->runnable_count_cache = $count;
-    }
-
-    return $this->runnable_count_cache;
-  }
-
-  public function getMinRunners() {
-    return 1;
-  }
-
-  public function getMaxRunners() {
-    return 4;
   }
 
   public function isParallelizable($cpkg_path, $version) {
     /*
      * Not safe to run in parallel if:
-     * - A directory is renamed to X, and other renames are into or out of X/.
+     * - A directory is renamed to or from X, and other renames are into or out of X/.
      * - X is renamed to Y, then Z is renamed to X.
      */
-
+    $renames = $this->reader->getRenames($cpkg_path, $version);
+    $all_impacted_objects = array_merge(array_keys($renames), array_values($renames));
+    sort($all_impacted_objects, SORT_STRING);
+    $current = next($all_impacted_objects);
+    while (($next = next($all_impacted_objects)) !== FALSE) {
+      $plus_slash = "$current/";
+      if(
+        $current === $next
+        || (strlen($plus_slash) + 1 >= strlen($next) && strncmp($plus_slash, $next, strlen($plus_slash)) === 0)
+      ) {
+        return FALSE;
+      }
+      $current = $next;
+    }
+    return TRUE;
   }
 
-  public function getRunnableIterator(RunnerInterface $runner, $runner_rank, $num_total_runners, $last_processed_runnable_id) {
-    // TODO: Implement getRunnableIterator() method.
+  public function getRunnableIterator(CpkgBatchTaskInstanceState $instance_state, RunnerInterface $runner, $runner_rank, $num_total_runners, $last_processed_runnable_id) {
+    if ($last_processed_runnable_id == 0) {
+      $start = $runner_rank;
+    } else {
+      $start = $last_processed_runnable_id + $num_total_runners;
+    }
+    return new DeleteRenameBatchRunnableIterator($this->reader, $this->fs_access, $start, $num_total_runners);
   }
 
 }

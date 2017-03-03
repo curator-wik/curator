@@ -104,7 +104,7 @@ class BatchTaskTranslationService {
       $num_renames = count($this->cpkg_reader->getRenames($path_to_cpkg, $version));
       $num_deletes = count($this->cpkg_reader->getDeletes($path_to_cpkg, $version));
       if ($num_renames + $num_deletes > 0) {
-        $num_runners = $this->delete_rename_task->isParallelizable($path_to_cpkg, $version) ? 4 : 1;
+        $num_runners = $this->delete_rename_task->getRunnerCount($path_to_cpkg, $version);
         $task_id = $this->task_scheduler->assignTaskInstanceId();
         $del_rename_task = new CpkgBatchTaskInstanceState(
           'Cpkg.DeleteRenameBatchTask',

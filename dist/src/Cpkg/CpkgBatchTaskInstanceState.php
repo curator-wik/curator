@@ -16,4 +16,12 @@ class CpkgBatchTaskInstanceState extends \Curator\Batch\TaskInstanceState  {
     $this->cpkg_path = $cpkg_path;
     $this->version = $version;
   }
+
+  public function getCpkgPath() {
+    return $this->cpkg_path;
+  }
+
+  public function getVersion() {
+    return $this->version;
+  }
 }
