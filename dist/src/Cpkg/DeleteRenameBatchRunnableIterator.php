@@ -70,6 +70,7 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
 
     return new DeleteRenameBatchRunnable(
       $this->fs_access,
+      $this->current_index,
       $operation,
       $source,
       $destination

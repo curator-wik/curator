@@ -2,6 +2,7 @@
 
 
 namespace Curator\Batch;
+use mbaynton\BatchFramework\RunnableInterface;
 
 /**
  * Interface DescribedRunnableInterface
