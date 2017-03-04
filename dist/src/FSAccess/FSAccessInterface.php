@@ -91,7 +91,9 @@ interface FSAccessInterface {
   function filePutContents($filename, $data);
 
   /**
-   * Moves existing file with $old_name to $new_name, overwriting if necessary.
+   * Moves existing file with $old_name to $new_name.
+   *
+   * If $new_name exists and is not a directory, it will be overwritten.
    *
    * @param string $old_name
    *   Absolute path, or relative path under the working path.
@@ -102,7 +104,8 @@ interface FSAccessInterface {
    *   When the $old_name does not exist, or a directory in $new_name is not
    *   found.
    * @throws FileException
-   *   Resulting from permission or I/O errors.
+   *   Resulting from permission or I/O errors, including when $new_name is a
+   *   directory.
    * @throws \InvalidArgumentException
    *   If $old_name or $new_name is outside the working path.
    */
@@ -201,5 +204,20 @@ interface FSAccessInterface {
    *   If $path is outside the working path.
    */
   public function isDir($path);
+
+  /**
+   * Lists the contents of a directory.
+   *
+   * @param $path
+   *   Absolute path, or relative path under the working path.
+   * @return string[]
+   *   An array containing the file and directory names found within the path.
+   *   '.' and '..' are not included.
+   * @throws FileException
+   *   If a directory listing cannot be obtained from the given path.
+   * @throws \InvalidArgumentException
+   *   If $path is outside the working path.
+   */
+  public function ls($path);
 
 }

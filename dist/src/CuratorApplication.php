@@ -5,6 +5,8 @@ namespace Curator;
 
 use Curator\Authorization\InstallationAge;
 use Curator\Batch\RunnerService;
+use Curator\Batch\TaskGroupManager;
+use Curator\Batch\TaskScheduler;
 use Curator\Controller\StaticContentController;
 use Curator\FSAccess\DefaultFtpConfigurationProvider;
 use Curator\FSAccess\FSAccessManager;
@@ -163,5 +165,13 @@ class CuratorApplication extends Application {
     $this['batch.runner_service'] = function($app) {
       return new RunnerService($app['persistence'], $app['status']);
     };
+
+    $this['batch.task_scheduler'] = $this->share(function($app) {
+      return new TaskScheduler($app['persistence'], $app['session']);
+    });
+
+    $this['batch.taskgroup_manager'] = $this->share(function($app) {
+      return new TaskGroupManager($app['persistence'], $app['batch.task_scheduler']);
+    });
   }
 }

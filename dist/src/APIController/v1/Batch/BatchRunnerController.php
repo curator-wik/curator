@@ -21,6 +21,7 @@ use mbaynton\BatchFramework\Controller\RunnerControllerInterface;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\ScheduledTaskInterface;
+use mbaynton\BatchFramework\TaskInstanceStateInterface;
 use mbaynton\BatchFramework\TaskInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -185,7 +186,7 @@ class BatchRunnerController implements RunnerControllerInterface {
     $this->runner_response->postMessage($message);
   }
 
-  public function onTaskComplete(ScheduledTaskInterface $task) {
+  public function onTaskComplete(TaskInstanceStateInterface $task_instance) {
     $batch_task_ids = $this->session->get('BatchTaskQueue', []);
     $this->session->set('BatchTaskQueue', array_shift($batch_task_ids));
   }

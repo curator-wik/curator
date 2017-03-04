@@ -4,16 +4,30 @@
 namespace Curator\Tests\Unit\Cpkg;
 
 
+use Curator\Batch\TaskGroupManager;
 use Curator\Cpkg\BatchTaskTranslationService;
 use Curator\Cpkg\CpkgReader;
+use Curator\Cpkg\DeleteRenameBatchTask;
+use Curator\FSAccess\FSAccessManager;
 use Curator\Tests\Shared\Mocks\AppTargeterMock;
+use Curator\Tests\Shared\Mocks\InMemoryPersistenceMock;
+use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
+use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
 class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
 
   protected function sutFactory() {
+    $reader = new CpkgReader();
+    $persistence = new InMemoryPersistenceMock();
+    $task_scheduler = $this->getMockBuilder('\Curator\Batch\TaskScheduler')->disableOriginalConstructor()->getMock();
+
     $sut = new BatchTaskTranslationService(
       new AppTargeterMock(),
-      new CpkgReader()
+      $reader,
+      new TaskGroupManager($persistence, $task_scheduler),
+      $task_scheduler,
+      $persistence,
+      new DeleteRenameBatchTask($reader, new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')))
     );
 
     return $sut;

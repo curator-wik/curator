@@ -6,6 +6,7 @@ namespace Curator\Cpkg;
 
 use Curator\FSAccess\FSAccessManager;
 use mbaynton\BatchFramework\RunnerInterface;
+use mbaynton\BatchFramework\TaskInstanceStateInterface;
 
 /**
  * Class DeleteRenameBatchTask
@@ -61,13 +62,13 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
     return TRUE;
   }
 
-  public function getRunnableIterator(CpkgBatchTaskInstanceState $instance_state, RunnerInterface $runner, $runner_rank, $num_total_runners, $last_processed_runnable_id) {
+  public function getRunnableIterator(TaskInstanceStateInterface $instance_state, RunnerInterface $runner, $runner_rank, $last_processed_runnable_id) {
     if ($last_processed_runnable_id == 0) {
       $start = $runner_rank;
     } else {
-      $start = $last_processed_runnable_id + $num_total_runners;
+      $start = $last_processed_runnable_id + $instance_state->getNumRunners();
     }
-    return new DeleteRenameBatchRunnableIterator($this->reader, $this->fs_access, $start, $num_total_runners);
+    return new DeleteRenameBatchRunnableIterator($this->reader, $this->fs_access, $start, $instance_state->getNumRunners());
   }
 
 }

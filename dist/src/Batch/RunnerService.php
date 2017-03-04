@@ -11,6 +11,7 @@ use mbaynton\BatchFramework\Controller\RunnerControllerInterface;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
 use mbaynton\BatchFramework\ScheduledTaskInterface;
+use mbaynton\BatchFramework\TaskInstanceStateInterface;
 
 class RunnerService extends AbstractRunner {
 
@@ -107,7 +108,7 @@ class RunnerService extends AbstractRunner {
     $this->persistence->end();
   }
 
-  protected function finalizeRunner($new_result_data, RunnableInterface $last_processed_runnable = NULL, $runner_id, RunnableResultAggregatorInterface $aggregator = NULL) {
+  protected function finalizeRunner($new_result_data, RunnableInterface $last_processed_runnable = NULL, TaskInstanceStateInterface $instance_state, $runner_id, RunnableResultAggregatorInterface $aggregator = NULL) {
     $this->persistence->beginReadWrite();
     if ($this->task->supportsUnaryPartialResult()) {
       $this->persistUnaryPartialResult($new_result_data);

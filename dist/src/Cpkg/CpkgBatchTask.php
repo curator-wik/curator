@@ -9,6 +9,7 @@ use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
 use mbaynton\BatchFramework\TaskInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 abstract class CpkgBatchTask implements TaskInterface {
   /**
@@ -42,6 +43,10 @@ abstract class CpkgBatchTask implements TaskInterface {
   public function onRunnableError(TaskInstanceStateInterface $instance_state, RunnableInterface $runnable, $exception, ProgressInfo $progress) {
     // TODO: Implement onRunnableError() method.
     // Look at adding a RunnableErrorAggregatorInterface parameter, and persisting those via the BatchFramework?
+  }
+
+  public function assembleResultResponse($final_results) {
+    return new Response();
   }
 
 }

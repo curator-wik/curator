@@ -74,7 +74,7 @@ class BatchTaskTranslationService {
     $this->validateCpkgIsApplicable($path_to_cpkg);
 
     // Find the versions we'll upgrade through.
-    $versions = $this->cpkg_reader->getVersion($path_to_cpkg);
+    $versions = [$this->cpkg_reader->getVersion($path_to_cpkg)];
     $prev_versions_reversed = array_reverse($this->cpkg_reader->getPrevVersions($path_to_cpkg));
     while (current($prev_versions_reversed) !== $this->app_targeter->getCurrentVersion()) {
       $versions[] = array_shift($prev_versions_reversed);

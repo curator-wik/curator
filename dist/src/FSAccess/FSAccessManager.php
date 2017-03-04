@@ -583,4 +583,9 @@ class FSAccessManager implements FSAccessInterface {
     return $this->readOps->isDir($path);
   }
 
+  public function ls($path) {
+    $path = $this->normalizePath($path);
+    return $this->readOps->ls($path);
+  }
+
 }
