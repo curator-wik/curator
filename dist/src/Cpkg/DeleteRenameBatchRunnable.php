@@ -5,6 +5,7 @@ namespace Curator\Cpkg;
 
 
 use Curator\Batch\DescribedRunnableInterface;
+use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\FSAccessManager;
 use mbaynton\BatchFramework\AbstractRunnable;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
@@ -63,7 +64,35 @@ class DeleteRenameBatchRunnable extends AbstractRunnable implements DescribedRun
   }
 
   public function run(TaskInterface $task, TaskInstanceStateInterface $instance_state) {
+    if ($this->operation == 'delete') {
+      $this->delete($this->source);
+    } else if ($this->operation == 'rename') {
+      $this->rename($this->source, $this->destination);
+    }
+  }
 
+  public function delete($path) {
+    $fs = $this->fs_access;
+    if ($fs->isDir($path)) {
+      $ls = $fs->ls($path);
+      foreach ($ls as $child) {
+        $this->delete($child);
+      }
+      $fs->rmDir($path);
+    } else {
+      try {
+        $fs->unlink($path);
+      } catch (FileNotFoundException $e) {}
+    }
+  }
+
+  public function rename($from, $to) {
+    $fs = $this->fs_access;
+    if ($fs->isDir($to)) {
+      $this->delete($to);
+    }
+
+    $fs->mv($from, $to);
   }
 
 }
