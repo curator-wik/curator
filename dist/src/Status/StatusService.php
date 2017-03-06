@@ -50,6 +50,7 @@ class StatusService {
 
     $result->alarm_signal_works = $this->persistence->get('alarm_signal_works', FALSE);
     $result->flush_works = $this->persistence->get('flush_works', FALSE);
+    $result->adjoining_app_targeter = $this->persistence->get('adjoining_app_targeter');
     $this->persistence->end();
 
     $this->model = $result;

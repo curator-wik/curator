@@ -18,9 +18,17 @@ class AppTargetingProvider implements ServiceProviderInterface {
   /**
    * @inheritdoc
    */
-  public function register(Application $c) {
-    $c['app_targeting.app_detector'] = function ($c) {
-      return new Detector($c['integration_config']);
-    };
+  public function register(Application $app) {
+    $app['app_targeting.app_detector'] = $app->share(function ($app) {
+      return new AppDetector(
+        $app['integration_config'],
+        $app['status'],
+        $app,
+        $app->getCuratorFilename()
+        );
+    });
   }
+
+  public function boot(Application $app) { }
+
 }

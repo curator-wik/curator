@@ -3,11 +3,14 @@
 
 namespace Curator;
 
+use Curator\AppTargeting\AppTargetingProvider;
 use Curator\Authorization\InstallationAge;
 use Curator\Batch\RunnerService;
 use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Controller\StaticContentController;
+use Curator\Cpkg\BatchTaskTranslationService;
+use Curator\Cpkg\CpkgServicesProvider;
 use Curator\FSAccess\DefaultFtpConfigurationProvider;
 use Curator\FSAccess\FSAccessManager;
 use Curator\FSAccess\PathParser\PosixPathParser;
@@ -45,6 +48,8 @@ class CuratorApplication extends Application {
     $this->configureDefaultTimezone();
     $this->register(new \Silex\Provider\SessionServiceProvider(), ['session.test' => getenv('PHPUNIT-TEST') === '1']);
     $this->register(new \Silex\Provider\ServiceControllerServiceProvider());
+    $this->register(new AppTargetingProvider());
+    $this->register(new CpkgServicesProvider());
     $this->register(new \Silex\Provider\TranslationServiceProvider(), array(
       'locale_fallbacks' => array('en'),
     ));
@@ -173,5 +178,6 @@ class CuratorApplication extends Application {
     $this['batch.taskgroup_manager'] = $this->share(function($app) {
       return new TaskGroupManager($app['persistence'], $app['batch.task_scheduler']);
     });
+
   }
 }

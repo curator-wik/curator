@@ -33,6 +33,11 @@ class IntegrationConfig {
   protected $siteName;
 
   /**
+   * @var TargeterInterface|null $targeter
+   */
+  protected $targeter;
+
+  /**
    * @var string $defaultTimeZone
    */
   protected $defaultTimeZone;
@@ -43,6 +48,7 @@ class IntegrationConfig {
 
   public function setSiteRootPath($site_root_path) {
     $this->siteRootPath = $site_root_path;
+    return $this;
   }
 
   public function getSiteRootPath() {
@@ -51,6 +57,7 @@ class IntegrationConfig {
 
   public function setDefaultTimezone($tz_string) {
     $this->defaultTimeZone = $tz_string;
+    return $this;
   }
 
   public function getDefaultTimezone() {
@@ -77,7 +84,12 @@ class IntegrationConfig {
   }
 
   public function setCustomAppTargeter(TargeterInterface $targeter) {
+    $this->targeter = $targeter;
+    return $this;
+  }
 
+  public function getCustomAppTargeter() {
+    return $this->targeter;
   }
 
   public static function getNullConfig() {

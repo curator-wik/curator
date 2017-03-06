@@ -63,12 +63,21 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
   }
 
   public function getRunnableIterator(TaskInstanceStateInterface $instance_state, RunnerInterface $runner, $runner_rank, $last_processed_runnable_id) {
+    /**
+     * @var CpkgBatchTaskInstanceState $instance_state
+     */
     if ($last_processed_runnable_id == 0) {
       $start = $runner_rank;
     } else {
       $start = $last_processed_runnable_id + $instance_state->getNumRunners();
     }
-    return new DeleteRenameBatchRunnableIterator($this->reader, $this->fs_access, $start, $instance_state->getNumRunners());
+    return new DeleteRenameBatchRunnableIterator(
+      $this->fs_access,
+      $this->reader->getDeletes($instance_state->getCpkgPath(), $instance_state->getVersion()),
+      $this->reader->getRenames($instance_state->getCpkgPath(), $instance_state->getVersion()),
+      $start,
+      $instance_state->getNumRunners()
+    );
   }
 
 }

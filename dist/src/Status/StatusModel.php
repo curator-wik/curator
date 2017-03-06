@@ -24,6 +24,14 @@ class StatusModel {
   public $is_authenticated = FALSE;
 
   /**
+   * @var string|null $adjoining_app_targeter
+   *   DI container service name of a built-in application targeter.
+   *   If NULL, the IntegrationConfig can still provide an AppTargeterInterface
+   *   implementation.
+   */
+  public $adjoining_app_targeter = NULL;
+
+  /**
    * @var bool $alarm_signal_works
    *   Whether pcntl_alarm and related functions are available & operational.
    */

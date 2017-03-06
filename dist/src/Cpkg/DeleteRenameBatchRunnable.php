@@ -19,7 +19,7 @@ class DeleteRenameBatchRunnable extends AbstractRunnable implements DescribedRun
 
   /**
    * @var string $operation
-   *   'r'ename or 'd'elete
+   *   'rename' or 'delete'
    */
   protected $operation;
 

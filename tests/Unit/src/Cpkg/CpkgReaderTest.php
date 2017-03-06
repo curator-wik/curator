@@ -110,5 +110,13 @@ class CpkgReaderTest extends \PHPUnit_Framework_TestCase {
     $sut = $this->sutFactory();
     $sut->validateCpkgStructure($this->p('nondirectory-payload-version.zip'));
   }
+
+  public function testRenamedFileParser() {
+    // TODO
+  }
+
+  public function testDeletedFileParser() {
+    // TODO
+  }
   
 }

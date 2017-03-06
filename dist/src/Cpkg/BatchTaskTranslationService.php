@@ -2,7 +2,9 @@
 
 
 namespace Curator\Cpkg;
+use Curator\AppTargeting\AppDetector;
 use Curator\AppTargeting\TargeterInterface;
+use Curator\Batch\TaskGroup;
 use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Persistence\PersistenceInterface;
@@ -16,9 +18,9 @@ use mbaynton\BatchFramework\TaskSchedulerInterface;
 class BatchTaskTranslationService {
 
   /**
-   * @var TargeterInterface $app_targeter
+   * @var AppDetector $app_detector
    */
-  protected $app_targeter;
+  protected $app_detector;
 
   /**
    * @var CpkgReaderInterface $cpkg_reader
@@ -46,14 +48,14 @@ class BatchTaskTranslationService {
   protected $delete_rename_task;
 
   public function __construct(
-    TargeterInterface $app_targeter,
+    AppDetector $app_detector,
     CpkgReaderInterface $cpkg_reader,
     TaskGroupManager $task_group_mgr,
     TaskScheduler $task_scheduler,
     PersistenceInterface $persistence,
     DeleteRenameBatchTask $delete_rename_task
   ) {
-    $this->app_targeter = $app_targeter;
+    $this->app_detector = $app_detector;
     $this->cpkg_reader = $cpkg_reader;
     $this->task_group_mgr = $task_group_mgr;
     $this->task_scheduler = $task_scheduler;
@@ -64,19 +66,23 @@ class BatchTaskTranslationService {
   /**
    * @param string $path_to_cpkg
    *
+   * @return TaskGroup
+   *   The new TaskGroup created from the cpkg.
+   *
    * @throws \UnexpectedValueException
    *   When the $path_to_cpkg does not reference a valid cpkg archive.
    * @throws \InvalidArgumentException
    *   When the cpkg does not contain upgrades for the application.
    */
   public function makeBatchTasks($path_to_cpkg) {
+    $app_targeter = $this->app_detector->getTargeter();
     $this->cpkg_reader->validateCpkgStructure($path_to_cpkg);
     $this->validateCpkgIsApplicable($path_to_cpkg);
 
     // Find the versions we'll upgrade through.
     $versions = [$this->cpkg_reader->getVersion($path_to_cpkg)];
     $prev_versions_reversed = array_reverse($this->cpkg_reader->getPrevVersions($path_to_cpkg));
-    while (current($prev_versions_reversed) !== $this->app_targeter->getCurrentVersion()) {
+    while (current($prev_versions_reversed) !== $app_targeter->getCurrentVersion()) {
       $versions[] = array_shift($prev_versions_reversed);
     }
     // Put in order that upgrades must be applied.
@@ -90,7 +96,7 @@ class BatchTaskTranslationService {
     $group = $this->task_group_mgr->makeNewGroup(
       sprintf('Update %s from %s to %s',
         $this->cpkg_reader->getApplication($path_to_cpkg),
-        $this->app_targeter->getCurrentVersion(),
+        $app_targeter->getCurrentVersion(),
         $this->cpkg_reader->getVersion($path_to_cpkg))
     );
 
@@ -107,7 +113,7 @@ class BatchTaskTranslationService {
         $num_runners = $this->delete_rename_task->getRunnerCount($path_to_cpkg, $version);
         $task_id = $this->task_scheduler->assignTaskInstanceId();
         $del_rename_task = new CpkgBatchTaskInstanceState(
-          'Cpkg.DeleteRenameBatchTask',
+          'cpkg.delete_rename_batch_task',
           $task_id,
           $num_runners,
           $num_renames + $num_deletes,
@@ -120,20 +126,23 @@ class BatchTaskTranslationService {
 
     $this->task_scheduler->scheduleGroupInSession($group);
     $this->persistence->end();
+
+    return $group;
   }
 
   protected function validateCpkgIsApplicable($cpkg_path) {
     $cpkg_application = $this->cpkg_reader->getApplication($cpkg_path);
-    if (strcasecmp($cpkg_application, $this->app_targeter->getAppName()) !== 0) {
+    $app_targeter = $this->app_detector->getTargeter();
+    if (strcasecmp($cpkg_application, $app_targeter->getAppName()) !== 0) {
       throw new \InvalidArgumentException(
         sprintf('The update package is for "%s", but you are running %s.',
           $cpkg_application,
-          $this->app_targeter->getAppName()
+          $app_targeter->getAppName()
         )
       );
     }
 
-    $current_version = (string) $this->app_targeter->getCurrentVersion();
+    $current_version = (string) $app_targeter->getCurrentVersion();
 
     if ($this->cpkg_reader->getVersion($cpkg_path) === $current_version) {
       throw new \InvalidArgumentException(sprintf('The update package provides version "%s", but it is already installed.', $current_version));
@@ -148,8 +157,8 @@ class BatchTaskTranslationService {
       }
       throw new \InvalidArgumentException(
         sprintf('The update package does not contain updates to your version of %s. You are running version %s; the package updates %s.',
-          $this->app_targeter->getAppName(),
-          $this->app_targeter->getCurrentVersion(),
+          $app_targeter->getAppName(),
+          $app_targeter->getCurrentVersion(),
           $supported_range
         )
       );
