@@ -90,10 +90,10 @@ class RunnerService extends AbstractRunner {
   public function getIncompleteRunnerIds() {
     if ($this->incompleteRunnerIds === NULL) {
       $this->incompleteRunnerIds = [];
-      $task_id = $this->scheduled_task->getTaskId();
+      $task_id = $this->instance_state->getTaskId();
       $this->persistence->beginReadOnly();
-      for ($i = 1; $i <= $this->scheduled_task->getNumRunners(); $i++) {
-        if ($this->persistence->get("BatchTask.$task_id.Runner.$i", -1) !== 'done') {
+      foreach ($this->instance_state->getRunnerIds() as $i) {
+        if ($this->persistence->get("BatchTask.$task_id.RunnerDone.$i", -1) !== 'done') {
           $this->incompleteRunnerIds[] = $i;
         }
       }
@@ -115,15 +115,19 @@ class RunnerService extends AbstractRunner {
     } else {
       $this->appendReducedResult($new_result_data);
     }
-    $task_id = $this->scheduled_task->getTaskId();
-    $runner_state = ($last_processed_runnable === NULL ? 'done' : $last_processed_runnable->getId());
-    $this->persistence->set("BatchTask.$task_id.Runner.$runner_id", $runner_state);
+    $task_id = $instance_state->getTaskId();
+    // NULL occurs when the runner is done.
+    if ($last_processed_runnable !== NULL) {
+      $this->persistence->set("BatchTask.$task_id.Runner.$runner_id", $last_processed_runnable->getId());
+    } else {
+      $this->persistence->set("BatchTask.$task_id.RunnerDone.$runner_id", 'done');
+    }
     $this->persistence->end();
   }
 
   protected function retrieveRunnerState() {
     $runner_id = $this->getRunnerId();
-    $task_id = $this->scheduled_task->getTaskId();
+    $task_id = $this->instance_state->getTaskId();
     $this->persistence->beginReadOnly();
     $result['last_completed_runnable_id'] = $this->persistence->get("BatchTask.$task_id.Runner.$runner_id");
     $result['incomplete_runner_ids'] = $this->getIncompleteRunnerIds();
@@ -145,10 +149,10 @@ class RunnerService extends AbstractRunner {
   protected function retrieveAllResultData() {
     $this->persistence->beginReadOnly();
     $result = [];
-    $task_id = $this->scheduled_task->getTaskId();
+    $task_id = $this->instance_state->getTaskId();
 
     if ($this->task->supportsUnaryPartialResult()) {
-      foreach ($this->scheduled_task->getRunnerIds() as $runner_id) {
+      foreach ($this->instance_state->getRunnerIds() as $runner_id) {
         $partial = $this->persistence->get("BatchTask.$task_id.Runner.$runner_id.PartialResult", NULL);
         if ($partial !== NULL) {
           $result[] = $partial;
@@ -170,16 +174,17 @@ class RunnerService extends AbstractRunner {
    * Precondition: $this->persistence is write locked.
    */
   protected function taskCompleteCleanup_persistence() {
-    $task_id = $this->scheduled_task->getTaskId();
+    $task_id = $this->instance_state->getTaskId();
     $count = $this->persistence->get("BatchTask.$task_id.ReducedResults.Count", 0);
     for ($i = 1; $i <= $count; $i++) {
       $this->persistence->set("BatchTask.$task_id.ReducedResults.$i", NULL);
     }
     $this->persistence->set("BatchTask.$task_id.ReducedResults.Count", NULL);
 
-    $runner_ids = $this->scheduled_task->getRunnerIds();
+    $runner_ids = $this->instance_state->getRunnerIds();
     foreach ($runner_ids as $runner_id) {
       $this->persistence->set("BatchTask.$task_id.Runner.$runner_id", NULL);
+      $this->persistence->set("BatchTask.$task_id.RunnerDone.$runner_id", NULL);
       $this->persistence->set("BatchTask.$task_id.Runner.$runner_id.PartialResult", NULL);
     }
 
@@ -193,7 +198,7 @@ class RunnerService extends AbstractRunner {
    *   The result data to persist.
    */
   protected function appendReducedResult($result) {
-    $task_id = $this->scheduled_task->getTaskId();
+    $task_id = $this->instance_state->getTaskId();
     $count = $this->persistence->get("BatchTask.$task_id.ReducedResults.Count", 0);
     $count++;
     $str = serialize($result);
@@ -202,7 +207,7 @@ class RunnerService extends AbstractRunner {
   }
 
   protected function persistUnaryPartialResult($partial_result) {
-    $task_id = $this->scheduled_task->getTaskId();
+    $task_id = $this->instance_state->getTaskId();
     $runner_id = $this->getRunnerId();
     $this->persistence->set("BatchTask.$task_id.Runner.$runner_id.PartialResult", $partial_result);
   }
@@ -212,7 +217,7 @@ class RunnerService extends AbstractRunner {
    * @return mixed[]
    */
   protected function getReducedResults() {
-    $task_id = $this->scheduled_task->getTaskId();
+    $task_id = $this->instance_state->getTaskId();
     $count = $this->persistence->get("BatchTask.$task_id.ReducedResults.Count", 0);
     if ($count == 0) {
       return [];

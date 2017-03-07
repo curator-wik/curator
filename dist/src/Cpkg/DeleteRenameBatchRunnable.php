@@ -65,8 +65,17 @@ class DeleteRenameBatchRunnable extends AbstractRunnable implements DescribedRun
 
   public function run(TaskInterface $task, TaskInstanceStateInterface $instance_state) {
     if ($this->operation == 'delete') {
+      if (empty($this->source)) {
+        throw new \RuntimeException('No path provided to delete.');
+      }
       $this->delete($this->source);
     } else if ($this->operation == 'rename') {
+      if (empty($this->source)) {
+        throw new \RuntimeException('No path provided to rename from.');
+      }
+      if (empty($this->destination)) {
+        throw new \RuntimeException('No path provided to rename to.');
+      }
       $this->rename($this->source, $this->destination);
     }
   }

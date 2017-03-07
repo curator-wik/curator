@@ -14,11 +14,18 @@ use Curator\Tests\Functional\Util\Session;
 use Curator\Tests\Functional\WebTestCase;
 use Curator\Tests\Shared\Mocks\AppTargeterMock;
 use Silex\Application;
+use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class DeleteRenameBatchTest extends WebTestCase {
 
   const ENDPOINT_BATCH_RUNNER = '/api/v1/batch/runner';
+
+  /**
+   * @var \Symfony\Component\HttpKernel\Client $client
+   */
+  protected $client;
 
   protected function injectTestDependencies(Application $app) {
     parent::injectTestDependencies($app);
@@ -55,8 +62,18 @@ class DeleteRenameBatchTest extends WebTestCase {
 
   public function setUp() {
     parent::setUp();
+
+    $this->client = self::createClient();
+    /**
+     * @var SessionInterface $session
+     */
+    $session = $this->app['session'];
     // This test class has no unauthenticated tests.
-    Session::makeSessionAuthenticated($this->app['session']);
+    Session::makeSessionAuthenticated($session);
+
+    $cj = $this->client->getCookieJar();
+    $session_cookie = new Cookie($this->app['session']->getName(), $this->app['session']->getId());
+    $cj->set($session_cookie);
   }
 
   /**
@@ -65,20 +82,20 @@ class DeleteRenameBatchTest extends WebTestCase {
    * - Cause there to be enough runnables to require > 1 runner incarnation.
    * - Verify all changes were made to filesystem at end.
    */
-  public function disabled_testMultipleDeletesAndRenames() {
+  public function testMultipleDeletesAndRenames() {
     // Set mock fs contents
     $this->fs_contents->directories = [
-      '/app', '/app/renames', '/app/deleteme-dir'
+      'renames', 'deleteme-dir'
     ];
 
     $this->fs_contents->files = [
-      '/app/deleteme-file' => 'hello world',
-      '/app/deleteme-dir/file' => 'hello world',
-      '/app/changelog.1.2.4' => 'More better.',
+      'deleteme-file' => 'hello world',
+      'deleteme-dir/file' => 'hello world',
+      'changelog.1.2.4' => 'More better.',
     ];
 
     for($i = 1; $i <= 30; $i++) {
-      $this->fs_contents->files["/app/renames/fileA$i"] = $i;
+      $this->fs_contents->files["renames/fileA$i"] = $i;
     }
 
     $taskgroup = $this->scheduleCpkg('multiple-deletes-renames.zip');
@@ -88,42 +105,50 @@ class DeleteRenameBatchTest extends WebTestCase {
       'Two batch tasks with unique ids are created from multiple-deletes-renames.zip'
     );
 
+    /********* End setup, begin execution of client requests as necessary *****/
+    $this->app['session']->save();
+
     /**
      * @var TaskGroupManager $taskgroup_manager
      */
     $taskgroup_manager = $this->app['batch.taskgroup_manager'];
+    $prev_task = NULL;
     while ($curr_task = $taskgroup_manager->getActiveTaskInstance($taskgroup)) {
-      $runner_ids = $curr_task->getRunnerIds();
-      $this->assertGreaterThan(0, count($runner_ids));
+      // Protect from endless loop if a task is not completing.
+      if ($prev_task && $curr_task->getTaskId() == $prev_task->getTaskId()) {
+        throw new \LogicException('Got same task instance twice from getActiveTaskInstance()');
+      }
+      $incomplete_runner_ids = $curr_task->getRunnerIds();
+      $this->assertGreaterThan(0, count($incomplete_runner_ids));
 
-      foreach ($runner_ids as $runner_id) {
-        $runner_done = FALSE;
-        while (!$runner_done) {
-          $client = self::createClient();
-          $client->request('POST', self::ENDPOINT_BATCH_RUNNER,
-            [],
-            [],
-            [
-              'HTTP_X-Runner-Id' => $runner_id
-            ]);
+      while (count($incomplete_runner_ids)) {
+        shuffle($incomplete_runner_ids);
+        $runner_id = reset($incomplete_runner_ids);
+        $client = $this->client;
+        $client->request('POST', self::ENDPOINT_BATCH_RUNNER,
+          [],
+          [],
+          [
+            'HTTP_X-Runner-Id' => $runner_id
+          ]);
 
-          $response = $client->getResponse();
-          $messages = $this->decodeBatchResponseContent($response->getContent());
-          $last_message = end($messages);
-          if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE) {
-            $runner_done = TRUE;
-          }
-          else {
-            if ($last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
-              $runner_done = ! $last_message->again;
-            }
+        $response = $client->getResponse();
+        $messages = $this->decodeBatchResponseContent($response->getContent());
+        $last_message = end($messages);
+        if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE) {
+          $incomplete_runner_ids = [];
+        } else {
+          if ($last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
+            $incomplete_runner_ids = $last_message->incomplete_runner_ids;
           }
         }
       }
+
+      $prev_task = $curr_task;
     }
 
     $this->assertEquals(
-      ['/app', '/app/renames'],
+      ['renames'],
       $this->fs_contents->directories
     );
 

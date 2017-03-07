@@ -20,6 +20,7 @@ class BatchRunnerResponseMessage extends BatchRunnerMessage {
 
   public function __construct(Response $response) {
     $this->type = BatchRunnerMessage::TYPE_RESPONSE;
+    $this->response = $response;
   }
 
   public function toJson() {

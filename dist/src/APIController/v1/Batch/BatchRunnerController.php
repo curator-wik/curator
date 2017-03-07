@@ -114,7 +114,7 @@ class BatchRunnerController implements RunnerControllerInterface {
     if ($this->task_instance === NULL) {
       // No pending tasks for our session, just tell them not to call back.
       return new BatchRunnerResponse([
-        new BatchRunnerControlMessage($runner_id, FALSE)
+        new BatchRunnerControlMessage($runner_id, [])
       ]);
     } else {
       /**
@@ -138,7 +138,7 @@ class BatchRunnerController implements RunnerControllerInterface {
       } else {
         // Task will finish during a subsequent request. Call back.
         $this->runner_response->postMessage(
-          new BatchRunnerControlMessage($runner_id, TRUE)
+          new BatchRunnerControlMessage($runner_id, $this->runner_service->getIncompleteRunnerIds())
         );
       }
 
