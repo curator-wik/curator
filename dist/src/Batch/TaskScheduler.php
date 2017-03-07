@@ -89,7 +89,7 @@ class TaskScheduler {
   public function assignTaskInstanceId() {
     $this->persistence->beginReadWrite();
     $new_task_id = $this->persistence->get('BatchTask.NextId', 1);
-    $this->persistence->set('BatchTask.NextId', $new_task_id++);
+    $this->persistence->set('BatchTask.NextId', $new_task_id + 1);
     $this->persistence->popEnd();
     return $new_task_id;
   }

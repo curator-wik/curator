@@ -48,12 +48,12 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
     $renames = $this->reader->getRenames($cpkg_path, $version);
     $all_impacted_objects = array_merge(array_keys($renames), array_values($renames));
     sort($all_impacted_objects, SORT_STRING);
-    $current = next($all_impacted_objects);
+    $current = reset($all_impacted_objects);
     while (($next = next($all_impacted_objects)) !== FALSE) {
       $plus_slash = "$current/";
       if(
         $current === $next
-        || (strlen($plus_slash) + 1 >= strlen($next) && strncmp($plus_slash, $next, strlen($plus_slash)) === 0)
+        || (strlen($next) >= strlen($plus_slash) + 1 && strncmp($plus_slash, $next, strlen($plus_slash)) === 0)
       ) {
         return FALSE;
       }

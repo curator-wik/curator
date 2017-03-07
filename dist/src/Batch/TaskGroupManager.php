@@ -63,7 +63,7 @@ class TaskGroupManager {
 
     $this->persistence->set(
       sprintf('BatchTask.%d', $task_instance->getTaskId()),
-      $task_instance->serialize()
+      serialize($task_instance)
     );
     $this->persistence->popEnd();
     $group->taskIds[] = $task_instance->getTaskId();

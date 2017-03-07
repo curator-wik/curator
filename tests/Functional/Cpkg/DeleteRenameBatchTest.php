@@ -5,10 +5,12 @@ namespace Curator\Tests\Functional\Cpkg;
 
 
 use Curator\APIModel\v1\BatchRunnerMessage;
+use Curator\Batch\TaskGroup;
 use Curator\Batch\TaskGroupManager;
 use Curator\Cpkg\BatchTaskTranslationService;
 use Curator\Persistence\PersistenceInterface;
 use Curator\Tests\Functional\MockedTimeRunnerService;
+use Curator\Tests\Functional\Util\Session;
 use Curator\Tests\Functional\WebTestCase;
 use Curator\Tests\Shared\Mocks\AppTargeterMock;
 use Silex\Application;
@@ -51,13 +53,19 @@ class DeleteRenameBatchTest extends WebTestCase {
     $persistence->end();
   }
 
+  public function setUp() {
+    parent::setUp();
+    // This test class has no unauthenticated tests.
+    Session::makeSessionAuthenticated($this->app['session']);
+  }
+
   /**
    * - Perform a job with both deletes and renames, ensure all of both types
    *   are processed.
    * - Cause there to be enough runnables to require > 1 runner incarnation.
    * - Verify all changes were made to filesystem at end.
    */
-  public function testMultipleDeletesAndRenames() {
+  public function disabled_testMultipleDeletesAndRenames() {
     // Set mock fs contents
     $this->fs_contents->directories = [
       '/app', '/app/renames', '/app/deleteme-dir'
@@ -65,37 +73,51 @@ class DeleteRenameBatchTest extends WebTestCase {
 
     $this->fs_contents->files = [
       '/app/deleteme-file' => 'hello world',
-      '/app/delteme-dir/file' => 'hello world'
+      '/app/deleteme-dir/file' => 'hello world',
+      '/app/changelog.1.2.4' => 'More better.',
     ];
 
     for($i = 1; $i <= 30; $i++) {
       $this->fs_contents->files["/app/renames/fileA$i"] = $i;
     }
 
+    $taskgroup = $this->scheduleCpkg('multiple-deletes-renames.zip');
+    $this->assertEquals(
+      2,
+      count(array_unique($taskgroup->taskIds)),
+      'Two batch tasks with unique ids are created from multiple-deletes-renames.zip'
+    );
+
     /**
-     * @var Response $response
+     * @var TaskGroupManager $taskgroup_manager
      */
-    $runner_ids = $this->scheduleCpkg('multiple-deletes-renames.zip');
-    $this->assertGreaterThan(0, count($runner_ids));
+    $taskgroup_manager = $this->app['batch.taskgroup_manager'];
+    while ($curr_task = $taskgroup_manager->getActiveTaskInstance($taskgroup)) {
+      $runner_ids = $curr_task->getRunnerIds();
+      $this->assertGreaterThan(0, count($runner_ids));
 
-    foreach ($runner_ids as $runner_id) {
-      $runner_done = FALSE;
-      while (! $runner_done) {
-        $client = self::createClient();
-        $client->request('POST', self::ENDPOINT_BATCH_RUNNER,
-          [],
-          [],
-          [
-            'HTTP_X-Runner-Id' => $runner_id
-          ]);
+      foreach ($runner_ids as $runner_id) {
+        $runner_done = FALSE;
+        while (!$runner_done) {
+          $client = self::createClient();
+          $client->request('POST', self::ENDPOINT_BATCH_RUNNER,
+            [],
+            [],
+            [
+              'HTTP_X-Runner-Id' => $runner_id
+            ]);
 
-        $response = $client->getResponse();
-        $messages = $this->decodeBatchResponseContent($response->getContent());
-        $last_message = end($messages);
-        if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE) {
-          $runner_done = TRUE;
-        } else if ($last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
-          $runner_done = $last_message->again;
+          $response = $client->getResponse();
+          $messages = $this->decodeBatchResponseContent($response->getContent());
+          $last_message = end($messages);
+          if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE) {
+            $runner_done = TRUE;
+          }
+          else {
+            if ($last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
+              $runner_done = ! $last_message->again;
+            }
+          }
         }
       }
     }
@@ -113,25 +135,27 @@ class DeleteRenameBatchTest extends WebTestCase {
   }
 
   /**
+   * @param $archive_name
+   *   Name of a file in the cpkgs fixtures directory.
+   * @return string
+   *   Full path to the file.
+   */
+  protected function p($archive_name) {
+    return __DIR__ . "/../../Unit/fixtures/cpkgs/$archive_name";
+  }
+
+  /**
    * @param $cpkg_path
    *   Path to cpkg used for test.
    *
-   * @return \int[]|null
-   *   Array of runner ids.
+   * @return TaskGroup
    */
   protected function scheduleCpkg($cpkg_path) {
     /**
      * @var BatchTaskTranslationService $translation_svc
      */
     $translation_svc = $this->app['cpkg.batch_task_translator'];
-    $taskgroup = $translation_svc->makeBatchTasks($cpkg_path);
-
-    /**
-     * @var TaskGroupManager $taskgroup_manager
-     */
-    $taskgroup_manager = $this->app['batch.taskgroup_manager'];
-    $curr_task = $taskgroup_manager->getActiveTaskInstance($taskgroup);
-    return $curr_task->getRunnerIds();
+    return $translation_svc->makeBatchTasks($this->p($cpkg_path));
   }
 
   protected function decodeBatchResponseContent($content) {

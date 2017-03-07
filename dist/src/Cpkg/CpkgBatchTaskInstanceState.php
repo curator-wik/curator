@@ -24,4 +24,22 @@ class CpkgBatchTaskInstanceState extends \Curator\Batch\TaskInstanceState  {
   public function getVersion() {
     return $this->version;
   }
+
+  public function serialize() {
+    $data = [
+      'parent' => parent::serialize(),
+      'cpkg_path' => $this->cpkg_path,
+      'version' => $this->version
+    ];
+
+    return serialize($data);
+  }
+
+  public function unserialize($serialized) {
+    $data = unserialize($serialized);
+    parent::unserialize($data['parent']);
+
+    $this->cpkg_path = $data['cpkg_path'];
+    $this->version = $data['version'];
+  }
 }

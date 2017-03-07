@@ -146,16 +146,16 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
 
   public function testRenamesCauseDeleteRenameTask() {
     $sut = $this->sutFactory();
-    $sut->makeBatchTasks($this->p('minimal+renames.zip'));
-
     $this->taskgroup_manager->expects($this->once())
       ->method('appendTaskInstance')
       ->with(
-        $this->isInstanceOf('\mbaynton\BatchFramework\TaskGroup'),
+        $this->isInstanceOf('\Curator\Batch\TaskGroup'),
         $this->callback(function(CpkgBatchTaskInstanceState $instanceState) {
-          return $instanceState->getTaskServiceName() == 'Cpkg.DeleteRenameBatchTask';
+          return $instanceState->getTaskServiceName() == 'cpkg.delete_rename_batch_task';
         })
       );
+
+    $sut->makeBatchTasks($this->p('minimal+renames.zip'));
   }
 
 }
