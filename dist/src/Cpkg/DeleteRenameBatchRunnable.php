@@ -85,7 +85,7 @@ class DeleteRenameBatchRunnable extends AbstractRunnable implements DescribedRun
     if ($fs->isDir($path)) {
       $ls = $fs->ls($path);
       foreach ($ls as $child) {
-        $this->delete($child);
+        $this->delete($this->fs_access->ensureTerminatingSeparator($path) . $child);
       }
       $fs->rmDir($path);
     } else {

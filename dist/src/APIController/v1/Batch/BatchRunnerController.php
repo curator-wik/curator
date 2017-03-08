@@ -20,9 +20,7 @@ use mbaynton\BatchFramework\Controller\HttpRunnerControllerTrait;
 use mbaynton\BatchFramework\Controller\RunnerControllerInterface;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
-use mbaynton\BatchFramework\ScheduledTaskInterface;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
-use mbaynton\BatchFramework\TaskInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -46,11 +44,6 @@ class BatchRunnerController implements RunnerControllerInterface {
   protected $task_instance;
 
   /**
-   * @var ScheduledTaskInterface $scheduledTask
-   */
-  protected $scheduledTask;
-
-  /**
    * @var RunnerService $runner_service
    */
   protected $runner_service;
@@ -59,6 +52,11 @@ class BatchRunnerController implements RunnerControllerInterface {
    * @var SessionInterface $session
    */
   protected $session;
+
+  /**
+   * @var PersistenceInterface $persistence
+   */
+  protected $persistence;
 
   /**
    * @var BatchRunnerResponse $runner_response
@@ -76,9 +74,28 @@ class BatchRunnerController implements RunnerControllerInterface {
    */
   protected $progress;
 
+  /**
+   * @var TaskScheduler $task_scheduler
+   */
+  protected $task_scheduler;
+
+  /**
+   * @var TaskGroupManager $taskgroup_manager
+   */
+  protected $taskgroup_manager;
+
+  /**
+   * @var TaskGroup $group
+   *   The TaskGroup currently being processed by this session.
+   */
+  protected $group;
+
   public function __construct(SessionInterface $session, PersistenceInterface $persistence, RunnerService $runner_service, TaskScheduler $task_scheduler, TaskGroupManager $taskgroup_mgr) {
     $this->session = $session;
     $this->runner_service = $runner_service;
+    $this->taskgroup_manager = $taskgroup_mgr;
+    $this->task_scheduler = $task_scheduler;
+    $this->persistence = $persistence;
 
     // The Pimple service injector gives us a new RunnerService unpaired to a
     // batch runner controller. That's us, so make the coupling.
@@ -93,12 +110,12 @@ class BatchRunnerController implements RunnerControllerInterface {
     /**
      * @var TaskGroup $group
      */
-    $group = $task_scheduler->getCurrentGroupInSession();
-    if ($group !== NULL) {
+    $this->group = $task_scheduler->getCurrentGroupInSession();
+    if ($this->group !== NULL) {
       /**
        * @var TaskInstanceState $task_instance
        */
-      $this->task_instance = $taskgroup_mgr->getActiveTaskInstance($group);
+      $this->task_instance = $taskgroup_mgr->getActiveTaskInstance($this->group);
     } else {
       $this->task_instance = NULL;
     }
@@ -132,8 +149,12 @@ class BatchRunnerController implements RunnerControllerInterface {
 
       if ($response !== NULL) {
         // Task done, send final outcome.
+        $next_task_runner_ids = [];
+        if ($this->task_instance !== NULL) {
+          $next_task_runner_ids = $this->task_instance->getRunnerIds();
+        }
         $this->runner_response->postMessage(
-          new BatchRunnerResponseMessage($response)
+          new BatchRunnerResponseMessage($response, $next_task_runner_ids)
         );
       } else {
         // Task will finish during a subsequent request. Call back.
@@ -187,8 +208,20 @@ class BatchRunnerController implements RunnerControllerInterface {
   }
 
   public function onTaskComplete(TaskInstanceStateInterface $task_instance) {
-    $batch_task_ids = $this->session->get('BatchTaskQueue', []);
-    $this->session->set('BatchTaskQueue', array_shift($batch_task_ids));
+    // TODO: Should really make RunnerService more TaskGroup-aware and move all this mess to RunnerService.
+    $this->persistence->beginReadWrite();
+    $this->taskgroup_manager->removeTaskInstance($this->group, $this->task_instance->getTaskId());
+    $this->task_instance = $this->taskgroup_manager->getActiveTaskInstance($this->group);
+
+    if ($this->task_instance === NULL) {
+      $this->task_scheduler->removeGroupFromSession($this->group);
+      $this->group = $this->task_scheduler->getCurrentGroupInSession();
+      if ($this->group !== NULL) {
+        $this->task_instance = $this->taskgroup_manager->getActiveTaskInstance($this->group);
+      }
+    }
+
+    $this->persistence->end();
   }
 
   protected function getRunnerId(Request $request) {

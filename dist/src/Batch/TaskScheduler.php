@@ -43,6 +43,32 @@ class TaskScheduler {
   }
 
   /**
+   * Removes a group from the Session.
+   *
+   * Must happen when all Tasks in the Group have been completed.
+   *
+   * @param \Curator\Batch\TaskGroup $group
+   *   The group to remove from the Session
+   * @param bool $delete_group
+   *   Whether to also remove the group's serialization from persistence.
+   *   This only occurs if the session did in fact own the group.
+   */
+  public function removeGroupFromSession(TaskGroup $group, $delete_group = TRUE) {
+    $session_queue = $this->session->get('TaskGroupQueue', []);
+    $group_ix = array_search($group->taskGroupId, $session_queue);
+    if ($group_ix !== FALSE) {
+      array_splice($session_queue, $group_ix, 1);
+      $this->session->set('TaskGroupQueue', $session_queue);
+    }
+
+    if ($delete_group && $this->session->getId() === $group->ownerSession) {
+      $this->persistence->beginReadWrite();
+      $this->persistence->set(sprintf('BatchTaskGroup.%d', $group->taskGroupId), NULL);
+      $this->persistence->popEnd();
+    }
+  }
+
+  /**
    * Gets the TaskGroup currently up for execution by the container's session.
    *
    * @return TaskGroup|null

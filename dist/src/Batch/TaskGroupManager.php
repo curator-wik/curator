@@ -97,6 +97,7 @@ class TaskGroupManager {
 
     $this->persistence->beginReadWrite();
     $this->persistence->set(sprintf('BatchTask.%d', $task_id), NULL);
+    $this->persistence->set(sprintf('BatchTaskGroup.%d', $group->taskGroupId), serialize($group));
     $this->persistence->popEnd();
   }
 

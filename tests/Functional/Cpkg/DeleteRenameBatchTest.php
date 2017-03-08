@@ -113,38 +113,32 @@ class DeleteRenameBatchTest extends WebTestCase {
      */
     $taskgroup_manager = $this->app['batch.taskgroup_manager'];
     $prev_task = NULL;
-    while ($curr_task = $taskgroup_manager->getActiveTaskInstance($taskgroup)) {
-      // Protect from endless loop if a task is not completing.
-      if ($prev_task && $curr_task->getTaskId() == $prev_task->getTaskId()) {
-        throw new \LogicException('Got same task instance twice from getActiveTaskInstance()');
+    // Seed the requests to the batch controller by looking up the runner ids
+    // of the first Task. In real world, will need to be pulled from an API.
+    $curr_task = $taskgroup_manager->getActiveTaskInstance($taskgroup);
+    $incomplete_runner_ids = $curr_task->getRunnerIds();
+    $this->assertGreaterThan(0, count($incomplete_runner_ids));
+
+    while (count($incomplete_runner_ids)) {
+      shuffle($incomplete_runner_ids);
+      $runner_id = reset($incomplete_runner_ids);
+      $client = $this->client;
+      $client->request('POST', self::ENDPOINT_BATCH_RUNNER,
+        [],
+        [],
+        [
+          'HTTP_X-Runner-Id' => $runner_id
+        ]);
+
+      $response = $client->getResponse();
+      $messages = $this->decodeBatchResponseContent($response->getContent());
+      $last_message = end($messages);
+      if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE || $last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
+        // This may be for a subsequent task, if the current one got done.
+        $incomplete_runner_ids = $last_message->incomplete_runner_ids;
+      } else {
+        throw new \RuntimeException('Last message in batch response was not TYPE_RESPONSE or TYPE_CONTROL.');
       }
-      $incomplete_runner_ids = $curr_task->getRunnerIds();
-      $this->assertGreaterThan(0, count($incomplete_runner_ids));
-
-      while (count($incomplete_runner_ids)) {
-        shuffle($incomplete_runner_ids);
-        $runner_id = reset($incomplete_runner_ids);
-        $client = $this->client;
-        $client->request('POST', self::ENDPOINT_BATCH_RUNNER,
-          [],
-          [],
-          [
-            'HTTP_X-Runner-Id' => $runner_id
-          ]);
-
-        $response = $client->getResponse();
-        $messages = $this->decodeBatchResponseContent($response->getContent());
-        $last_message = end($messages);
-        if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE) {
-          $incomplete_runner_ids = [];
-        } else {
-          if ($last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
-            $incomplete_runner_ids = $last_message->incomplete_runner_ids;
-          }
-        }
-      }
-
-      $prev_task = $curr_task;
     }
 
     $this->assertEquals(
@@ -154,8 +148,11 @@ class DeleteRenameBatchTest extends WebTestCase {
 
     $expected_files = [];
     for ($i = 1; $i <= 30; $i++) {
-      $expected_files["/app/renames/fileB$i"] = $i;
+      $expected_files["renames/fileB$i"] = $i;
     }
+    $expected_files['changelog.1.2.5'] = 'More better.';
+    ksort($expected_files, SORT_STRING);
+    ksort($this->fs_contents->files, SORT_STRING);
     $this->assertEquals($expected_files, $this->fs_contents->files);
   }
 

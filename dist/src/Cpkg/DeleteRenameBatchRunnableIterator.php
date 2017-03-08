@@ -33,6 +33,15 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
 
   protected $renames;
 
+  /**
+   * DeleteRenameBatchRunnableIterator constructor.
+   * @param \Curator\FSAccess\FSAccessManager $fs_access
+   * @param $deletes
+   * @param $renames
+   * @param int $start_index
+   *   0-based index into an imaginary concatenation of $deletes + $renames
+   * @param $increment
+   */
   public function __construct(FSAccessManager $fs_access, $deletes, $renames, $start_index, $increment) {
     $this->fs_access = $fs_access;
     $this->start_index = $start_index;
@@ -44,13 +53,14 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
   }
 
   protected function _seekRenames() {
-    $n_delete_offset = count($this->deletes) % $this->increment;
-    for($i = 1; $i <= $n_delete_offset; $i++) {
-      next($this->renames);
+    if ($this->start_index < count($this->deletes)) {
+      // Compute index of first rename this runner will do
+      $first_rename = $this->start_index + ($this->increment * ceil(count($this->deletes) / $this->increment));
+    } else {
+      $first_rename = $this->start_index;
     }
 
-    $completed_renames_offset = $this->current_index - count($this->deletes);
-    for ($i = 1; $i <= $completed_renames_offset; $i++) {
+    for ($i = 0; $i < $first_rename - count($this->deletes); $i++) {
       next($this->renames);
     }
   }
@@ -82,7 +92,8 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
    */
   public function next() {
     if ($this->current_index >= count($this->deletes)) {
-      for ($i = 1; $i <= $this->increment; $i++) {
+      // One less than $this->increment because each() already incremented 1
+      for ($i = 1; $i < $this->increment; $i++) {
         next($this->renames);
       }
     }
