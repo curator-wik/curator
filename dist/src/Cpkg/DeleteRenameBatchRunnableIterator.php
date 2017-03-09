@@ -24,6 +24,8 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
    */
   protected $current_index;
 
+  protected $rename_seeked;
+
   /**
    * @var int $increment
    */
@@ -53,15 +55,12 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
   }
 
   protected function _seekRenames() {
-    if ($this->start_index < count($this->deletes)) {
-      // Compute index of first rename this runner will do
-      $first_rename = $this->start_index + ($this->increment * ceil(count($this->deletes) / $this->increment));
-    } else {
-      $first_rename = $this->start_index;
-    }
-
-    for ($i = 0; $i < $first_rename - count($this->deletes); $i++) {
-      next($this->renames);
+    if ($this->current_index >= count($this->deletes) && ! $this->rename_seeked) {
+      reset($this->renames);
+      for ($i = 0; $i < $this->current_index - count($this->deletes); $i++) {
+        next($this->renames);
+      }
+      $this->rename_seeked = TRUE;
     }
   }
 
@@ -91,13 +90,17 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
    * Moves the iterator forward to the next element.
    */
   public function next() {
+    $this->current_index += $this->increment;
     if ($this->current_index >= count($this->deletes)) {
-      // One less than $this->increment because each() already incremented 1
-      for ($i = 1; $i < $this->increment; $i++) {
-        next($this->renames);
+      if (! $this->rename_seeked) {
+        $this->_seekRenames();
+      } else {
+        // One less than $this->increment because each() already incremented 1
+        for ($i = 1; $i < $this->increment; $i++) {
+          next($this->renames);
+        }
       }
     }
-    $this->current_index += $this->increment;
   }
 
   public function valid() {
@@ -106,7 +109,7 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
 
   public function rewind() {
     $this->current_index = $this->start_index;
-    reset($this->renames);
+    $this->rename_seeked = FALSE;
     $this->_seekRenames();
   }
 }

@@ -66,7 +66,7 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
     /**
      * @var CpkgBatchTaskInstanceState $instance_state
      */
-    if ($last_processed_runnable_id == 0) {
+    if ($last_processed_runnable_id === NULL) {
       $start = $runner_rank;
     } else {
       $start = $last_processed_runnable_id + $instance_state->getNumRunners();

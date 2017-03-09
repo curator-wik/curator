@@ -82,23 +82,105 @@ class DeleteRenameBatchTest extends WebTestCase {
    * - Cause there to be enough runnables to require > 1 runner incarnation.
    * - Verify all changes were made to filesystem at end.
    */
-  public function testMultipleDeletesAndRenames() {
-    // Set mock fs contents
-    $this->fs_contents->directories = [
-      'renames', 'deleteme-dir'
-    ];
-
-    $this->fs_contents->files = [
+  // Tests two deletions and many renames using 4 runners.
+  public function testMultipleDeletesAndRenames1() {
+    $initial_dirs = ['renames', 'deleteme-dir'];
+    $initial_files = [
       'deleteme-file' => 'hello world',
       'deleteme-dir/file' => 'hello world',
       'changelog.1.2.4' => 'More better.',
     ];
-
     for($i = 1; $i <= 30; $i++) {
-      $this->fs_contents->files["renames/fileA$i"] = $i;
+      $initial_files["renames/fileA$i"] = $i;
     }
 
-    $taskgroup = $this->scheduleCpkg('multiple-deletes-renames.zip');
+    $expected_dirs = ['renames'];
+    $expected_files = [];
+    for ($i = 1; $i <= 30; $i++) {
+      $expected_files["renames/fileB$i"] = $i;
+    }
+    $expected_files['changelog.1.2.5'] = 'More better.';
+
+    $this->_testMultipleDeletesAndRenames('multiple-deletes-renames.zip', $initial_dirs, $expected_dirs, $initial_files, $expected_files);
+  }
+
+  // Tests exactly as many deletions as there are runners.
+  public function testMultipleDeletesAndRenames2() {
+    $initial_dirs = ['renames', 'deleteme-dir'];
+    $initial_files = [
+      'deleteme-file' => 'hello world',
+      'deleteme-file2' => 'hello world',
+      'deleteme-file3' => 'x',
+      'deleteme-dir/file' => 'hello world',
+      'changelog.1.2.4' => 'More better.',
+    ];
+    for($i = 1; $i <= 30; $i++) {
+      $initial_files["renames/fileA$i"] = $i;
+    }
+
+    $expected_dirs = ['renames'];
+    $expected_files = [];
+    for ($i = 1; $i <= 30; $i++) {
+      $expected_files["renames/fileB$i"] = $i;
+    }
+    $expected_files['changelog.1.2.5'] = 'More better.';
+
+    $this->_testMultipleDeletesAndRenames('multiple-deletes-renames2.zip', $initial_dirs, $expected_dirs, $initial_files, $expected_files);
+  }
+
+  // Tests more deletions as there are runners.
+  public function testMultipleDeletesAndRenames3() {
+    $initial_dirs = ['renames', 'deleteme-dir'];
+    $initial_files = [
+      'deleteme-file' => 'hello world',
+      'deleteme-file2' => 'hello world',
+      'deleteme-file3' => 'x',
+      'deleteme-file4' => 'y',
+      'deleteme-file5' => 'z',
+      'deleteme-dir/file' => 'hello world',
+      'changelog.1.2.4' => 'More better.',
+    ];
+    for($i = 1; $i <= 30; $i++) {
+      $initial_files["renames/fileA$i"] = $i;
+    }
+
+    $expected_dirs = ['renames'];
+    $expected_files = [];
+    for ($i = 1; $i <= 30; $i++) {
+      $expected_files["renames/fileB$i"] = $i;
+    }
+    $expected_files['changelog.1.2.5'] = 'More better.';
+
+    $this->_testMultipleDeletesAndRenames('multiple-deletes-renames3.zip', $initial_dirs, $expected_dirs, $initial_files, $expected_files);
+  }
+
+  // Tests zero deletions.
+  public function testMultipleRenames() {
+    $initial_dirs = ['renames'];
+    $initial_files = [
+      'changelog.1.2.4' => 'More better.',
+    ];
+    for($i = 1; $i <= 35; $i++) {
+      $initial_files["renames/fileA$i"] = $i;
+    }
+
+    $expected_dirs = ['renames'];
+    $expected_files = [];
+    for ($i = 1; $i <= 35; $i++) {
+      $expected_files["renames/fileB$i"] = $i;
+    }
+    $expected_files['changelog.1.2.5'] = 'More better.';
+
+    $this->_testMultipleDeletesAndRenames('multiple-renames.zip', $initial_dirs, $expected_dirs, $initial_files, $expected_files);
+  }
+
+  public function _testMultipleDeletesAndRenames($cpkg_path, $initial_dirs, $expected_dirs, $initial_files, $expected_files) {
+    // Set mock fs contents
+    $this->fs_contents->directories = $initial_dirs;
+
+    $this->fs_contents->files = $initial_files;
+
+    $taskgroup = $this->scheduleCpkg($cpkg_path);
     $this->assertEquals(
       2,
       count(array_unique($taskgroup->taskIds)),
@@ -117,7 +199,7 @@ class DeleteRenameBatchTest extends WebTestCase {
     // of the first Task. In real world, will need to be pulled from an API.
     $curr_task = $taskgroup_manager->getActiveTaskInstance($taskgroup);
     $incomplete_runner_ids = $curr_task->getRunnerIds();
-    $this->assertGreaterThan(0, count($incomplete_runner_ids));
+    $this->assertEquals(4, count($incomplete_runner_ids));
 
     while (count($incomplete_runner_ids)) {
       shuffle($incomplete_runner_ids);
@@ -132,6 +214,17 @@ class DeleteRenameBatchTest extends WebTestCase {
 
       $response = $client->getResponse();
       $messages = $this->decodeBatchResponseContent($response->getContent());
+
+      // Ensure no errors reported in update messages.
+      foreach ($messages as $message) {
+        if ($message->type === BatchRunnerMessage::TYPE_UPDATE) {
+          $this->assertTrue(
+            $message->ok,
+            sprintf('BatchRunnerUpdateMessage indicated failure: %s', implode(' | ', $message->chatter))
+          );
+        }
+      }
+
       $last_message = end($messages);
       if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE || $last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
         // This may be for a subsequent task, if the current one got done.
@@ -141,16 +234,8 @@ class DeleteRenameBatchTest extends WebTestCase {
       }
     }
 
-    $this->assertEquals(
-      ['renames'],
-      $this->fs_contents->directories
-    );
+    $this->assertEquals($expected_dirs, $this->fs_contents->directories);
 
-    $expected_files = [];
-    for ($i = 1; $i <= 30; $i++) {
-      $expected_files["renames/fileB$i"] = $i;
-    }
-    $expected_files['changelog.1.2.5'] = 'More better.';
     ksort($expected_files, SORT_STRING);
     ksort($this->fs_contents->files, SORT_STRING);
     $this->assertEquals($expected_files, $this->fs_contents->files);
