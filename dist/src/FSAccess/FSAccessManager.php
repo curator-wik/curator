@@ -149,7 +149,7 @@ class FSAccessManager implements FSAccessInterface {
     $write_curr_dir_items = $this->writeOps->ls($write_starting_point);
 
     // Is the starting point already the read working path?
-    if ($working_path_items === $write_curr_dir_items
+    if (self::autodetectPathContentCompare($working_path_items, $write_curr_dir_items)
       && $this->verifyWriteWorkingPathCandidate($write_starting_point)
     ) {
       return $write_starting_point;
@@ -182,7 +182,7 @@ class FSAccessManager implements FSAccessInterface {
           // We've fully populated the $write_partial_path. Now just see if
           // the resulting location is the same as the working path.
           //$write_curr_dir_items = $this->writeOps->ls($write_partial_path);
-          if ($working_path_items === $write_curr_dir_items
+          if (self::autodetectPathContentCompare($working_path_items, $write_curr_dir_items)
             && $this->verifyWriteWorkingPathCandidate($write_partial_path)) {
             return $write_partial_path;
           }
@@ -190,6 +190,31 @@ class FSAccessManager implements FSAccessInterface {
       }
     }
     return NULL;
+  }
+
+  /**
+   * Decides whether the contents of two directories are sufficiently similar
+   * that they could be the same directory.
+   *
+   * @param string[] $contents1
+   *   Filenames in a directory.
+   * @param string[] $contents2
+   *   Filenames in a directory.
+   * @return bool
+   */
+  protected static function autodetectPathContentCompare($contents1, $contents2) {
+    // Shockingly, vsftpd excludes dotfiles from its directory listing unless
+    // specially configured. This is sufficiently prevalent to indicate the
+    // exclusion of dotfiles from the comparison.
+    $contents1 = array_filter($contents1, function($n) {
+      return substr($n, 0, 1) != '.';
+    });
+    $contents2 = array_filter($contents2, function($n) {
+      return substr($n, 0, 1) != '.';
+    });
+    sort($contents1);
+    sort($contents2);
+    return $contents1 === $contents2;
   }
 
   /**
@@ -214,8 +239,7 @@ class FSAccessManager implements FSAccessInterface {
       $this->writeOps->filePutContents($path, $data);
     } catch (FileException $e) {
       try {
-        // TODO: delete once write adapters support that operation
-        // $this->writeOps->rm($path);
+        $this->writeOps->unlink($path);
       } catch (FileException $e) { }
       return FALSE;
     }
@@ -229,8 +253,7 @@ class FSAccessManager implements FSAccessInterface {
     } catch (FileException $e) { }
 
     try {
-      // TODO: delete once write adapters support that operation
-      //$this->writeOps->rm($path);
+      $this->writeOps->unlink($path);
     } catch (FileException $e) { }
 
     return $data === $readback_data;
@@ -496,11 +519,10 @@ class FSAccessManager implements FSAccessInterface {
      * working path, but the ReadAdapterInterface's realPath() and by extension
      * $this->normalizePath() only work on paths that already exist.
      */
-    // TODO: removed this at cabin, seems redundant? $path = $this->simplifyPath($path);
     $dirs_needed = [];
     try {
       $this->normalizePath($path);
-      throw new FileExistsException($path, 0);
+      throw new FileExistsException($path, $this->isDir($path) ? 0 : 1);
     } catch (FileNotFoundException $e) {
       array_unshift($dirs_needed, $this->readOps->getPathParser()->baseName($path));
       $parent = $this->readOps->simplifyPath($path . $this->readSeparator . '..');
@@ -527,11 +549,18 @@ class FSAccessManager implements FSAccessInterface {
     // If we get this far, $parent contains a normalized absolute path to the
     // deepest directory of $path that already exists in the filesystem and is
     // within the working path.
-    $existing_dirs = $this->readOps->getPathParser()->translate($parent, $this->writeOps->getPathParser());
+    $existing_dirs_write = $this->readOps->getPathParser()->translate($parent, $this->writeOps->getPathParser());
+    $existing_dirs_read = $parent;
 
     foreach ($dirs_needed as $new_dir) {
-      $existing_dirs .= $this->writeSeparator . $new_dir;
-      $this->writeOps->mkdir($existing_dirs);
+      $existing_dirs_write .= $this->writeSeparator . $new_dir;
+      $existing_dirs_read .= $this->readSeparator . $new_dir;
+      if (! $this->writeOps->mkdir($existing_dirs_write)) {
+        // Throw, unless it is because the directory already exists.
+        if (! $this->isDir($existing_dirs_read)) {
+          throw new FileException('Directory creation failed.', $existing_dirs_write);
+        }
+      }
     }
   }
 

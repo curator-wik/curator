@@ -4,6 +4,8 @@ namespace Curator\Tests\Integration\FSAccess;
 
 use Curator\AppManager;
 use Curator\CuratorApplication;
+use Curator\FSAccess\FileException;
+use Curator\FSAccess\FileExistsException;
 use Curator\IntegrationConfig;
 use \Curator\FSAccess\FSAccessManager;
 
@@ -121,5 +123,72 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
       $fs->fileGetContents('test-ftp-chroot'),
       'Simple file can be written via chrooted ftp and read back.'
     );
+  }
+
+  function testExistingMkdirException() {
+    $adapters_tested = 0;
+    foreach ($this->getAdapterServices('write') as $writeAdapterService) {
+      // FSAccessManager needs to be reinitialized for each write adapter
+      $this->setUp();
+
+      $this->app['fs_access.write_adapter'] = $this->app->raw($writeAdapterService);
+      $name = $this->app['fs_access.write_adapter']->getAdapterName();
+
+      /**
+       * @var FSAccessManager $fs
+       */
+      $fs = $this->app['fs_access'];
+      $fs->setWorkingPath('/home/ftptest');
+      $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
+
+      try {
+        $fs->mkdir('www');
+        $this->assertFalse(TRUE, "No exception thrown when making an existing directory with $name.");
+      } catch (FileExistsException $e) {
+        $this->assertEquals(
+          0,
+          $e->getCode(),
+          "FileExistsException thrown by $name should have code 1"
+        );
+      }
+      $adapters_tested++;
+    }
+
+    $this->assertGreaterThan(0, $adapters_tested);
+  }
+
+  function testMkdirOverExistingFileException() {
+    $adapters_tested = 0;
+    foreach ($this->getAdapterServices('write') as $writeAdapterService) {
+      // FSAccessManager needs to be reinitialized for each write adapter
+      $this->setUp();
+
+      $this->app['fs_access.write_adapter'] = $this->app->raw($writeAdapterService);
+      $name = $this->app['fs_access.write_adapter']->getAdapterName();
+
+      /**
+       * @var FSAccessManager $fs
+       */
+      $fs = $this->app['fs_access'];
+      $fs->setWorkingPath('/home/ftptest');
+      $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
+
+      try {
+        $fs->mkdir('.profile');
+        $this->assertFalse(
+          TRUE,
+          "No exception thrown when attempting to make directory over existing file with $name."
+        );
+      } catch (FileExistsException $e) {
+        $this->assertEquals(
+          1,
+          $e->getCode(),
+          "FileExistsException thrown by $name should have code 1"
+        );
+      }
+      $adapters_tested++;
+    }
+
+    $this->assertGreaterThan(0, $adapters_tested);
   }
 }
