@@ -66,10 +66,12 @@ interface WriteAdapterInterface {
    * @throws FileNotFoundException
    *   When the directory to create the new directory in does not already exist.
    * @throws FileExistsException
-   *   When a filesystem object already exists at the $path (code 0), or the
-   *   parent of the new directory is not a directory (code 1).
+   *   When $path is already a directory (code 0), or
+   *   $path is another filesystem object (code 1).
    * @throws FileException
    *   On permission or I/O errors.
+   * @throws \UnexpectedValueException
+   *   If the directory was not created but the write adapter does not know why.
    */
   function mkdir($path);
 

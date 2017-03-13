@@ -503,8 +503,8 @@ class FSAccessManager implements FSAccessInterface {
    *   When a non-leaf directory of $path is not found and $create_parents is
    *   false.
    * @throws FileExistsException
-   *   When a filesystem object already exists at the $path (code 0), or a
-   *   non-directory exists at a location along the $path (code 1).
+   *   When $path is already a directory (code 0), or
+   *   a non-directory exists at a location along the $path (code 1).
    * @throws FileException
    *   Resulting from permission or I/O errors.
    * @throws \InvalidArgumentException
@@ -552,14 +552,44 @@ class FSAccessManager implements FSAccessInterface {
     $existing_dirs_write = $this->readOps->getPathParser()->translate($parent, $this->writeOps->getPathParser());
     $existing_dirs_read = $parent;
 
+    $last_dir_needed = array_pop($dirs_needed);
+
+    // For intermediate directories, continue if the directory is already
+    // created.
     foreach ($dirs_needed as $new_dir) {
       $existing_dirs_write .= $this->writeSeparator . $new_dir;
       $existing_dirs_read .= $this->readSeparator . $new_dir;
-      if (! $this->writeOps->mkdir($existing_dirs_write)) {
-        // Throw, unless it is because the directory already exists.
-        if (! $this->isDir($existing_dirs_read)) {
-          throw new FileException('Directory creation failed.', $existing_dirs_write);
+      try {
+        $this->writeOps->mkdir($existing_dirs_write);
+      } catch (FileExistsException $e) {
+        if ($e->getCode() == 0) {
+          // It is already a directory; safe to proceed.
+          continue;
+        } else {
+          throw $e;
         }
+      } catch (\UnexpectedValueException $e) {
+        // Adapter failed to create directory and that's all it knows.
+        // Scope out the situation with the read adapter.
+        if ($this->isDir($existing_dirs_read)) {
+          continue;
+        } else if ($this->isFile($existing_dirs_read)) {
+          throw new FileException(sprintf('Cannot create a directory here, because %s is a file.', $existing_dirs_read), $path, 1);
+        } else {
+          throw new FileException('Failed to create directory.', $existing_dirs_write);
+        }
+      }
+    }
+
+    $existing_dirs_write .= $this->writeSeparator . $last_dir_needed;
+    $existing_dirs_read .= $this->readSeparator . $last_dir_needed;
+    try {
+      $this->writeOps->mkdir($existing_dirs_write);
+    } catch (\UnexpectedValueException $e) {
+      if ($this->isDir($existing_dirs_read)) {
+        throw new FileExistsException($existing_dirs_write, 0);
+      } else if ($this->isFile($existing_dirs_read)) {
+        throw new FileExistsException($existing_dirs_write, 1);
       }
     }
   }

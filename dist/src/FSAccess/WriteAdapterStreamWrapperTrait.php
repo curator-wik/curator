@@ -56,12 +56,14 @@ trait WriteAdapterStreamWrapperTrait
   }
 
   public function mkdir($path) {
-    return mkdir(
+    if (! mkdir(
       $this->alterPathForStreamWrapper($path),
-      0755, // TODO: something fancier for mode
+      0755, // TODO: something fancier for mode, caution: umask
       FALSE,
       $this->getStreamContext()->getContext()
-    );
+    )) {
+      throw new \UnexpectedValueException();
+    }
   }
 
   public function rename($old_name, $new_name) {
