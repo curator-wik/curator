@@ -125,6 +125,26 @@ class ArchiveFileReader {
     return $finfo->isDir();
   }
 
+  /**
+   * Gets an iterator over all files and directories below the given path.
+   *
+   * // TODO: develop our own recursive iterator that efficiently implements
+   * // \SeekableIterator given an index of every n'th path. This could improve
+   * // batch runner incarnation startup time on very large archives.
+   *
+   * @param string $internal_path
+   *   The path within the archive to iterate all descendants of.
+   *   The empty string will result in an iterator over the entire contents.
+   * @return \Iterator
+   */
+  public function getRecursiveFileIterator($internal_path = '') {
+    $location = sprintf('phar://%s/%s', $this->archive_path, $internal_path);
+    return new \RecursiveIteratorIterator(
+      new \RecursiveDirectoryIterator($location),
+      \RecursiveIteratorIterator::SELF_FIRST
+    );
+  }
+
   public function __destruct() {
     self::$underlying_paths_refcounters[$this->archive_path]--;
     if (self::$underlying_paths_refcounters[$this->archive_path] === 0) {
