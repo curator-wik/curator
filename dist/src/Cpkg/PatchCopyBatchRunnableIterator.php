@@ -60,18 +60,45 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
   public function __construct(FSAccessManager $fs_access, ArchiveFileReader $archive_reader, $version, $start_index, $end_index) {
     $this->fs_access = $fs_access;
     $this->archive_reader = $archive_reader;
-    $this->internal_iterator = new \AppendIterator($archive_reader->getRecursiveFileIterator("payload/$version/files"));
-    $this->internal_iterator->append(
-      new PatchFilterIterator(
-        $archive_reader->getRecursiveFileIterator("payload/$version/patch_files")
-      )
-    );
 
-    $this->detectIteratorPathPrefix();
+    $this->internal_iterator = self::buildPatchCopyInternalIterator($archive_reader, $version);
+
+    if ($this->internal_iterator->valid()) {
+      $this->detectIteratorPathPrefix();
+    }
 
     $this->start_index = $start_index;
     $this->end_index = $end_index;
     $this->rewind();
+  }
+
+  /**
+   * Gets an iterator over all files and patches for a particular version
+   * in the cpkg archive being read by $archive_reader.
+   *
+   * @param \Curator\Cpkg\ArchiveFileReader $archive_reader
+   * @param $version
+   * @return \AppendIterator
+   */
+  public static function buildPatchCopyInternalIterator(ArchiveFileReader $archive_reader, $version) {
+    $internal_iterator = new \AppendIterator();
+    try {
+      $internal_iterator->append($archive_reader->getRecursiveFileIterator("payload/$version/files"));
+    } catch (\UnexpectedValueException $e) {
+      // When no files directory is present.
+    }
+
+    try {
+      $internal_iterator->append(
+        new PatchFilterIterator(
+          $archive_reader->getRecursiveFileIterator("payload/$version/patch_files")
+        )
+      );
+    } catch (\UnexpectedValueException $e) {
+      // When no patch_files directory is present.
+    }
+
+    return $internal_iterator;
   }
 
   /**
@@ -81,7 +108,7 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
     $path = $this->internal_iterator->current()->getPathname();
     if (!empty($path)) {
       // Example: 'phar:///path/to/cpkg.zip/payload/1.2.3'
-      $this->destination_excess_prefix = dirname($path);
+      $this->destination_excess_prefix = dirname(dirname($path));
       $this->source_excess_prefix = dirname(dirname($this->destination_excess_prefix));
     }
   }
@@ -150,7 +177,7 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
   }
 
   public function valid() {
-    return $this->current_index <= $this->end_index && $this->internal_iterator->valid();
+    return ($this->current_index <= $this->end_index || $this->end_index === -1)
+      && $this->internal_iterator->valid();
   }
 }
-

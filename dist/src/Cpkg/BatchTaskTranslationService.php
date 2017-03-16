@@ -122,6 +122,29 @@ class BatchTaskTranslationService {
         );
         $this->task_group_mgr->appendTaskInstance($group, $del_rename_task);
       }
+
+      $patch_copy_iterator = PatchCopyBatchRunnableIterator::buildPatchCopyInternalIterator(
+        new ArchiveFileReader($path_to_cpkg),
+        $version
+      );
+      $patch_copy_runnables = 0;
+      foreach ($patch_copy_iterator as $item) {
+        $patch_copy_runnables++;
+      }
+
+      if ($patch_copy_runnables > 0) {
+        $task_id = $this->task_scheduler->assignTaskInstanceId();
+        $patch_copy_task = new CpkgBatchTaskInstanceState(
+          'cpkg.patch_copy_batch_task',
+          $task_id,
+          4,
+          $patch_copy_runnables,
+          $path_to_cpkg,
+          $version
+        );
+
+        $this->task_group_mgr->appendTaskInstance($group, $patch_copy_task);
+      }
     }
 
     $this->task_scheduler->scheduleGroupInSession($group);

@@ -21,6 +21,13 @@ class CpkgServicesProvider implements ServiceProviderInterface {
       );
     });
 
+    $app['cpkg.patch_copy_batch_task'] = $app->share(function($app) {
+      return new PatchCopyBatchTask(
+        $app['cpkg.reader'],
+        $app['fs_access']
+      );
+    });
+
     $app['cpkg.batch_task_translator'] = $app->share(function($app) {
       return new BatchTaskTranslationService(
         $app['app_targeting.app_detector'],

@@ -336,7 +336,7 @@ class FSAccessManager implements FSAccessInterface {
     // Path by def'n begins with $this->workingPath; make a relative path.
     $relative_path = substr($normalized_path, strlen($this->workingPath));
     if ($this->readOps->getPathParser()->pathIsAbsolute($relative_path)) {
-      // TODO
+      // TODO. Can this happen?
     }
     $write_path = $this->writeWorkingPath
       . $this->writeOps->getPathParser()->getDirectorySeparators()[0]

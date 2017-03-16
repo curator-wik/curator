@@ -33,9 +33,14 @@ class PatchCopyBatchTask extends CpkgBatchTask {
       $start = $last_processed_runnable_id + 1;
     }
 
+    $end = (($runner_rank + 1) * $instance_state->getNumRunnables()) - 1;
+
     return new PatchCopyBatchRunnableIterator(
       $this->fs_access,
-      $start
+      new ArchiveFileReader($instance_state->getCpkgPath()),
+      $instance_state->getVersion(),
+      $start,
+      $end
     );
   }
 }

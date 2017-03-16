@@ -4,9 +4,7 @@ namespace Curator\Tests\Integration\FSAccess;
 
 use Curator\AppManager;
 use Curator\CuratorApplication;
-use Curator\FSAccess\FileException;
 use Curator\FSAccess\FileExistsException;
-use Curator\IntegrationConfig;
 use \Curator\FSAccess\FSAccessManager;
 
 class FSAccessTest extends \PHPUnit_Framework_TestCase
@@ -39,6 +37,16 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
         return strncmp($service_name, $prefix, strlen($prefix)) === 0;
       }
     );
+  }
+
+  protected function chrootSetup() {
+    $this->app['fs_access.ftp_config'] = $this->app->share(function() {
+      return new TestFtpConfigurationProvider('ftptest_chroot');
+    });
+    $this->app['fs_access.write_adapter'] = $this->app->raw('fs_access.write_adapter.ftp');
+    $fs = $this->app['fs_access'];
+    $fs->setWorkingPath('/home/ftptest_chroot/www');
+    $fs->setWriteWorkingPath('/www');
   }
 
   /**
@@ -99,7 +107,7 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
     $this->assertGreaterThan(0, $adapters_tested);
   }
 
-  function testFilePut_chroot() {
+  function testAutodetectWriteWorkingPath_chroot() {
     $this->app['fs_access.ftp_config'] = $this->app->share(function() {
       return new TestFtpConfigurationProvider('ftptest_chroot');
     });
@@ -114,15 +122,63 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
       '/www',
       $fs->autodetectWriteWorkingPath()
     );
-    $fs->setWriteWorkingPath('/www');
+  }
 
+  protected function _testFilePut_chroot() {
+    $fs = $this->app['fs_access'];
     $test_data = 'Data from integration test via chrooted ftp';
     $fs->filePutContents('test-ftp-chroot', $test_data);
+    return $test_data;
+  }
+
+  function testFilePut_chroot() {
+    $this->chrootSetup();
+    $fs = $this->app['fs_access'];
+    $expected = $this->_testFilePut_chroot();
     $this->assertEquals(
-      $test_data,
+      $expected,
       $fs->fileGetContents('test-ftp-chroot'),
       'Simple file can be written via chrooted ftp and read back.'
     );
+  }
+
+  function testMv_chroot() {
+    $this->chrootSetup();
+    $expected = $this->_testFilePut_chroot();
+    /**
+     * @var FSAccessManager $fs
+     */
+    $fs = $this->app['fs_access'];
+    $fs->mv('test-ftp-chroot', 'test-ftp-chroot-moved');
+    $this->assertEquals(
+      $expected,
+      $fs->fileGetContents('test-ftp-chroot-moved')
+    );
+  }
+
+  function testUnlink_chroot() {
+    $this->chrootSetup();
+    $this->_testFilePut_chroot();
+    /**
+     * @var FSAccessManager $fs
+     */
+    $fs = $this->app['fs_access'];
+    $this->assertTrue($fs->isFile('test-ftp-chroot'));
+    $fs->unlink('test-ftp-chroot');
+    $this->assertFalse($fs->isFile('test-ftp-chroot'));
+  }
+
+  function testMkdirRmdir_chroot() {
+    $this->chrootSetup();
+    /**
+     * @var FSAccessManager $fs
+     */
+    $fs = $this->app['fs_access'];
+    $this->assertFalse($fs->isDir('test-mkdir'));
+    $fs->mkdir('test-mkdir');
+    $this->assertTrue($fs->isDir('test-mkdir'));
+    $fs->rmDir('test-mkdir');
+    $this->assertFalse($fs->isDir('test-mkdir'));
   }
 
   function testExistingMkdirException() {
