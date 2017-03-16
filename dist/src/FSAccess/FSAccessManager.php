@@ -24,7 +24,7 @@ class FSAccessManager implements FSAccessInterface {
   /**
    * @var string $writeWorkingPath
    */
-  protected $writeWorkingPath;
+  protected $writeWorkingPath = NULL;
 
   /**
    * @var string $readSeparator
@@ -333,6 +333,10 @@ class FSAccessManager implements FSAccessInterface {
    *   FSAccessManager::normalizePath() without an $alt_wd.
    */
   protected function toWritePath($normalized_path) {
+    if ($this->writeWorkingPath === NULL) {
+      throw new \RuntimeException('A file write operation was attempted before calling FSAccessManager::setWriteWorkingPath().');
+    }
+
     // Path by def'n begins with $this->workingPath; make a relative path.
     $relative_path = substr($normalized_path, strlen($this->workingPath));
     if ($this->readOps->getPathParser()->pathIsAbsolute($relative_path)) {
@@ -429,8 +433,8 @@ class FSAccessManager implements FSAccessInterface {
     $new_location = $this->normalizePath($new_location);
     $new_name = $new_location . $this->readSeparator . $this->readOps->getPathParser()->baseName($new_name);
 
-    $new_name = $this->readOps->getPathParser()->translate($new_name, $this->writeOps->getPathParser());
-    $old_name = $this->readOps->getPathParser()->translate($old_name, $this->writeOps->getPathParser());
+    $new_name = $this->toWritePath($new_name);
+    $old_name = $this->toWritePath($old_name);
     $this->writeOps->rename($old_name, $new_name);
   }
 
@@ -470,7 +474,7 @@ class FSAccessManager implements FSAccessInterface {
    */
   public function unlink($filename) {
     $filename = $this->normalizePath($filename, NULL, FALSE);
-    $filename = $this->readOps->getPathParser()->translate($filename, $this->writeOps->getPathParser());
+    $filename = $this->toWritePath($filename);
     $this->writeOps->unlink($filename);
   }
 
@@ -487,7 +491,7 @@ class FSAccessManager implements FSAccessInterface {
    */
   public function rmDir($path) {
     $path = $this->normalizePath($path, NULL, FALSE);
-    $path = $this->readOps->getPathParser()->translate($path, $this->writeOps->getPathParser());
+    $path = $this->toWritePath($path);
     $this->writeOps->rmDir($path);
   }
 
@@ -549,7 +553,7 @@ class FSAccessManager implements FSAccessInterface {
     // If we get this far, $parent contains a normalized absolute path to the
     // deepest directory of $path that already exists in the filesystem and is
     // within the working path.
-    $existing_dirs_write = $this->readOps->getPathParser()->translate($parent, $this->writeOps->getPathParser());
+    $existing_dirs_write = $this->toWritePath($parent);
     $existing_dirs_read = $parent;
 
     $last_dir_needed = array_pop($dirs_needed);

@@ -68,6 +68,8 @@ abstract class CpkgWebTestCase extends WebTestCase {
     $cj = $this->client->getCookieJar();
     $session_cookie = new Cookie($this->app['session']->getName(), $this->app['session']->getId());
     $cj->set($session_cookie);
+
+    $this->app['fs_access']->setWriteWorkingPath('/app');
   }
 
   /**

@@ -101,6 +101,7 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
       $s = new FSAccessManager(self::$readAdapter_root, self::$writeAdapter_root);
       if ($init_working_path) {
         $s->setWorkingPath('/');
+        $s->setWriteWorkingPath('/');
       }
     } else {
       $read_adapter = self::$readAdapter_proj;
@@ -118,6 +119,7 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
       $s = new FSAccessManager($read_adapter, $write_adapter);
       if ($init_working_path) {
         $s->setWorkingPath(self::PROJECT_PATH);
+        $s->setWriteWorkingPath(self::PROJECT_PATH);
       }
     }
     return $s;
@@ -265,6 +267,7 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
   public function testMkdir_newAtCustomRoot() {
     $sut = static::sutFactory(FALSE, FALSE);
     $sut->setWorkingPath(static::PROJECT_PATH . '/test');
+    $sut->setWriteWorkingPath(static::PROJECT_PATH . '/test');
     $sut->mkdir(static::PROJECT_PATH . '/test/new', TRUE);
     self::assertMockDirExists($sut, 'new');
     self::assertMockDirExists($sut, static::PROJECT_PATH . '/test/new');
@@ -315,6 +318,7 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
   public function testMkdir_newAtDepth2FromProjRootViaRelPath() {
     $sut = static::sutFactory(FALSE, FALSE);
     $sut->setWorkingPath(self::PROJECT_PATH . '/test/a');
+    $sut->setWriteWorkingPath(self::PROJECT_PATH . '/test/a');
     $sut->mkdir('b');
     self::assertMockDirExists($sut, self::PROJECT_PATH  . '/test/a/b');
   }

@@ -60,3 +60,9 @@ services:
 
 volumes:
   php-builds: {}
+
+
+networks:
+  default:
+    external:
+      name: bridge

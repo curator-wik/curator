@@ -36,7 +36,7 @@ class StreamWrapperFtpAdapter implements ReadAdapterInterface, WriteAdapterInter
 
     $this->context = new StreamContextWrapper(
       stream_context_create(
-        array('ftp://' =>
+        array('ftp' =>
           array('overwrite' => TRUE)
         )
       ), 'ftp://'
