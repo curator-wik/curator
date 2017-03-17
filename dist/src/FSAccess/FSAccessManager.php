@@ -400,6 +400,9 @@ class FSAccessManager implements FSAccessInterface {
     $write_filename = $this->toWritePath($filename);
     // todo: Swap out absolute base of read path with that of write adapter.
     $bytes = $this->writeOps->filePutContents($write_filename, $data);
+    if ($this->readOps instanceof ClearStatCacheInterface) {
+      $this->readOps->clearstatcache($filename);
+    }
     if ($bytes != strlen($data)) {
       throw new FileException(sprintf('Write file "%s" via %s incomplete: %d of %d bytes were written.',
         $write_filename,
@@ -433,9 +436,13 @@ class FSAccessManager implements FSAccessInterface {
     $new_location = $this->normalizePath($new_location);
     $new_name = $new_location . $this->readSeparator . $this->readOps->getPathParser()->baseName($new_name);
 
-    $new_name = $this->toWritePath($new_name);
-    $old_name = $this->toWritePath($old_name);
-    $this->writeOps->rename($old_name, $new_name);
+    $new_name_write = $this->toWritePath($new_name);
+    $old_name_write = $this->toWritePath($old_name);
+    $this->writeOps->rename($old_name_write, $new_name_write);
+    if ($this->readOps instanceof ClearStatCacheInterface) {
+      $this->readOps->clearstatcache($old_name);
+      $this->readOps->clearstatcache($new_name);
+    }
   }
 
   /**
@@ -474,8 +481,11 @@ class FSAccessManager implements FSAccessInterface {
    */
   public function unlink($filename) {
     $filename = $this->normalizePath($filename, NULL, FALSE);
-    $filename = $this->toWritePath($filename);
-    $this->writeOps->unlink($filename);
+    $filename_write = $this->toWritePath($filename);
+    $this->writeOps->unlink($filename_write);
+    if ($this->readOps instanceof ClearStatCacheInterface) {
+      $this->readOps->clearstatcache($filename);
+    }
   }
 
   /**
@@ -491,8 +501,11 @@ class FSAccessManager implements FSAccessInterface {
    */
   public function rmDir($path) {
     $path = $this->normalizePath($path, NULL, FALSE);
-    $path = $this->toWritePath($path);
-    $this->writeOps->rmDir($path);
+    $path_write = $this->toWritePath($path);
+    $this->writeOps->rmDir($path_write);
+    if ($this->readOps instanceof ClearStatCacheInterface) {
+      $this->readOps->clearstatcache($path);
+    }
   }
 
   /**

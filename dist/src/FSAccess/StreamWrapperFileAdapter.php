@@ -5,7 +5,7 @@ namespace Curator\FSAccess;
 
 use Curator\FSAccess\PathParser\PathParserInterface;
 
-class StreamWrapperFileAdapter implements ReadAdapterInterface, WriteAdapterInterface {
+class StreamWrapperFileAdapter implements ReadAdapterInterface, WriteAdapterInterface, ClearStatCacheInterface {
   use ReadAdapterStreamWrapperTrait;
   use WriteAdapterStreamWrapperTrait;
   use CommonAdapterStreamWrapperTrait;
@@ -53,6 +53,15 @@ class StreamWrapperFileAdapter implements ReadAdapterInterface, WriteAdapterInte
 
   public function getCwd() {
     return getcwd();
+  }
+
+  /**
+   * Clears PHP's stat and realpath cache.
+   *
+   * @param string|null $path
+   */
+  public function clearstatcache($path = NULL) {
+    clearstatcache(TRUE, $path);
   }
 
   /**
