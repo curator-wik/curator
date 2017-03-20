@@ -50,12 +50,12 @@ class PatchCopyBatchTask extends CpkgBatchTask {
    *   0: The id of the first runnable this runner should execute.
    *   1: The id of the last runnable this runner should execute.
    */
-  protected static function getStartEndRunnableId(TaskInstanceStateInterface $instance_state, $runner_rank) {
+  public static function getStartEndRunnableId(TaskInstanceStateInterface $instance_state, $runner_rank) {
     /**
      * @var int $num_runnables_all_ranks
      *   The (minimum) number of runnables run by all runners.
      */
-    $num_runnables_all_ranks = floor($instance_state->getNumRunnables() / $instance_state->getNumRunners());
+    $num_runnables_all_ranks = (int)($instance_state->getNumRunnables() / $instance_state->getNumRunners());
     /**
      * @var int $num_ranks_running_remainder
      *   The number of ranks that need to run one extra runnable.
@@ -64,24 +64,21 @@ class PatchCopyBatchTask extends CpkgBatchTask {
 
     $first_rank_running_remainder = $instance_state->getNumRunners() - $num_ranks_running_remainder;
     if ($runner_rank >= $first_rank_running_remainder) {
-      if ($runner_rank > $first_rank_running_remainder) {
-        $start = $runner_rank * ($num_runnables_all_ranks + 1);
+      if ($num_runnables_all_ranks === 0) {
+        $start = $end = $runner_rank - $first_rank_running_remainder;
       } else {
-        $start = $runner_rank * $num_runnables_all_ranks;
+        if ($runner_rank > $first_rank_running_remainder) {
+          $start = $runner_rank * ($num_runnables_all_ranks + 1);
+        } else {
+          $start = $runner_rank * $num_runnables_all_ranks;
+        }
+        $end = (($runner_rank + 1) * ($num_runnables_all_ranks + 1) - 1);
       }
-      $end = (($runner_rank + 1) * ($num_runnables_all_ranks + 1) - 1);
     } else {
       $start = $runner_rank * $num_runnables_all_ranks;
       $end = (($runner_rank + 1) * $num_runnables_all_ranks) - 1;
     }
 
-
-    if ($num_runnables_all_ranks === 0 && $runner_rank < $num_ranks_running_remainder) {
-      $start = $runner_rank;
-    }
-
-
-
-    return [$start, $end];
+    return [$start, min($end, $instance_state->getNumRunnables() - 1)];
   }
 }
