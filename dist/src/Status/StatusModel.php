@@ -43,4 +43,10 @@ class StatusModel {
    */
   public $flush_works = FALSE;
 
+  /**
+   * @var string $write_working_path
+   *   The path corresponding to the site root for write operations.
+   */
+  public $write_working_path;
+
 }

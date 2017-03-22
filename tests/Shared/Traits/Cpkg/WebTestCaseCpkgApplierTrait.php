@@ -15,6 +15,7 @@ use Curator\Tests\Shared\Mocks\AppTargeterMock;
 use Silex\Application;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\HttpKernel\Client;
 
 
 trait WebTestCaseCpkgApplierTrait {
@@ -34,7 +35,28 @@ trait WebTestCaseCpkgApplierTrait {
     return $translation_svc->makeBatchTasks($this->p($cpkg_path));
   }
 
-  protected function runBatchApplicationOfCpkg($cpkg_path, $num_tasks = NULL) {
+  /**
+   * Modifies a path to cpkgs used by this test.
+   *
+   * Often overridden in the class to create absolute pathnames to fixture
+   * packages.
+   *
+   * @param string $cpkg_path
+   * @return string
+   */
+  protected function p($cpkg_path) {
+    return $cpkg_path;
+  }
+
+  /**
+   * @param string $cpkg_path
+   *   The pre p()-translated path to the cpkg.
+   * @param Client $client
+   *   The client to make the batch runner requests on; cookie jar should be preconfigured.
+   * @param int|null $num_tasks
+   *   The expected number of tasks that will result from the given cpkg.
+   */
+  protected function runBatchApplicationOfCpkg($cpkg_path, Client $client, $num_tasks = NULL) {
     $taskgroup = $this->scheduleCpkg($cpkg_path);
     if ($num_tasks != NULL) {
       $this->assertEquals(
@@ -61,7 +83,6 @@ trait WebTestCaseCpkgApplierTrait {
     while (count($incomplete_runner_ids)) {
       shuffle($incomplete_runner_ids);
       $runner_id = reset($incomplete_runner_ids);
-      $client = $this->client;
       $client->request('POST', $this->ENDPOINT_BATCH_RUNNER,
         [],
         [],
@@ -90,5 +111,17 @@ trait WebTestCaseCpkgApplierTrait {
         throw new \RuntimeException('Last message in batch response was not TYPE_RESPONSE or TYPE_CONTROL.');
       }
     }
+  }
+
+  protected function decodeBatchResponseContent($content) {
+    $objects = [];
+    while(strlen($content)) {
+      list($chunk_len, $content) = explode("\r\n", $content, 2);
+      $chunk_len = hexdec($chunk_len) + strlen("\r\n"); // incl. trailing \r\n
+      $chunk = substr($content, 0, $chunk_len);
+      $objects[] = json_decode($chunk);
+      $content = substr($content, $chunk_len);
+    }
+    return $objects;
   }
 }

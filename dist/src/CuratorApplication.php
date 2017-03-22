@@ -18,6 +18,7 @@ use Curator\FSAccess\PathParser\WindowsPathParser;
 use Curator\FSAccess\StreamWrapperFileAdapter;
 use Curator\FSAccess\StreamWrapperFtpAdapter;
 use Curator\Persistence\FilePersistence;
+use Curator\Status\StatusModel;
 use Curator\Status\StatusService;
 use Curator\Authorization\AuthorizationMiddleware;
 use Silex\Application;

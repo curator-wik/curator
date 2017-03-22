@@ -17,9 +17,15 @@ use Curator\Tests\Shared\Traits\Cpkg\WebTestCaseCpkgApplierTrait;
 use Silex\Application;
 use Symfony\Component\BrowserKit\Cookie;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\HttpKernel\Client;
 
 abstract class CpkgWebTestCase extends WebTestCase {
   use WebTestCaseCpkgApplierTrait;
+
+  /**
+   * @var Client $client;
+   */
+  protected $client;
 
   protected function injectTestDependencies(Application $app) {
     parent::injectTestDependencies($app);
@@ -82,25 +88,13 @@ abstract class CpkgWebTestCase extends WebTestCase {
     return __DIR__ . "/../../Unit/fixtures/cpkgs/$archive_name";
   }
 
-  protected function decodeBatchResponseContent($content) {
-    $objects = [];
-    while(strlen($content)) {
-      list($chunk_len, $content) = explode("\r\n", $content, 2);
-      $chunk_len = hexdec($chunk_len) + strlen("\r\n"); // incl. trailing \r\n
-      $chunk = substr($content, 0, $chunk_len);
-      $objects[] = json_decode($chunk);
-      $content = substr($content, $chunk_len);
-    }
-    return $objects;
-  }
-
   protected function _testCpkgBatchApplication($cpkg_path, $initial_dirs, $expected_dirs, $initial_files, $expected_files, $num_tasks = 2) {
     // Set mock fs contents
     $this->fs_contents->directories = $initial_dirs;
 
     $this->fs_contents->files = $initial_files;
 
-    $this->runBatchApplicationOfCpkg($cpkg_path, $num_tasks);
+    $this->runBatchApplicationOfCpkg($cpkg_path, $this->client, $num_tasks);
 
     $this->assertEquals($expected_dirs, $this->fs_contents->directories);
 

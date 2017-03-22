@@ -193,7 +193,7 @@ class BatchRunnerController implements RunnerControllerInterface {
     $this->progress = $progress;
   }
 
-  public function onRunnableError(RunnableInterface $runnable, $exception, ProgressInfo $progress) {
+  public function onRunnableError(RunnableInterface $runnable, \Exception $exception, ProgressInfo $progress) {
     $this->progress = $progress;
 
     $message = new BatchRunnerUpdateMessage();
@@ -203,6 +203,7 @@ class BatchRunnerController implements RunnerControllerInterface {
        * @var DescribedRunnableInterface $runnable
        */
       $message->chatter[0] = $runnable->describe();
+      $message->chatter[1] = $exception->__toString();
     }
     $this->runner_response->postMessage($message);
   }
