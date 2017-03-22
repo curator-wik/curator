@@ -27,6 +27,10 @@ class AppTargetingProvider implements ServiceProviderInterface {
         $app->getCuratorFilename()
         );
     });
+
+    $app['app_targeting.drupal7'] = $app->share(function($app) {
+      return new Drupal7AppTargeter($app['integration_config'], $app['fs_access']);
+    });
   }
 
   public function boot(Application $app) { }
