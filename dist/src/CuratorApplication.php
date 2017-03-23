@@ -3,6 +3,7 @@
 
 namespace Curator;
 
+use Curator\AppTargeting\AppTargeterFactoryInterface;
 use Curator\AppTargeting\AppTargetingProvider;
 use Curator\Authorization\InstallationAge;
 use Curator\Batch\RunnerService;
@@ -25,7 +26,7 @@ use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-class CuratorApplication extends Application {
+class CuratorApplication extends Application implements AppTargeterFactoryInterface {
 
   /**
    * @var string $curator_filename
@@ -180,5 +181,12 @@ class CuratorApplication extends Application {
       return new TaskGroupManager($app['persistence'], $app['batch.task_scheduler']);
     });
 
+  }
+
+  /**
+   * @inheritdoc
+   */
+  public function getAppTargeterById($app_id) {
+    return $this["app_targeting.$app_id"];
   }
 }

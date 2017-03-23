@@ -24,7 +24,7 @@ class AppTargetingProvider implements ServiceProviderInterface {
         $app['integration_config'],
         $app['status'],
         $app,
-        $app->getCuratorFilename()
+        $app['fs_access']
         );
     });
 

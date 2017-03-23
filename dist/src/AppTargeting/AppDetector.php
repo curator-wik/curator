@@ -6,6 +6,7 @@ namespace Curator\AppTargeting;
 
 
 
+use Curator\FSAccess\FSAccessManager;
 use Curator\IntegrationConfig;
 use Curator\Status\StatusService;
 
@@ -21,28 +22,20 @@ class AppDetector {
   protected $status;
 
   /**
-   * @var String $request_path
-   *   The path found in the HTTP request that invoked Curator.
+   * @var AppTargeterFactoryInterface $targeter_factory
    */
-  protected $request_path;
+  protected $targeter_factory;
 
   /**
    * @var TargeterInterface $targeter
    */
   protected $targeter = NULL;
 
-  /**
-   * @var \Pimple $di_container
-   *   Dependency injection container, for getTargeter() to access service names
-   *   given in variables.
-   */
-  protected $di_container;
-
-  function __construct(IntegrationConfig $curator_config, StatusService $status, \Pimple $di_container, $request_path) {
+  function __construct(IntegrationConfig $curator_config, StatusService $status, AppTargeterFactoryInterface $targeter_factory, FSAccessManager $fs_access) {
     $this->curatorConfig = $curator_config;
     $this->status = $status;
-    $this->di_container = $di_container;
-    $this->request_path = $request_path;
+    $this->targeter_factory = $targeter_factory;
+    $this->fs_access = $fs_access;
   }
 
   /**
@@ -56,7 +49,12 @@ class AppDetector {
         $this->targeter = $this->curatorConfig->getCustomAppTargeter();
       } else if ($this->status->getStatus()->adjoining_app_targeter) {
         $targeter_service_name = $this->status->getStatus()->adjoining_app_targeter;
-        $this->targeter = $this->di_container["app_targeting.$targeter_service_name"];
+        $this->targeter = $this->targeter_factory->getAppTargeterById($targeter_service_name);
+      } else {
+        $id = $this->detectAdjoiningApp();
+        if ($id !== NULL) {
+          $this->targeter = $this->targeter_factory->getAppTargeterById($id);
+        }
       }
     }
 
@@ -64,17 +62,27 @@ class AppDetector {
   }
 
   /**
-   * @return string
-   *   The name of the adjoining application.
-   *   Must match a service app_targeting.app.*.config
+   * @return string|null
+   *   The service ID for the app targeter appropriate for the adjoining app.
    */
-  function detectAdjoiningApp() {
-    // If the hard config tells us the app we're adjoining, we're done.
-    $hc_app = $this->curatorConfig['app'];
-    if (!empty($hc_app)) {
-      return $hc_app;
+  public function detectAdjoiningApp() {
+    $app_signatures = [
+      'drupal7' => ['includes/bootstrap.inc', 'modules/system/system.info']
+    ];
+
+    foreach ($app_signatures as $target_service_id => $app_signature) {
+      $match = TRUE;
+      foreach ($app_signature as $filename) {
+        if (! $this->fs_access->isFile($filename)) {
+          $match = FALSE;
+          break;
+        }
+      }
+      if ($match) {
+        return $target_service_id;
+      }
     }
-
-
+    // TODO: We probably want to have a generic targeter someday.
+    return NULL;
   }
 }
