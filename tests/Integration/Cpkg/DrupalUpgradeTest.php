@@ -45,6 +45,6 @@ class DrupalUpgradeTest extends IntegrationWebTestCase {
     $cj = $client->getCookieJar();
     $session_cookie = new Cookie($this->app['session']->getName(), $this->app['session']->getId());
     $cj->set($session_cookie);
-    $this->runBatchApplicationOfCpkg('/root/drupal-upgrade-test.zip', $client);
+    $this->runBatchApplicationOfCpkg('/root/drupal-upgrade-test-allfiles.zip', $client);
   }
 }
