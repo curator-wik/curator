@@ -3,13 +3,11 @@
 
 namespace Curator\Tests\Integration\Cpkg;
 
-use Curator\CuratorApplication;
 use Curator\IntegrationConfig;
-use Curator\Tests\Functional\Cpkg\CpkgWebTestCase;
 use Curator\Tests\Functional\Util\Session;
-use Curator\Tests\Functional\WebTestCase;
 use Curator\Tests\Integration\IntegrationWebTestCase;
 use Curator\Tests\Shared\Traits\Cpkg\WebTestCaseCpkgApplierTrait;
+use Silex\Application;
 use Symfony\Component\BrowserKit\Cookie;
 
 /**
@@ -20,7 +18,7 @@ use Symfony\Component\BrowserKit\Cookie;
 class DrupalUpgradeTest extends IntegrationWebTestCase {
   use WebTestCaseCpkgApplierTrait;
 
-  protected function injectTestDependencies(CuratorApplication $app) {
+  protected function injectTestDependencies(Application $app) {
     parent::injectTestDependencies($app);
     /**
      * @var IntegrationConfig $integration_config
