@@ -46,5 +46,12 @@ class DrupalUpgradeTest extends IntegrationWebTestCase {
     $session_cookie = new Cookie($this->app['session']->getName(), $this->app['session']->getId());
     $cj->set($session_cookie);
     $this->runBatchApplicationOfCpkg('/root/drupal-upgrade-test-allfiles.zip', $client);
+
+    $diff = `/usr/bin/diff --brief -r /root/drupal-7.53 /root/drupal-7.54 2>&1 | grep -Fv '.curator-data'`;
+    $this->assertEquals(
+      '',
+      trim($diff),
+      '7.53 source tree after updating to 7.54 does not match 7.54 source tree.'
+    );
   }
 }

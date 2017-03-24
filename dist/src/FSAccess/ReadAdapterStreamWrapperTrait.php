@@ -80,7 +80,7 @@ trait ReadAdapterStreamWrapperTrait
     if ($this->getStreamContext()->getScheme() === 'file://') {
       // We can resolve symlinks and such if using the filesystem.
       if ($resolve_symlink) {
-        $true_real_path = realpath($path);
+        $true_real_path = realpath($this->simplifyPath($path));
       } else {
         $parent = $this->simplifyPath($path . $this->getPathParser()->getDirectorySeparators()[0] . '..');
         $true_real_path = realpath($parent);
