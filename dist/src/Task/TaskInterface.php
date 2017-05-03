@@ -6,7 +6,8 @@ namespace Curator\Task;
 
 interface TaskInterface {
   /**
-   * @return callable
+   * @return string
+   *   The DI service name for the controller to use in handling this request.
    */
-  function getController();
+  function getControllerName();
 }

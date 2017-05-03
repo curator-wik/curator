@@ -31,8 +31,8 @@ class UpdateTask implements TaskInterface {
     return $this;
   }
 
-  public function getController() {
-    return function () { return 'Update controller'; };
+  public function getControllerName() {
+    return 'Update controller';
   }
 
 }

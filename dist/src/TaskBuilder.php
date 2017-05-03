@@ -27,6 +27,10 @@ class TaskBuilder {
     return $this->task;
   }
 
+  public function setIntegrationSecret() {
+
+  }
+
   /**
    * @return \Curator\Task\TaskInterface
    */
