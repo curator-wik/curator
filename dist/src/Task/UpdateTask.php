@@ -31,7 +31,11 @@ class UpdateTask implements TaskInterface {
     return $this;
   }
 
-  public function getControllerName() {
+  public function getRoute() {
+    return 'init-update';
+  }
+
+  public function getDecoderServiceName() {
     return 'Update controller';
   }
 

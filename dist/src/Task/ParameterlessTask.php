@@ -26,10 +26,14 @@ class ParameterlessTask implements TaskInterface {
     $this->task = $task;
   }
 
-  public function getControllerName() {
+  public function getDecoderServiceName() {
+    return NULL;
+  }
+
+  public function getRoute() {
     switch ($this->task) {
       case self::TASK_INIT_INTEGRATION_SECRET:
-        return 'controller.integration.init_secret';
+        return '/integration-utils/init-secret';
     }
   }
 }
