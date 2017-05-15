@@ -27,6 +27,10 @@ class ParameterlessTask implements TaskInterface {
   }
 
   public function getDecoderServiceName() {
+    switch ($this->task) {
+      case self::TASK_INIT_INTEGRATION_SECRET:
+        return 'task.decoder.initialize_hmac_secret';
+    }
     return NULL;
   }
 

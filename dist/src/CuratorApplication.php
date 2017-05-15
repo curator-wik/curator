@@ -22,6 +22,7 @@ use Curator\Persistence\FilePersistence;
 use Curator\Status\StatusModel;
 use Curator\Status\StatusService;
 use Curator\Authorization\AuthorizationMiddleware;
+use Curator\Task\Decoder\InitializeHmacSecret;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -114,6 +115,10 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     $this['authorization.installation_age'] = function() {
       return new InstallationAge();
     };
+
+    $this['task.decoder.initialize_hmac_secret'] = $this->share(function($app) {
+      return new InitializeHmacSecret();
+    });
 
     $this['fs_access'] = $this->share(function($app) {
       $manager = new FSAccessManager($app['fs_access.read_adapter'], $app['fs_access.write_adapter']);

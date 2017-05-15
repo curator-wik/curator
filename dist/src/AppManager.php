@@ -171,18 +171,28 @@ class AppManager {
         // redirecting to the route provided by the task.
         $setup_service = $this->silexApp[$task->getDecoderServiceName()];
         if ($setup_service instanceof \Curator\Task\TaskDecoderInterface) {
-          $setup_service->decodeTask($task);
+          $decoder_return = $setup_service->decodeTask($task);
         } else {
           throw new \LogicException(sprintf('The integration task identified decoder service "%s", but it does not implement TaskDecoderInterface.', $task->getDecoderServiceName()));
         }
       }
 
-      // Assume current URL as basis for redirect, because integration tasks
-      // ought to only be present when the integration script itself is the URL.
-      $is_https = isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) == 'on';
-      $http_protocol = $is_https ? 'https://' : 'http://';
-      $entrypoint_script_url = $http_protocol . $_SERVER['HTTP_HOST'];
-      $entrypoint_script_url .= $_SERVER['SCRIPT_NAME'];
+      // If the decoder service returned a non-null value, it is assumed that
+      // the meaningful work done during this request was performed by the
+      // decoder service itself. Make the result available to the integration
+      // script. This feature is used during HMAC shared secret initialization.
+      if ($decoder_return !== NULL) {
+        return $decoder_return;
+      } else {
+        // Otherwise, assume current URL as basis for redirect, because
+        // integration tasks ought to only be present when the integration
+        // script itself is the URL.
+        $is_https = isset($_SERVER['HTTPS'])
+          && strtolower($_SERVER['HTTPS']) == 'on';
+        $http_protocol = $is_https ? 'https://' : 'http://';
+        $entrypoint_script_url = $http_protocol . $_SERVER['HTTP_HOST'];
+        $entrypoint_script_url .= $_SERVER['SCRIPT_NAME'];
+      }
 
       header('Location: ' . $entrypoint_script_url . $task->getRoute());
       header('Cache-Control: no-cache'); // Not a permanent redirect.
