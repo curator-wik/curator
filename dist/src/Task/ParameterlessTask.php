@@ -10,7 +10,8 @@ namespace Curator\Task;
  */
 class ParameterlessTask implements TaskInterface {
 
-  const TASK_INIT_INTEGRATION_SECRET = 1;
+  const TASK_GEN_INTEGRATION_SECRET = 1;
+  const TASK_COMMIT_INTEGRATION_SECRET = 2;
 
   /**
    * @var int $task
@@ -28,7 +29,8 @@ class ParameterlessTask implements TaskInterface {
 
   public function getDecoderServiceName() {
     switch ($this->task) {
-      case self::TASK_INIT_INTEGRATION_SECRET:
+      case self::TASK_GEN_INTEGRATION_SECRET:
+      case self::TASK_COMMIT_INTEGRATION_SECRET:
         return 'task.decoder.initialize_hmac_secret';
     }
     return NULL;
@@ -36,8 +38,16 @@ class ParameterlessTask implements TaskInterface {
 
   public function getRoute() {
     switch ($this->task) {
-      case self::TASK_INIT_INTEGRATION_SECRET:
+      case self::TASK_GEN_INTEGRATION_SECRET:
         return '/integration-utils/init-secret';
     }
+  }
+
+  /**
+   * @return int
+   *   One of the self::TASK_* constants.
+   */
+  public function getTaskNumber() {
+    return $this->task;
   }
 }

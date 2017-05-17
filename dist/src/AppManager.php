@@ -201,6 +201,9 @@ class AppManager {
     }
   }
 
+  /**
+   * @return \Curator\CuratorApplication
+   */
   public function createApplication() {
     if ($this->isPhar()) {
       set_include_path('phar://curator.phar');

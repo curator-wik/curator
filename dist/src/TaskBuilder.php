@@ -2,6 +2,7 @@
 
 
 namespace Curator;
+use Curator\Task\ParameterlessTask;
 use Curator\Task\TaskInterface;
 use Curator\Task\UpdateTask;
 
@@ -27,8 +28,12 @@ class TaskBuilder {
     return $this->task;
   }
 
-  public function setIntegrationSecret() {
-
+  public function setIntegrationSecret($commit = FALSE) {
+    $this->task = new ParameterlessTask(
+      $commit ? ParameterlessTask::TASK_COMMIT_INTEGRATION_SECRET
+        : ParameterlessTask::TASK_GEN_INTEGRATION_SECRET
+    );
+    return $this->task;
   }
 
   /**

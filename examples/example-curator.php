@@ -1,8 +1,11 @@
 <?php
 /**
  * @file curator.php
- * Fallback entry point for .phar distributions, when server does not support
- * interpreting .phar files directly.
+ * Example for the skeleton of an integration script. This shows how you would
+ * specify a task for Curator to perform, and then launch the application.
+ *
+ * Your file should not be named 'curator.php', or Curator will run in
+ * standalone, not embedded, mode.
  */
 
 use Curator\AppManager;
@@ -19,7 +22,7 @@ $closure = function() {
     ->update('backdrop')
     ->fromPackage('file://site/default/files/...');
 
-  $app_manager->applyConfiguration($config);
+  $app_manager->applyIntegrationConfig($config);
 
   $app_manager->run();
 };
