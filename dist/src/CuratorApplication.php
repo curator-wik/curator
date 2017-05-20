@@ -117,7 +117,7 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     };
 
     $this['task.decoder.initialize_hmac_secret'] = $this->share(function($app) {
-      return new InitializeHmacSecret();
+      return new InitializeHmacSecret($app['persistence']);
     });
 
     $this['fs_access'] = $this->share(function($app) {

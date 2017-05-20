@@ -146,12 +146,9 @@ class AppManager {
       throw new \LogicException('Must call determineRunMode() before run().');
     }
 
-    if ($this->hasRun()) {
-      throw new \LogicException('Curator has already been run().');
-    }
-
-    if (php_sapi_name() == 'cli') {
-      die("Curator cannot be used from the command line.\n");
+    if (php_sapi_name() == 'cli' && ! getenv('PHPUNIT-TEST')) {
+      fwrite(STDERR, "Curator cannot be used from the command line.\n");
+      exit(1);
     }
 
     if (!defined('PHP_VERSION_ID') || PHP_MAJOR_VERSION < 5 || (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION < 4)) {
@@ -197,6 +194,10 @@ class AppManager {
       header('Location: ' . $entrypoint_script_url . $task->getRoute());
       header('Cache-Control: no-cache'); // Not a permanent redirect.
     } else {
+      if ($this->hasRun()) {
+        throw new \LogicException('Curator has already been run().');
+      }
+      
       $this->silexApp->run();
     }
   }
