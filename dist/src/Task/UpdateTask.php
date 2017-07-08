@@ -8,6 +8,26 @@ use Curator\AppTargeting\TargeterInterface;
 
 class UpdateTask implements TaskInterface {
 
+  /**
+   * @var string $component
+   * The name of the component to update, as identified in the cpkg.
+   */
+  protected $component;
+
+  /**
+   * @var string $source_spec
+   * A URL to the update cpkg.
+   */
+  protected $source_spec;
+
+  /**
+   * @var string $to_version
+   * The version identifier to update to, as identified in the cpkg.
+   */
+  protected $to_version;
+
+
+
   public function __construct($component) {
     $this->component($component);
   }
@@ -19,6 +39,7 @@ class UpdateTask implements TaskInterface {
    * @return $this
    */
   public function component($component_name) {
+    $this->component = $component_name;
     return $this;
   }
 
@@ -28,6 +49,17 @@ class UpdateTask implements TaskInterface {
    * @return $this
    */
   public function fromPackage($source_spec) {
+    $this->source_spec = $source_spec;
+    return $this;
+  }
+
+  /**
+   * @param string $version
+   *
+   * @return $this
+   */
+  public function toVersion($version) {
+    $this->to_version = $version;
     return $this;
   }
 
@@ -35,8 +67,34 @@ class UpdateTask implements TaskInterface {
     return 'init-update';
   }
 
+  /**
+   * Gets the name of the service registered with DI to interpret this task.
+   *
+   * @return string
+   */
   public function getDecoderServiceName() {
     return 'Update controller';
+  }
+
+  /**
+   * @return string
+   */
+  public function getComponent() {
+    return $this->component;
+  }
+
+  /**
+   * @return string
+   */
+  public function getPackageLocation() {
+    return $this->source_spec;
+  }
+
+  /**
+   * @return string
+   */
+  public function getToVersion() {
+    return $this->to_version;
   }
 
 }

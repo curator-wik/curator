@@ -5,10 +5,12 @@ namespace Curator\APIController\v1\Batch;
 
 
 use Curator\APIModel\v1\BatchRunnerControlMessage;
+use Curator\APIModel\v1\BatchRunnerMessage;
 use Curator\APIModel\v1\BatchRunnerResponseMessage;
 use Curator\APIModel\v1\BatchRunnerUpdateMessage;
 use Curator\Batch\BatchRunnerResponse;
 use Curator\Batch\DescribedRunnableInterface;
+use Curator\Batch\MessageCallbackRunnableInterface;
 use Curator\Batch\RunnerService;
 use Curator\Batch\TaskGroup;
 use Curator\Batch\TaskGroupManager;
@@ -183,10 +185,23 @@ class BatchRunnerController implements RunnerControllerInterface {
     }
     $this->runner_response->postMessage($message);
 
+    if ($runnable instanceof MessageCallbackRunnableInterface) {
+      /**
+       * @var MessageCallbackRunnableInterface $runnable
+       */
+      $runnable->setUpdateMessageCallback([$this, 'handleMessageCallbackRunnablePostback']);
+    }
+
     if ($this->progress->timeElapsed - $this->last_chatter_flush >= static::CHATTER_FLUSH_INTERVAL) {
       $this->runner_response->flush();
       $this->last_chatter_flush = $this->progress->timeElapsed;
     }
+  }
+
+  protected function handleMessageCallbackRunnablePostback(BatchRunnerMessage $message) {
+    $this->runner_response->postMessage($message);
+    // TODO: add some kind of throttling on the flush rate.
+    $this->runner_response->flush();
   }
 
   public function onRunnableComplete(RunnableInterface $runnable, $result, ProgressInfo $progress) {

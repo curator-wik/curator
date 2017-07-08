@@ -4,22 +4,23 @@
 namespace Curator\APIModel\v1;
 
 /**
- * Class BatchRunnerUpdateModel
- *   Models information about the progress and current activity of a batch
- *   Task Runner while the run is in progress.
+ * Class BatchRunnerRawProgressMessage
+ *
+ * An alternate type of update message that provides a precomputed percent
+ * complete rather than the number of completed runnables.
  */
-class BatchRunnerUpdateMessage extends BatchRunnerMessage {
-
+class BatchRunnerRawProgressMessage {
   public function __construct() {
     $this->type = BatchRunnerMessage::TYPE_UPDATE;
     $this->ok = TRUE; // Default to something truthy.
   }
 
   /**
-   * @var int $n
-   *   Number of Runnables completed during this Incarnation of this Runner.
+   * @var float $pct
+   *   The total percent complete for this Task that should be directly reported
+   *   in the UI.
    */
-  public $n;
+  public $pct;
 
   /**
    * @var string[] $chatter
@@ -34,4 +35,5 @@ class BatchRunnerUpdateMessage extends BatchRunnerMessage {
    *   Boolean indicating whether there has been an error.
    */
   public $ok;
+
 }
