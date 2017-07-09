@@ -146,12 +146,21 @@ class CurlDownloadBatchRunnable extends AbstractRunnable implements MessageCallb
     return [$name, $fh];
   }
 
-  protected function handleCurlProgress($resource,$download_size, $downloaded, $upload_size, $uploaded) {
-    if ($download_size > 0) {
-      // Calling microtime() is expensive, so don't do it on every invocation.
-      $this->handle_curl_progress_flap = ($this->handle_curl_progress_flap + 1) % 4;
-      if ($this->handle_curl_progress_flap === 0) {
-        $now = microtime(true);
+  protected function handleCurlProgress() {
+    // Calling microtime() is expensive, so don't do it on every invocation.
+    $this->handle_curl_progress_flap = ($this->handle_curl_progress_flap + 1) % 4;
+    if ($this->handle_curl_progress_flap === 0) {
+      // Parameters to this callback changed in PHP 5.5+; handle both.
+      if (func_num_args() === 4) {
+        $download_size = func_get_arg(0);
+        $downloaded = func_get_arg(1);
+      } else {
+        $download_size = func_get_arg(1);
+        $downloaded = func_get_arg(2);
+      }
+
+      if ($download_size > 0) {
+        $now = microtime(TRUE);
         if ($now - $this->last_update_message_timestamp >= self::PROGRESS_UPDATE_INTERVAL_MS) {
           $this->last_update_message_timestamp = $now;
           $message = new BatchRunnerRawProgressMessage();

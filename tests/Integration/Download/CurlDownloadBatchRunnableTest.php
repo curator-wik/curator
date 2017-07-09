@@ -141,8 +141,13 @@ class CurlDownloadBatchRunnableTest extends \PHPUnit_Framework_TestCase {
   public function testDownloadProgressIsReported() {
     $sut = $this->sutFactory();
     $called_counter = 0;
-    $sut->setUpdateMessageCallback(function(BatchRunnerRawProgressMessage $m) use (&$called_counter) {
+    $last_pct_reported = 0;
+    $sut->setUpdateMessageCallback(function(BatchRunnerRawProgressMessage $m) use (&$called_counter, &$last_pct_reported) {
       $called_counter++;
+      $this->assertGreaterThanOrEqual($last_pct_reported, $m->pct);
+      $this->assertGreaterThanOrEqual(0, $m->pct);
+      $this->assertLessThanOrEqual(100, $m->pct);
+      $last_pct_reported = $m->pct;
     });
 
     $file = $sut->run($this->task, $this->taskState);
