@@ -10,6 +10,7 @@ use Curator\IntegrationConfig;
 use mbaynton\BatchFramework\AbstractRunnable;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
 use mbaynton\BatchFramework\TaskInterface;
+use Symfony\Component\Debug\Exception\ContextErrorException;
 
 /**
  * Class CurlDownloadBatchRunnable
@@ -79,25 +80,57 @@ class CurlDownloadBatchRunnable extends AbstractRunnable implements MessageCallb
     if ($fh === FALSE) {
       throw new \RuntimeException("Unable to open or create a new file to receive the download at " . $filename);
     }
+    $files[] = $fh;
 
     $ch = curl_init($this->url);
+    // CURLOPT_PROGRESSFUNCTION requires CURLOPT_NOPROGRESS = FALSE, but this
+    // has the side-effect of generating progress chatter on stderr; silence it.
+    try {
+      $devnull = fopen('/dev/null', 'r+');
+    } catch (ContextErrorException $e) {
+      $devnull = fopen('php://temp', 'w');
+    }
+    $files[] = $devnull;
+    curl_setopt($ch, CURLOPT_STDERR, $devnull);
     curl_setopt($ch, CURLOPT_NOPROGRESS, FALSE);
     curl_setopt($ch, CURLOPT_FILE, $fh);
+    curl_setopt($ch, CURLOPT_FAILONERROR, TRUE);
     if (is_callable($this->progressMessageCallback)) {
       curl_setopt($ch, CURLOPT_PROGRESSFUNCTION, [$this, 'handleCurlProgress']);
     }
 
-    if (curl_exec($ch) === FALSE) {
+    $result = curl_exec($ch);
+    if ($result === FALSE || curl_errno($ch) != 0) {
       $msg = sprintf("Error downloading \"%s\": %s",
         $this->url,
-        function_exists('curl_strerror') ? curl_strerror(curl_errno($ch)) : 'cURL error code ' . curl_errno($ch)
+        curl_error($ch)
       );
-      curl_close($ch);
+
+      $this->closeHandles($ch, $files);
       throw new \RuntimeException($msg);
     }
 
-    curl_close($ch);
+    $this->closeHandles($ch, $files);
+
+    if (is_callable($this->progressMessageCallback)) {
+      $message = new BatchRunnerRawProgressMessage();
+      $message->pct = 100;
+      call_user_func($this->progressMessageCallback, $message);
+    }
+
     return $filename;
+  }
+
+  protected function closeHandles($curl = null, $files = []) {
+    if (is_resource($curl)) {
+      curl_close($curl);
+    }
+
+    foreach ($files as $file) {
+      if (is_resource($file)) {
+        fclose($file);
+      }
+    }
   }
 
   protected function getFile() {
@@ -123,10 +156,11 @@ class CurlDownloadBatchRunnable extends AbstractRunnable implements MessageCallb
           $this->last_update_message_timestamp = $now;
           $message = new BatchRunnerRawProgressMessage();
           $message->pct = round(($downloaded / $download_size) * 100, 2);
-          $this->progressMessageCallback($message);
+          call_user_func($this->progressMessageCallback, $message);
         }
       }
     }
+    return 0;
   }
 
 }

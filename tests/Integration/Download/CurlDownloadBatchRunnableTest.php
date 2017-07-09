@@ -4,6 +4,7 @@
 namespace Curator\Tests\Integration\Download;
 
 
+use Curator\APIModel\v1\BatchRunnerRawProgressMessage;
 use Curator\Download\CurlDownloadBatchRunnable;
 use Curator\IntegrationConfig;
 use Curator\Task\TaskInterface;
@@ -46,7 +47,7 @@ class CurlDownloadBatchRunnableTest extends \PHPUnit_Framework_TestCase {
 
     $h_server_proc = proc_open(
       'exec /usr/bin/env php -S localhost:8080 -t /tmp',
-      [0 => $devnull, 1 => $devnull, 2 => STDERR],
+      [0 => $devnull, 1 => $devnull, 2 => $devnull],
       $foo
     );
     self::$h_server_proc = $h_server_proc;
@@ -94,11 +95,13 @@ class CurlDownloadBatchRunnableTest extends \PHPUnit_Framework_TestCase {
       ->getMock();
   }
 
-  protected function sutFactory() {
+  protected function sutFactory($opts = []) {
+    $url = isset($opts['url']) ? $opts['url'] : sprintf("http://localhost:8080/random512.dat?count=%d", $this->count);
+
     $sut = new CurlDownloadBatchRunnable(
       IntegrationConfig::getNullConfig(),
       1,
-      sprintf("http://localhost:8080/random512.dat?count=%d", $this->count)
+      $url
     );
     $this->count++;
     return $sut;
@@ -116,7 +119,35 @@ class CurlDownloadBatchRunnableTest extends \PHPUnit_Framework_TestCase {
     );
   }
 
-  // TODO: testFileDownloadFailureIsCorrectlyReported
+  /**
+   * @expectedException \RuntimeException
+   * @expectedExceptionMessage 404 Not Found
+   */
+  public function testFileDownloadFailureIsCorrectlyReported() {
+    $sut = $this->sutFactory(['url' => 'http://localhost:8080/does/not/exist']);
+    $file = $sut->run($this->task, $this->taskState);
+  }
+
+  /**
+   * @expectedException \RuntimeException
+   * @expectedExceptionMessage Connection refused
+   */
+  public function testFileDownloadFailureIsCorrectlyReported_2() {
+    $sut = $this->sutFactory(['url' => 'http://localhost:8079/']);
+    $file = $sut->run($this->task, $this->taskState);
+  }
 
   // TODO: testFileDownloadProgressIsReported
+  public function testDownloadProgressIsReported() {
+    $sut = $this->sutFactory();
+    $called_counter = 0;
+    $sut->setUpdateMessageCallback(function(BatchRunnerRawProgressMessage $m) use (&$called_counter) {
+      $called_counter++;
+    });
+
+    $file = $sut->run($this->task, $this->taskState);
+
+    // At least 2 calls expected: 1 after transfer completes, 1+ by cURL.
+    $this->assertGreaterThan(1, $called_counter);
+  }
 }
