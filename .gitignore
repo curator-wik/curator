@@ -8,3 +8,4 @@
 /phpdoc.xml
 /phpdoc/
 /.idea/workspace.xml
+/.docker-compose_generated.yml

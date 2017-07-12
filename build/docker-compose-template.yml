@@ -57,6 +57,3 @@ services:
       - php-builds:/usr/local/phpenv/versions
     tmpfs:
       - /tmp
-
-volumes:
-  php-builds: {}

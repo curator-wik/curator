@@ -17,6 +17,14 @@
             <directory suffix="Test.php">tests/Integration/</directory>
         </testsuite>
     </testsuites>
+
+    <!-- Filter code coverage to only disr/src/ -->
+    <filter>
+        <whitelist>
+            <directory suffix=".php">dist/src/</directory>
+        </whitelist>
+    </filter>
+
     <php>
         <env name="PHPUNIT-TEST" value="1" />
     </php>

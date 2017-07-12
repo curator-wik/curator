@@ -1,0 +1,3 @@
+coverage_clover: /tmp/curator-clover.xml
+json_path: /tmp/curator-coveralls-upload.json
+service_name: travis-ci
