@@ -2,6 +2,12 @@
 
 $here = dirname(__FILE__);
 
+// Are we running in the project root?
+if (! is_dir('dist')) {
+  fwrite(STDERR, "FATAL: dist/ directory not found. Run this script with the project root as the working directory.\n");
+  exit(1);
+}
+
 echo "Deleting any existing phars kicking around from a past run\n";
 foreach (array_map(function($n) use($here) { return "$here/$n";},
   ['curator.phar', 'curator.phar.gz', 'curator.phar.bz2', 'backdrop-curator.phar']) as $path) {
@@ -20,16 +26,16 @@ $p->setStub(file_get_contents($here . '/phar_stub.php'));
 //$p->buildFromDirectory(dirname(__FILE__) . '/dist');
 $iterator_chain = new PharFilter(
   new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator($here . '/dist')
+    new RecursiveDirectoryIterator($here . '/../dist')
   )
 );
 
-$p->buildFromIterator($iterator_chain, $here . '/dist');
+$p->buildFromIterator($iterator_chain, $here . '/../dist');
 
 $p->compress(Phar::GZ);
 $p->compress(Phar::BZ2);
 
-file_put_contents('backdrop-curator.phar', file_get_contents('curator.phar'));
+// file_put_contents('backdrop-curator.phar', file_get_contents('curator.phar'));
 
 class PharFilter extends FilterIterator {
   public function accept() {
