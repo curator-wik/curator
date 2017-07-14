@@ -12,6 +12,7 @@ use Curator\Batch\TaskScheduler;
 use Curator\Controller\StaticContentController;
 use Curator\Cpkg\BatchTaskTranslationService;
 use Curator\Cpkg\CpkgServicesProvider;
+use Curator\Download\DownloadServicesProvider;
 use Curator\FSAccess\DefaultFtpConfigurationProvider;
 use Curator\FSAccess\FSAccessManager;
 use Curator\FSAccess\PathParser\PosixPathParser;
@@ -22,7 +23,7 @@ use Curator\Persistence\FilePersistence;
 use Curator\Status\StatusModel;
 use Curator\Status\StatusService;
 use Curator\Authorization\AuthorizationMiddleware;
-use Curator\Task\Decoder\InitializeHmacSecret;
+use Curator\Task\Decoder\TaskDecoderServicesProvider;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -53,6 +54,8 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     $this->register(new \Silex\Provider\ServiceControllerServiceProvider());
     $this->register(new AppTargetingProvider());
     $this->register(new CpkgServicesProvider());
+    $this->register(new DownloadServicesProvider());
+    $this->register(new TaskDecoderServicesProvider());
     $this->register(new \Silex\Provider\TranslationServiceProvider(), array(
       'locale_fallbacks' => array('en'),
     ));
@@ -115,10 +118,6 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     $this['authorization.installation_age'] = function() {
       return new InstallationAge();
     };
-
-    $this['task.decoder.initialize_hmac_secret'] = $this->share(function($app) {
-      return new InitializeHmacSecret($app['persistence'], $app['session']);
-    });
 
     $this['fs_access'] = $this->share(function($app) {
       $manager = new FSAccessManager($app['fs_access.read_adapter'], $app['fs_access.write_adapter']);

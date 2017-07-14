@@ -73,7 +73,7 @@ class UpdateTask implements TaskInterface {
    * @return string
    */
   public function getDecoderServiceName() {
-    return 'Update controller';
+    return 'task.decoder.update';
   }
 
   /**

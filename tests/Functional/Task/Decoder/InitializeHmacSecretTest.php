@@ -15,6 +15,11 @@ use Curator\IntegrationConfig;
  */
 class InitializeHmacSecretTest extends \PHPUnit_Framework_TestCase {
 
+  public function setUp() {
+    parent::setUp();
+    $this->markTestSkipped('HMAC secret features are currently unutilized and may be removed.');
+  }
+
   protected function _testInitializeHmacSecret($persistence_type) {
     // This test basically emulates an integration script, and requests a new
     // HMAC secret.
