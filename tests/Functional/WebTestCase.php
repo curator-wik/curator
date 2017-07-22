@@ -34,8 +34,7 @@ class WebTestCase extends \Silex\WebTestCase {
   }
 
   public function createApplication() {
-    $integration = clone IntegrationConfig::getNullConfig();
-    $integration->setSiteRootPath($this->getTestSiteRoot());
+    $integration = $this->getTestIntegrationConfig();
     $this->app_manager->applyIntegrationConfig($integration);
     $app = $this->app_manager->createApplication();
 
@@ -50,6 +49,12 @@ class WebTestCase extends \Silex\WebTestCase {
 
   protected function getTestSiteRoot() {
     return '/app';
+  }
+
+  protected function getTestIntegrationConfig() {
+    $integration = clone IntegrationConfig::getNullConfig();
+    $integration->setSiteRootPath($this->getTestSiteRoot());
+    return $integration;
   }
 
   public function setUp() {

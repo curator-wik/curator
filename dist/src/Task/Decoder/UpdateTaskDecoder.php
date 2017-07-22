@@ -29,9 +29,6 @@ class UpdateTaskDecoder implements TaskDecoderInterface {
     $this->taskScheduler = $task_scheduler;
   }
 
-  /**
-   * @param UpdateTask $task
-   */
   public function decodeTask(TaskInterface $task) {
     /**
      * @var UpdateTask $task
@@ -44,6 +41,7 @@ class UpdateTaskDecoder implements TaskDecoderInterface {
     );
 
     $download_task_instance = new CurlDownloadBatchTaskInstanceState(
+      'download.cpkg_download_task',
       $this->taskScheduler->assignTaskInstanceId(),
       $task->getPackageLocation()
     );

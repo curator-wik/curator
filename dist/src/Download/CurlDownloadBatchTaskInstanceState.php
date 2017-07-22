@@ -9,8 +9,8 @@ use Curator\Batch\TaskInstanceState;
 class CurlDownloadBatchTaskInstanceState extends TaskInstanceState {
   protected $url;
 
-  public function __construct($task_id, $url) {
-    parent::__construct('download.curl_download_task', $task_id, 1, 1);
+  public function __construct($task_id, $url, $task_service_name = 'download.curl_download_task') {
+    parent::__construct($task_service_name, $task_id, 1, 1);
     $this->url = $url;
   }
 
