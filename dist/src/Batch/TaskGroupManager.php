@@ -11,6 +11,10 @@ namespace Curator\Batch;
 
 use Curator\Persistence\PersistenceInterface;
 
+/**
+ * Class TaskGroupManager
+ * Service name: batch.taskgroup_manager
+ */
 class TaskGroupManager {
 
   protected $persistence;

@@ -27,5 +27,6 @@
 
     <php>
         <env name="PHPUNIT-TEST" value="1" />
+        <env name="TEST_HTTP_SERVER" value="http://localhost:8080/" />
     </php>
 </phpunit>
