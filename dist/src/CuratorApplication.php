@@ -47,9 +47,8 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
    */
   public function __construct(AppManager $app_manager, $curator_filename) {
     parent::__construct();
-    $this['integration_config'] = $app_manager->getConfiguration();
+
     $this->curator_filename = $curator_filename;
-    $this->configureDefaultTimezone();
     $this->register(new \Silex\Provider\SessionServiceProvider(), ['session.test' => getenv('PHPUNIT-TEST') === '1']);
     $this->register(new \Silex\Provider\ServiceControllerServiceProvider());
     $this->register(new AppTargetingProvider());
@@ -81,6 +80,19 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
         return NULL;
       }
     }, -4);
+  }
+
+  public function setIntegrationConfig(IntegrationConfig $config) {
+    if ($this->isIntegrationConfigSet()) {
+      throw new \LogicException('Integration config has already been set.');
+    }
+
+    $this['integration_config'] = $config;
+    $this->configureDefaultTimezone();
+  }
+
+  public function isIntegrationConfigSet() {
+    return array_key_exists('integration_config', $this);
   }
 
   protected function configureDefaultTimezone() {
