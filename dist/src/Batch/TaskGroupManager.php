@@ -39,7 +39,7 @@ class TaskGroupManager {
     $group->friendlyDescription = $friendlyDescription;
     $this->persistence->beginReadWrite();
     $next_id = $this->persistence->get('BatchTaskGroup.NextId', 1);
-    $this->persistence->set('BatchTaskGroup.NextId', $next_id++);
+    $this->persistence->set('BatchTaskGroup.NextId', $next_id + 1);
     $this->persistence->popEnd();
     $group->taskGroupId = $next_id;
 

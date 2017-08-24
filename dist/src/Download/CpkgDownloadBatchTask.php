@@ -14,6 +14,8 @@ use mbaynton\BatchFramework\TaskInstanceStateInterface;
 /**
  * Class CpkgDownloadBatchTask
  * Creates batch tasks to apply a cpkg upon successful download.
+ *
+ * Service id: download.cpkg_download_batch_task
  */
 class CpkgDownloadBatchTask extends CurlDownloadBatchTask {
 

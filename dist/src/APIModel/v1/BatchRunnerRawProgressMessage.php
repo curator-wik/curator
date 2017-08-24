@@ -9,7 +9,7 @@ namespace Curator\APIModel\v1;
  * An alternate type of update message that provides a precomputed percent
  * complete rather than the number of completed runnables.
  */
-class BatchRunnerRawProgressMessage {
+class BatchRunnerRawProgressMessage extends BatchRunnerMessage {
   public function __construct() {
     $this->type = BatchRunnerMessage::TYPE_UPDATE;
     $this->ok = TRUE; // Default to something truthy.

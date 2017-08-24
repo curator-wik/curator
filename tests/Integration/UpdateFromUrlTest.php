@@ -5,11 +5,15 @@ namespace Curator\Tests\Integration;
 
 
 use Curator\AppManager;
+use Curator\Batch\TaskGroup;
 use Curator\Batch\TaskScheduler;
 use Curator\IntegrationConfig;
 use Curator\Tests\Functional\Util\Session;
 use Curator\Tests\Functional\WebTestCase;
+use Curator\Tests\Shared\Mocks\AppTargeterMock;
+use Curator\Tests\Shared\Traits\Batch\WebTestCaseBatchRunnerTrait;
 use Symfony\Component\BrowserKit\Cookie;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpKernel\Client;
 
 /**
@@ -26,6 +30,7 @@ use Symfony\Component\HttpKernel\Client;
  */
 class UpdateFromUrlTest extends WebTestCase {
   use WebserverRunnerTrait;
+  use WebTestCaseBatchRunnerTrait;
 
   /**
    * @var Client $client;
@@ -34,8 +39,6 @@ class UpdateFromUrlTest extends WebTestCase {
 
   public function setUp() {
     parent::setUp();
-
-    $this->client = self::createClient();
     /**
      * @var SessionInterface $session
      */
@@ -43,6 +46,7 @@ class UpdateFromUrlTest extends WebTestCase {
     // This test class has no unauthenticated tests.
     Session::makeSessionAuthenticated($session);
 
+    $this->client = self::createClient();
     $cj = $this->client->getCookieJar();
     $session_cookie = new Cookie($this->app['session']->getName(), $this->app['session']->getId());
     $cj->set($session_cookie);
@@ -62,6 +66,8 @@ class UpdateFromUrlTest extends WebTestCase {
       ->taskIs()->update('MockApp')
       ->fromPackage(getenv('TEST_HTTP_SERVER') . 'oh_look_an_update.cpkg.zip');
 
+    $integration_config->setCustomAppTargeter(new AppTargeterMock());
+
     return $integration_config;
   }
 
@@ -78,5 +84,25 @@ class UpdateFromUrlTest extends WebTestCase {
       '\Curator\Download\CurlDownloadBatchTaskInstanceState',
       $this->app['batch.taskgroup_manager']->getActiveTaskInstance($task_group)
     );
+
+    // Close session so the request pipeline can start it successfully.
+    /**
+     * @var SessionInterface $session
+     */
+    $session = $this->app['session'];
+    $session->save();
+    $this->runBatchTasks($this->client, $task_group, FALSE);
+
+    // This should have resulted in a downloaded cpkg that enqueued a new
+    // TaskGroup to update MockApp from 1.2.3 to 1.2.4.
+    /**
+     * @var TaskGroup $task_group
+     */
+    $task_group = $task_scheduler->getCurrentGroupInSession();
+    $this->assertNotNull($task_group);
+    $this->assertEquals(
+      'Update MockApp from 1.2.3 to 1.2.4',
+      $task_group->friendlyDescription
+      );
   }
 }

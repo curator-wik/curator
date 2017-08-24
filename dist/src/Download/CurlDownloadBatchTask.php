@@ -20,6 +20,8 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * It is likely useful to extend this class with more interesting
  * implementations of onRunnableComplete() that do things with the download.
+ *
+ * Service id: download.curl_download_batch_task
  */
 class CurlDownloadBatchTask implements TaskInterface {
 

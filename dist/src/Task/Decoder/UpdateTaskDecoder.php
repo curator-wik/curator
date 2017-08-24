@@ -41,9 +41,9 @@ class UpdateTaskDecoder implements TaskDecoderInterface {
     );
 
     $download_task_instance = new CurlDownloadBatchTaskInstanceState(
-      'download.cpkg_download_task',
       $this->taskScheduler->assignTaskInstanceId(),
-      $task->getPackageLocation()
+      $task->getPackageLocation(),
+      'download.cpkg_download_batch_task'
     );
 
     $this->taskGroupManager->appendTaskInstance(

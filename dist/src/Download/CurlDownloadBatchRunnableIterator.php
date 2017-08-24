@@ -25,6 +25,8 @@ class CurlDownloadBatchRunnableIterator extends AbstractRunnableIterator {
       1,
       $url
     );
+
+    $this->is_valid = TRUE;
   }
 
   public function current() {
@@ -38,7 +40,7 @@ class CurlDownloadBatchRunnableIterator extends AbstractRunnableIterator {
   }
 
   public function valid() {
-    return $this->runnable !== NULL;
+    return $this->is_valid;
   }
 
   public function rewind() {

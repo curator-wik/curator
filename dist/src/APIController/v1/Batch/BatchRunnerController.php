@@ -198,7 +198,7 @@ class BatchRunnerController implements RunnerControllerInterface {
     }
   }
 
-  protected function handleMessageCallbackRunnablePostback(BatchRunnerMessage $message) {
+  public function handleMessageCallbackRunnablePostback(BatchRunnerMessage $message) {
     $this->runner_response->postMessage($message);
     // TODO: add some kind of throttling on the flush rate.
     $this->runner_response->flush();
@@ -219,6 +219,8 @@ class BatchRunnerController implements RunnerControllerInterface {
        */
       $message->chatter[0] = $runnable->describe();
       $message->chatter[1] = $exception->__toString();
+    } else {
+      $message->chatter[0] = $exception->__toString();
     }
     $this->runner_response->postMessage($message);
   }
