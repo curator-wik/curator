@@ -10,6 +10,10 @@ use mbaynton\BatchFramework\TaskInterface;
 use mbaynton\BatchFramework\TaskSchedulerInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
+/**
+ * Class TaskScheduler
+ * Service id: batch.task_scheduler
+ */
 class TaskScheduler {
 
   /**
