@@ -35,7 +35,7 @@ class AppManager {
   protected $curator_filename;
 
   /**
-   * @var \Silex\Application $silexApp
+   * @var CuratorApplication $silexApp
    */
   protected $silexApp;
 
@@ -133,29 +133,14 @@ class AppManager {
 
   public function applyIntegrationConfig(IntegrationConfig $integration_configuration) {
     $this->integration_configuration = $integration_configuration;
-  }
 
-  public function getConfiguration() {
-    return empty($this->integration_configuration)
-      ? IntegrationConfig::getNullConfig()
-      : $this->integration_configuration;
-  }
-
-  public function run() {
-    if ($this->runMode === self::RUNMODE_UNSET) {
-      throw new \LogicException('Must call determineRunMode() before run().');
+    if ($this->silexApp === NULL) {
+      $this->createApplication();
     }
 
-    if (php_sapi_name() == 'cli' && ! getenv('PHPUNIT-TEST')) {
-      fwrite(STDERR, "Curator cannot be used from the command line.\n");
-      exit(1);
+    if (! $this->silexApp->isIntegrationConfigSet()) {
+      $this->silexApp->setIntegrationConfig($integration_configuration);
     }
-
-    if (!defined('PHP_VERSION_ID') || PHP_MAJOR_VERSION < 5 || (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION < 4)) {
-      die("Curator requires PHP 5.4+\n");
-    }
-
-    $this->silexApp = $this->createApplication();
 
     // Honor the requested task if the integration script provided one.
     if (
@@ -180,26 +165,39 @@ class AppManager {
       // script. This feature is used during HMAC shared secret initialization.
       if ($decoder_return !== NULL) {
         return $decoder_return;
-      } else {
-        // Otherwise, assume current URL as basis for redirect, because
-        // integration tasks ought to only be present when the integration
-        // script itself is the URL.
-        $is_https = isset($_SERVER['HTTPS'])
-          && strtolower($_SERVER['HTTPS']) == 'on';
-        $http_protocol = $is_https ? 'https://' : 'http://';
-        $entrypoint_script_url = $http_protocol . $_SERVER['HTTP_HOST'];
-        $entrypoint_script_url .= $_SERVER['SCRIPT_NAME'];
       }
-
-      header('Location: ' . $entrypoint_script_url . $task->getRoute());
-      header('Cache-Control: no-cache'); // Not a permanent redirect.
-    } else {
-      if ($this->hasRun()) {
-        throw new \LogicException('Curator has already been run().');
-      }
-      
-      $this->silexApp->run();
     }
+    return $this->silexApp;
+  }
+
+  public function run() {
+    if ($this->runMode === self::RUNMODE_UNSET) {
+      throw new \LogicException('Must call determineRunMode() before run().');
+    }
+
+    if (php_sapi_name() == 'cli' && ! getenv('PHPUNIT-TEST')) {
+      fwrite(STDERR, "Curator cannot be used from the command line.\n");
+      exit(1);
+    }
+
+    if (!defined('PHP_VERSION_ID') || PHP_MAJOR_VERSION < 5 || (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION < 4)) {
+      die("Curator requires PHP 5.4+\n");
+    }
+
+    if ($this->silexApp === NULL) {
+      $this->createApplication();
+    }
+
+    if ($this->integration_configuration === NULL) {
+      $this->applyIntegrationConfig(IntegrationConfig::getNullConfig());
+    }
+
+
+    if ($this->hasRun()) {
+      throw new \LogicException('Curator has already been run().');
+    }
+
+    $this->silexApp->run();
   }
 
   /**
@@ -223,6 +221,12 @@ class AppManager {
     if (! $this->isPhar()) {
       $app['debug'] = TRUE;
     }
+
+    if ($this->integration_configuration !== NULL) {
+      $app->setIntegrationConfig($this->integration_configuration);
+    }
+
+    $this->silexApp = $app;
     return $app;
   }
 
