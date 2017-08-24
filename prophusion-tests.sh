@@ -9,16 +9,20 @@ echo "Running PHPUnit tests..."
 if [ -z "$PHPUNIT" ]
 then
   PHPUNIT="./vendor/bin/phpunit"
-  export PHPUNIT
 fi
 
 
 if [[ "$PHPUNIT_COVERAGE" != "" ]]
 then
   PHPUNIT="$PHPUNIT $PHPUNIT_COVERAGE"
-  export PHPUNIT
+fi
+
+if [[ "$PHPUNIT_EXTRA_ARGS" != "" ]]
+then
+  PHPUNIT="$PHPUNIT $PHPUNIT_EXTRA_ARGS"
 fi
 
 echo "PHPUNIT is: $PHPUNIT"
+export PHPUNIT
 
 $PHPUNIT
