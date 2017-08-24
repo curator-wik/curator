@@ -6,11 +6,13 @@ namespace Curator\Tests\Functional;
 
 use Curator\AppManager;
 use Curator\IntegrationConfig;
+use Curator\Tests\Functional\Util\Session;
 use Curator\Tests\Shared\Mocks\InMemoryPersistenceMock;
 use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 use Silex\Application;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class WebTestCase extends \Silex\WebTestCase {
   /**
@@ -34,14 +36,12 @@ class WebTestCase extends \Silex\WebTestCase {
   }
 
   public function createApplication() {
-    $integration = $this->getTestIntegrationConfig();
-    $this->app_manager->applyIntegrationConfig($integration);
     $app = $this->app_manager->createApplication();
 
+    // Modify the DI container for testing.
     $app['debug'] = TRUE;
     $app['session.test'] = TRUE;
     unset($app['exception_handler']);
-
     $this->injectTestDependencies($app);
 
     return $app;
@@ -61,6 +61,19 @@ class WebTestCase extends \Silex\WebTestCase {
     parent::setUp();
     $this->fs_contents->clearAll();
     $this->fs_contents->directories = ['/app'];
+
+
+    // Make sure the session is started.
+    /**
+     * @var SessionInterface $session
+     */
+    $session = $this->app['session'];
+    $session->start();
+
+    // Now that the DI container is set up, we can safely ask it to do whatever
+    // the integration config might trigger.
+    $integration = $this->getTestIntegrationConfig();
+    $this->app_manager->applyIntegrationConfig($integration);
   }
 
   protected function injectTestDependencies(Application $app) {

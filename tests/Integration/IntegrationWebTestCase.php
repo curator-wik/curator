@@ -10,6 +10,16 @@ use Silex\Application;
 
 class IntegrationWebTestCase extends WebTestCase {
 
+  public function setUp() {
+    parent::setUp();
+
+    /**
+     * @var IntegrationConfig $integration_config
+     */
+    $integration_config = $this->app['integration_config'];
+    $this->app['fs_access']->setWriteWorkingPath($integration_config->getSiteRootPath());
+  }
+
   /**
    * Fully override the parent's dependency injection. We'll use our own,
    * test-double free environment for integration tests.
@@ -17,11 +27,6 @@ class IntegrationWebTestCase extends WebTestCase {
   protected function injectTestDependencies(Application $app) {
     $app['fs_access.read_adapter'] = $app->raw('fs_access.read_adapter.filesystem');
     $app['fs_access.write_adapter'] = $app->raw('fs_access.write_adapter.filesystem');
-    /**
-     * @var IntegrationConfig $integration_config
-     */
-    $integration_config = $app['integration_config'];
-    $app['fs_access']->setWriteWorkingPath($integration_config->getSiteRootPath());
   }
 
   /**

@@ -18,15 +18,6 @@ use Symfony\Component\BrowserKit\Cookie;
 class DrupalUpgradeTest extends IntegrationWebTestCase {
   use WebTestCaseCpkgApplierTrait;
 
-  protected function injectTestDependencies(Application $app) {
-    parent::injectTestDependencies($app);
-    /**
-     * @var IntegrationConfig $integration_config
-     */
-    $integration_config = $app['integration_config'];
-    $integration_config->setCustomAppTargeter($app['app_targeting.drupal7']);
-  }
-
   protected function getTestSiteRoot() {
     return '/root/drupal-7.53';
   }

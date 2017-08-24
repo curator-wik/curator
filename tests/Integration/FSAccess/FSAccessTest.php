@@ -6,6 +6,7 @@ use Curator\AppManager;
 use Curator\CuratorApplication;
 use Curator\FSAccess\FileExistsException;
 use \Curator\FSAccess\FSAccessManager;
+use Curator\IntegrationConfig;
 
 class FSAccessTest extends \PHPUnit_Framework_TestCase
 {
@@ -18,6 +19,7 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
     // Re-initialize service container to provide default services.
     $app_manager = new AppManager(AppManager::RUNMODE_STANDALONE);
     $this->app = $app_manager->createApplication();
+    $app_manager->applyIntegrationConfig(IntegrationConfig::getNullConfig());
     $this->app['fs_access.ftp_config'] = $this->app->share(function() {
       return new TestFtpConfigurationProvider();
     });

@@ -4,6 +4,7 @@
 namespace Curator\Tests\Integration;
 
 
+use Curator\AppManager;
 use Curator\Batch\TaskScheduler;
 use Curator\IntegrationConfig;
 use Curator\Tests\Functional\Util\Session;
@@ -34,10 +35,6 @@ class UpdateFromUrlTest extends WebTestCase {
   public function setUp() {
     parent::setUp();
 
-    if (self::$h_server_proc === FALSE) {
-      $this->fail('Test fails because development webserver is not operational.');
-    }
-
     $this->client = self::createClient();
     /**
      * @var SessionInterface $session
@@ -49,6 +46,10 @@ class UpdateFromUrlTest extends WebTestCase {
     $cj = $this->client->getCookieJar();
     $session_cookie = new Cookie($this->app['session']->getName(), $this->app['session']->getId());
     $cj->set($session_cookie);
+
+    if (self::$h_server_proc === FALSE) {
+      $this->fail('Test fails because development webserver is not operational.');
+    }
   }
 
   protected static function installDownloadData() {
@@ -65,10 +66,11 @@ class UpdateFromUrlTest extends WebTestCase {
   }
 
   public function testUpdateFromCpkgAtUrl() {
-    // Before making the first client request directly to Curator, the script
-    // that applied the Integration Config should have attached a download task
-    // to this session. Verify.
-    $task_scheduler = new TaskScheduler($this->app['persistence'], $this->app['session']);
+    // Before making the first client request directly to Curator, verify that
+    // the Integration Config (provided in test via getTestIntegrationConfig())
+    // was correctly translated to a batch task to download a cpkg.
+    // $task_scheduler = new TaskScheduler($this->app['persistence'], $this->app['session']);
+    $task_scheduler = $this->app['batch.task_scheduler'];
     $task_group = $task_scheduler->getCurrentGroupInSession();
     $this->assertNotNull($task_group);
 
