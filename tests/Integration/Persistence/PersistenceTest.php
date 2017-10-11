@@ -26,8 +26,7 @@ class PersistenceTest extends \PHPUnit_Framework_TestCase {
     $app_manager = require __DIR__ . '/../../../dist/web/index.php';
     $integration_config = new IntegrationConfig();
     $integration_config->setSiteRootPath(self::TEST_PATH);
-    $app_manager->applyIntegrationConfig($integration_config);
-    $this->appContainer = $app_manager->createApplication();
+    $this->appContainer = $app_manager->applyIntegrationConfig($integration_config);
     // Always test file persistence for now, until there's others
     $this->appContainer['persistence'] = $this->appContainer->raw('persistence.file');
 

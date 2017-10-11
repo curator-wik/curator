@@ -135,7 +135,7 @@ class AppManager {
     $this->integration_configuration = $integration_configuration;
 
     if ($this->silexApp === NULL) {
-      $this->createApplication();
+      $this->createApplication(TRUE);
     }
 
     if (! $this->silexApp->isIntegrationConfigSet()) {
@@ -170,12 +170,16 @@ class AppManager {
     return $this->silexApp;
   }
 
-  public function run() {
+  /**
+   * @internal
+   * @return \Curator\CuratorApplication
+   */
+  public function prepareToRun() {
     if ($this->runMode === self::RUNMODE_UNSET) {
       throw new \LogicException('Must call determineRunMode() before run().');
     }
 
-    if (php_sapi_name() == 'cli' && ! getenv('PHPUNIT-TEST')) {
+    if (php_sapi_name() == 'cli' && !getenv('PHPUNIT-TEST')) {
       fwrite(STDERR, "Curator cannot be used from the command line.\n");
       exit(1);
     }
@@ -184,26 +188,29 @@ class AppManager {
       die("Curator requires PHP 5.4+\n");
     }
 
-    if ($this->silexApp === NULL) {
-      $this->createApplication();
+    if ($this->hasRun()) {
+      throw new \LogicException('Curator has already been run().');
+    } else {
+      $this->createApplication(FALSE);
     }
 
     if ($this->integration_configuration === NULL) {
       $this->applyIntegrationConfig(IntegrationConfig::getNullConfig());
     }
 
+    return $this->silexApp;
+  }
 
-    if ($this->hasRun()) {
-      throw new \LogicException('Curator has already been run().');
-    }
-
+  public function run() {
+    $this->prepareToRun();
     $this->silexApp->run();
   }
 
   /**
+   * @internal
    * @return \Curator\CuratorApplication
    */
-  public function createApplication() {
+  public function createApplication($assertIsAuthorized = FALSE) {
     if ($this->isPhar()) {
       set_include_path('phar://curator.phar');
       require __DIR__.'/../vendor/autoload.php';
@@ -215,7 +222,7 @@ class AppManager {
     // Engage conversion of errors to ErrorExceptions.
     \Symfony\Component\Debug\ErrorHandler::register();
 
-    $app = new CuratorApplication($this, $this->curator_filename);
+    $app = new CuratorApplication($this, $this->curator_filename, $assertIsAuthorized);
 
     // For now, nobody's running this outside a phar that isn't a developer
     if (! $this->isPhar()) {

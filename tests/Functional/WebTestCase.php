@@ -6,6 +6,7 @@ namespace Curator\Tests\Functional;
 
 use Curator\AppManager;
 use Curator\IntegrationConfig;
+use Curator\Persistence\SessionFauxPersistence;
 use Curator\Tests\Functional\Util\Session;
 use Curator\Tests\Shared\Mocks\InMemoryPersistenceMock;
 use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
@@ -36,7 +37,11 @@ class WebTestCase extends \Silex\WebTestCase {
   }
 
   public function createApplication() {
-    $app = $this->app_manager->createApplication();
+    return $this->doCreateApplication(TRUE);
+  }
+
+  protected function doCreateApplication($assertIsAuthorized) {
+    $app = $this->app_manager->createApplication($assertIsAuthorized);
 
     // Modify the DI container for testing.
     $app['debug'] = TRUE;

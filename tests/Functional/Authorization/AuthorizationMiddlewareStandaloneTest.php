@@ -18,6 +18,10 @@ class AuthorizationMiddlewareStandaloneTest extends WebTestCase  {
     parent::__construct(TRUE);
   }
 
+  public function createApplication() {
+    return parent::doCreateApplication(FALSE);
+  }
+
   protected function installationAgeTest($simulated_age) {
     /**
      * @var InMemoryPersistenceMock $persistence

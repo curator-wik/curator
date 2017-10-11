@@ -20,12 +20,15 @@ use Curator\FSAccess\PathParser\WindowsPathParser;
 use Curator\FSAccess\StreamWrapperFileAdapter;
 use Curator\FSAccess\StreamWrapperFtpAdapter;
 use Curator\Persistence\FilePersistence;
+use Curator\Persistence\SessionFauxPersistence;
 use Curator\Status\StatusModel;
 use Curator\Status\StatusService;
 use Curator\Authorization\AuthorizationMiddleware;
 use Curator\Task\Decoder\TaskDecoderServicesProvider;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class CuratorApplication extends Application implements AppTargeterFactoryInterface {
@@ -45,11 +48,18 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
    *   Capture the value of __FILE__ and pass it along. It's
    *   generally along the lines of /something/curator.phar.
    */
-  public function __construct(AppManager $app_manager, $curator_filename) {
+  public function __construct(AppManager $app_manager, $curator_filename, $assertIsAuthorized = FALSE) {
     parent::__construct();
 
     $this->curator_filename = $curator_filename;
-    $this->register(new \Silex\Provider\SessionServiceProvider(), ['session.test' => getenv('PHPUNIT-TEST') === '1']);
+    $this->register(new \Silex\Provider\SessionServiceProvider(), [
+      'session.storage.options' => [
+        'name' => 'CURATOR_' . substr(md5($this->curator_filename), 0, 8),
+        'cookie_httponly' => true,
+      ],
+      'session.test' => getenv('PHPUNIT-TEST') === '1']
+    );
+
     $this->register(new \Silex\Provider\ServiceControllerServiceProvider());
     $this->register(new AppTargetingProvider());
     $this->register(new CpkgServicesProvider());
@@ -64,6 +74,12 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     });
     $this->defineServices();
     $this->prepareRoutes();
+
+    if ($assertIsAuthorized) {
+      $this->before(function (Request $request, CuratorApplication $app) {
+        $app['session']->set('IsAuthenticated', TRUE);
+      });
+    }
 
     /**
      * When no other route matches, see if it is a file under web/curator-gui
@@ -115,7 +131,7 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
 
   protected function prepareRoutes() {
     $this->get('/', 'static_content_controller:generateSinglePageHost');
-    $this->mount('/api/v1', new Provider\APIv1\UnauthenticatedEndpointsProvider());
+    // $this->mount('/api/v1', new Provider\APIv1\UnauthenticatedEndpointsProvider());
     $this->mount('/api/v1', new Provider\APIv1\AuthenticatedOrUnconfiguredEndpointsProvider());
   }
 
@@ -179,7 +195,30 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
       $safe_extension = pathinfo($this->getCuratorFilename(), PATHINFO_EXTENSION);
       return new FilePersistence($app['fs_access'], $app['persistence.lock'], $app['integration_config'], $safe_extension);
     });
-    $this['persistence'] = $this->raw('persistence.file');
+    $this['persistence.session_faux'] = $this->share(function($app) {
+      return new SessionFauxPersistence($app['session']);
+    });
+    $this['persistence'] = $this->share(function($app) {
+      // Use persistence.file unless it has not yet been configured.
+      // TODO: is there a way to avoid a lock/read/unlock for every container
+      // instantiation? Session not guaranteed to be startable yet :(.
+      // Maybe a persistence proxy than can switcharoo after kernel is booted?
+      /**
+       * @var FilePersistence $fp
+       */
+      $fp = $app['persistence.file'];
+      $fp->beginReadOnly();
+      $hasWriteConfig = $fp->get('write_config', NULL);
+      $fp->end();
+
+      if ($hasWriteConfig !== NULL) {
+        $sp = 'persistence.file';
+      } else {
+        $sp = 'persistence.session_faux';
+      }
+
+      return $app[$sp];
+    });
 
     $this['status'] = $this->share(function($app) {
       return new StatusService($app['persistence'], $app['session']);
