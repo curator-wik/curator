@@ -22,14 +22,19 @@ class StatusService {
   protected $persistence;
 
   /**
+   * @var SessionInterface $session
+   */
+  protected $session;
+
+  /**
    * @var StatusModel $model
    */
   protected $model;
 
   function __construct(PersistenceInterface $persistence, SessionInterface $user_session) {
     $this->persistence = $persistence;
-
-    $this->reloadStatus($user_session);
+    $this->session = $user_session;
+    $this->model = null;
   }
 
   /**
@@ -37,10 +42,13 @@ class StatusService {
    * @return StatusModel
    */
   public function getStatus() {
+    if ($this->model === null) {
+      $this->reloadStatus();
+    }
     return $this->model;
   }
 
-  public function reloadStatus(SessionInterface $user_session) {
+  public function reloadStatus() {
     $result = new StatusModel();
     $this->persistence->beginReadOnly();
 
@@ -53,6 +61,8 @@ class StatusService {
     $result->adjoining_app_targeter = $this->persistence->get('adjoining_app_targeter');
     $result->write_working_path = $this->persistence->get('write_working_path');
     $this->persistence->end();
+
+    $result->is_authenticated = $this->session->get('IsAuthenticated', FALSE);
 
     $this->model = $result;
   }
