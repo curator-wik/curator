@@ -10,7 +10,6 @@ use Curator\Batch\RunnerService;
 use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Controller\StaticContentController;
-use Curator\Cpkg\BatchTaskTranslationService;
 use Curator\Cpkg\CpkgServicesProvider;
 use Curator\Download\DownloadServicesProvider;
 use Curator\FSAccess\DefaultFtpConfigurationProvider;
@@ -21,14 +20,11 @@ use Curator\FSAccess\StreamWrapperFileAdapter;
 use Curator\FSAccess\StreamWrapperFtpAdapter;
 use Curator\Persistence\FilePersistence;
 use Curator\Persistence\SessionFauxPersistence;
-use Curator\Status\StatusModel;
 use Curator\Status\StatusService;
 use Curator\Authorization\AuthorizationMiddleware;
 use Curator\Task\Decoder\TaskDecoderServicesProvider;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Session\Session;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class CuratorApplication extends Application implements AppTargeterFactoryInterface {
@@ -48,7 +44,7 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
    *   Capture the value of __FILE__ and pass it along. It's
    *   generally along the lines of /something/curator.phar.
    */
-  public function __construct(AppManager $app_manager, $curator_filename, $assertIsAuthorized = FALSE) {
+  public function __construct(AppManager $app_manager, $curator_filename) {
     parent::__construct();
 
     $this->curator_filename = $curator_filename;
@@ -74,12 +70,6 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     });
     $this->defineServices();
     $this->prepareRoutes();
-
-    if ($assertIsAuthorized) {
-      $this->before(function (Request $request, CuratorApplication $app) {
-        $app['session']->set('IsAuthenticated', TRUE);
-      });
-    }
 
     /**
      * When no other route matches, see if it is a file under web/curator-gui
@@ -131,7 +121,7 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
 
   protected function prepareRoutes() {
     $this->get('/', 'static_content_controller:generateSinglePageHost');
-    // $this->mount('/api/v1', new Provider\APIv1\UnauthenticatedEndpointsProvider());
+    $this->mount('/api/v1', new Provider\APIv1\UnauthenticatedEndpointsProvider());
     $this->mount('/api/v1', new Provider\APIv1\AuthenticatedOrUnconfiguredEndpointsProvider());
   }
 

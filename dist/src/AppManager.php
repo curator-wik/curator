@@ -138,6 +138,8 @@ class AppManager {
       $this->createApplication(TRUE);
     }
 
+    $this->silexApp['session']->set('IsAuthenticated', TRUE);
+
     if (! $this->silexApp->isIntegrationConfigSet()) {
       $this->silexApp->setIntegrationConfig($integration_configuration);
     }
@@ -210,7 +212,7 @@ class AppManager {
    * @internal
    * @return \Curator\CuratorApplication
    */
-  public function createApplication($assertIsAuthorized = FALSE) {
+  public function createApplication() {
     if ($this->isPhar()) {
       set_include_path('phar://curator.phar');
       require __DIR__.'/../vendor/autoload.php';
@@ -222,7 +224,7 @@ class AppManager {
     // Engage conversion of errors to ErrorExceptions.
     \Symfony\Component\Debug\ErrorHandler::register();
 
-    $app = new CuratorApplication($this, $this->curator_filename, $assertIsAuthorized);
+    $app = new CuratorApplication($this, $this->curator_filename);
 
     // For now, nobody's running this outside a phar that isn't a developer
     if (! $this->isPhar()) {
