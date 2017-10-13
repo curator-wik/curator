@@ -117,7 +117,7 @@ TPL;
 
   protected function getGuiPath() {
     if ($this->app_manager->isPhar()) {
-      $root = 'phar://curator.phar/web/curator-gui';
+      $root = 'phar://curator/web/curator-gui';
     } else {
       $root = 'curator-gui';
     }
