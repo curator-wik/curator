@@ -18,7 +18,7 @@ use Curator\Tests\Shared\Mocks\InMemoryPersistenceMock;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
-class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
+class BatchTaskTranslationServiceTest extends \PHPUnit\Framework\TestCase {
 
   /**
    * @var CpkgReader $reader

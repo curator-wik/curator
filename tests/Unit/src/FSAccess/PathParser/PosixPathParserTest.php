@@ -6,7 +6,7 @@ namespace Curator\Tests\Unit\FSAccess\PathParser;
 
 use Curator\FSAccess\PathParser\PosixPathParser;
 
-class PosixPathParserTest extends \PHPUnit_Framework_TestCase {
+class PosixPathParserTest extends \PHPUnit\Framework\TestCase {
 
   /**
    * System under test factory.

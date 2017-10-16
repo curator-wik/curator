@@ -6,7 +6,7 @@ namespace Curator\Tests\Unit\Cpkg;
 
 use Curator\Cpkg\PatchCopyBatchTask;
 
-class PatchCopyBatchTaskTest extends \PHPUnit_Framework_TestCase {
+class PatchCopyBatchTaskTest extends \PHPUnit\Framework\TestCase {
 
   public function testStartEndRunnableId_NoRunnables() {
     $num_runners = 4;

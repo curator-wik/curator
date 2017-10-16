@@ -6,7 +6,7 @@ use Curator\AppManager;
 use Curator\CuratorApplication;
 use Curator\IntegrationConfig;
 
-class CuratorApplicationTest extends \PHPUnit_Framework_TestCase  {
+class CuratorApplicationTest extends \PHPUnit\Framework\TestCase  {
   public function testCuratorApplicationInstantiates() {
     /**
      * @var AppManager $app_manager

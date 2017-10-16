@@ -8,7 +8,7 @@ use Curator\FSAccess\FileExistsException;
 use \Curator\FSAccess\FSAccessManager;
 use Curator\IntegrationConfig;
 
-class FSAccessTest extends \PHPUnit_Framework_TestCase
+class FSAccessTest extends \PHPUnit\Framework\TestCase
 {
   /**
    * @var CuratorApplication $app

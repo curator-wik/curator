@@ -7,7 +7,7 @@ use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
-class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
+class FSAccessManagerTest extends \PHPUnit\Framework\TestCase {
 
   const PROJECT_PATH = '/within/a/project';
 

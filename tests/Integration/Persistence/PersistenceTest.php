@@ -9,7 +9,7 @@ use Curator\FSAccess\FSAccessInterface;
 use Curator\IntegrationConfig;
 use Curator\Tests\Shared\Traits\Persistence\PersistenceTestsTrait;
 
-class PersistenceTest extends \PHPUnit_Framework_TestCase {
+class PersistenceTest extends \PHPUnit\Framework\TestCase {
   /**
    * @var CuratorApplication $appContainer
    */

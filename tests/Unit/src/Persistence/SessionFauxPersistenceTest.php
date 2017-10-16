@@ -8,7 +8,7 @@ use Curator\Persistence\SessionFauxPersistence;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
-class SessionFauxPersistenceTest extends \PHPUnit_Framework_TestCase {
+class SessionFauxPersistenceTest extends \PHPUnit\Framework\TestCase {
   public function testSessionFauxPersistence() {
     $sut = new SessionFauxPersistence(new Session(new MockArraySessionStorage()));
 

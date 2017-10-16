@@ -6,7 +6,7 @@ namespace Curator\Tests\Unit\Cpkg;
 
 use Curator\Cpkg\CpkgReader;
 
-class CpkgReaderTest extends \PHPUnit_Framework_TestCase {
+class CpkgReaderTest extends \PHPUnit\Framework\TestCase {
   protected function sutFactory() {
     return new CpkgReader();
   }

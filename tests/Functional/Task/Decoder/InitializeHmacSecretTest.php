@@ -13,7 +13,7 @@ use Curator\IntegrationConfig;
  *   the dependencies of the system in test. But, it also does not use the usual
  *   WebTestCase because it does not provide a means to cover AppManager::run().
  */
-class InitializeHmacSecretTest extends \PHPUnit_Framework_TestCase {
+class InitializeHmacSecretTest extends \PHPUnit\Framework\TestCase {
 
   public function setUp() {
     parent::setUp();

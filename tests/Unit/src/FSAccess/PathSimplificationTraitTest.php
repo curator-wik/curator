@@ -9,8 +9,9 @@ use Curator\FSAccess\PathParser\PathParserInterface;
 use Curator\FSAccess\PathParser\PosixPathParser;
 use Curator\FSAccess\PathParser\WindowsPathParser;
 use Curator\FSAccess\PathSimplificationTrait;
+use PHPUnit\Framework\TestCase;
 
-class PathSimplificationTraitTest extends \PHPUnit_Framework_TestCase {
+class PathSimplificationTraitTest extends TestCase {
   use PathSimplificationTrait;
 
   /**

@@ -10,7 +10,7 @@ use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\Shared\Mocks\ReaderWriterLockMock;
 
-class FilePersistenceTest extends \PHPUnit_Framework_TestCase {
+class FilePersistenceTest extends \PHPUnit\Framework\TestCase {
 
   const PROJECT_PATH = '/within/a/project';
 

@@ -8,7 +8,7 @@ use Curator\AppManager;
 use Curator\IntegrationConfig;
 use Symfony\Component\HttpKernel\Client;
 
-class ApplicationIntegrationTest extends \PHPUnit_Framework_TestCase {
+class ApplicationIntegrationTest extends \PHPUnit\Framework\TestCase {
   /*
    * The challenge with WebTestCase is it creates one HttpKernelInterface
    * instance and reuses it for all requests, whereas this test is specificially

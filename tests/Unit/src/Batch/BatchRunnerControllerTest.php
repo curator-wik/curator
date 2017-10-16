@@ -8,7 +8,7 @@ use Curator\Tests\Shared\Mocks\InMemoryPersistenceMock;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
-class BatchRunnerControllerTest extends \PHPUnit_Framework_TestCase {
+class BatchRunnerControllerTest extends \PHPUnit\Framework\TestCase {
   protected function sutFactory() {
     $session_storage = new MockArraySessionStorage();
     $session_storage->setId(__CLASS__);

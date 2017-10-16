@@ -10,7 +10,7 @@ use Curator\FSAccess\FSAccessManager;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
-class DeleteRenameBatchTaskTest extends \PHPUnit_Framework_TestCase {
+class DeleteRenameBatchTaskTest extends \PHPUnit\Framework\TestCase {
   protected function sutFactory() {
     return new DeleteRenameBatchTask(
       new CpkgReader(),

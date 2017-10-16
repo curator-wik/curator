@@ -11,7 +11,7 @@ use Curator\Task\TaskInterface;
 use Curator\Tests\Integration\WebserverRunnerTrait;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
 
-class CurlDownloadBatchRunnableTest extends \PHPUnit_Framework_TestCase {
+class CurlDownloadBatchRunnableTest extends \PHPUnit\Framework\TestCase {
   use WebserverRunnerTrait;
 
   protected static $random512 = '';

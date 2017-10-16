@@ -10,7 +10,7 @@ use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
-class Drupal7AppTargeterTest extends \PHPUnit_Framework_TestCase {
+class Drupal7AppTargeterTest extends \PHPUnit\Framework\TestCase {
   protected function setupVersionDetectionTest($files) {
     $ic_mock = $this->getMockBuilder('\Curator\IntegrationConfig')->getMock();
     $ic_mock->method('getSiteRootPath')->willReturn('/app');

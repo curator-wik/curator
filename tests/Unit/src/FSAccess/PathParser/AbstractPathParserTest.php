@@ -8,7 +8,7 @@ use Curator\FSAccess\PathParser\PathParserInterface;
 use Curator\FSAccess\PathParser\PosixPathParser;
 use Curator\FSAccess\PathParser\WindowsPathParser;
 
-class AbstractPathParserTest extends \PHPUnit_Framework_TestCase {
+class AbstractPathParserTest extends \PHPUnit\Framework\TestCase {
 
   /**
    * @param string $path

@@ -3,8 +3,8 @@ services:
   phpunit_runner_7_1:
     image: curatorwik/docker_test_env
     environment:
-      - PHP_VERSION=7.1.0
-      - PHPUNIT=/usr/local/bin/phpunit-5.5
+      - PHP_VERSION=7.1.10
+      - PHPUNIT=/usr/local/bin/phpunit-6.4.phar
     volumes:
       - .:/curator
       - /tmp:/host_tmp
@@ -15,8 +15,8 @@ services:
   phpunit_runner_7_0:
     image: curatorwik/docker_test_env
     environment:
-      - PHP_VERSION=7.0.14
-      - PHPUNIT=/usr/local/bin/phpunit-5.5
+      - PHP_VERSION=7.0.24
+      - PHPUNIT=/usr/local/bin/phpunit-5.7.phar
     volumes:
       - .:/curator
       - /tmp:/host_tmp
@@ -27,8 +27,8 @@ services:
   phpunit_runner_5_6:
     image: curatorwik/docker_test_env
     environment:
-      - PHP_VERSION=5.6.29
-      - PHPUNIT=/usr/local/bin/phpunit-5.5
+      - PHP_VERSION=5.6.31
+      - PHPUNIT=/usr/local/bin/phpunit-5.7.phar
     volumes:
       - .:/curator
       - /tmp:/host_tmp

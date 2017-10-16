@@ -11,7 +11,7 @@ namespace Curator\Tests\Unit\FSAccess\PathParser;
 
 use Curator\FSAccess\PathParser\WindowsPathParser;
 
-class WindowsPathParserTest extends \PHPUnit_Framework_TestCase {
+class WindowsPathParserTest extends \PHPUnit\Framework\TestCase {
   /**
    * System under test factory.
    *

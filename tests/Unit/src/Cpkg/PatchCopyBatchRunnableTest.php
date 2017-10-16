@@ -11,7 +11,7 @@ use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
-class PatchCopyBatchRunnableTest extends \PHPUnit_Framework_TestCase {
+class PatchCopyBatchRunnableTest extends \PHPUnit\Framework\TestCase {
 
   /**
    * @param $cpkg_path
