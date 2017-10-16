@@ -11,14 +11,16 @@ namespace Curator\APIModel\v1\ConnectionConfig;
 class FtpConfig {
   /**
    * The FTP username.
-   * @var string $username
+   *
+   * @var string
    * @SWG\Property()
    */
   public $username;
 
   /**
    * The FTP password.
-   * @var string $password
+   *
+   * @var string
    * @SWG\Property()
    */
   public $password;
@@ -26,14 +28,16 @@ class FtpConfig {
   /**
    * The FTP server hostname.
    *
-   * @var string $host
+   * @var string
+   * @SWG\Property()
    */
   public $host;
 
   /**
    * The FTP server's TCP port.
    *
-   * @var int $port
+   * @var int
+   * @SWG\Property()
    */
   public $port;
 }
