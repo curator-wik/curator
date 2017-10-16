@@ -1,0 +1,58 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Curator API",
+        "description": "Operations of the Curator Web Install Kit.",
+        "version": "1.0.0"
+    },
+    "produces": [
+        "application/json"
+    ],
+    "paths": {
+        "/config/connection/ftp": {
+            "post": {
+                "parameters": [
+                    {
+                        "name": "body",
+                        "in": "body",
+                        "description": "FTP connection configuration object",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/FtpConfig"
+                        }
+                    }
+                ],
+                "responses": {
+                    "405": {
+                        "description": "Invalid input"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "FtpConfig": {
+            "properties": {
+                "username": {
+                    "description": "The FTP username.",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "The FTP password.",
+                    "type": "string"
+                },
+                "host": {
+                    "description": "The FTP server hostname.",
+                    "type": "string"
+                },
+                "port": {
+                    "description": "The FTP server's TCP port.",
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
