@@ -52,6 +52,7 @@ class ApplicationIntegrationTest extends \PHPUnit_Framework_TestCase {
 
     // Simulate a subsequent process calling AppManager::run().
     $regularKernel = $this->createApplication(self::MODE_DIRECT_ACCESS);
+    $alreadyStarted = $regularKernel['session']->isStarted();
     $client2 = new Client(
       $regularKernel, [], null, $client->getCookieJar()
     );

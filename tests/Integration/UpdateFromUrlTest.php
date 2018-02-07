@@ -60,6 +60,8 @@ class UpdateFromUrlTest extends WebTestCase {
     copy(__DIR__ . '/../Unit/fixtures/cpkgs/multiple-files-patches.zip', '/tmp/oh_look_an_update.cpkg.zip');
   }
 
+  protected static function getSampleFilePath() { return 'oh_look_an_update.cpkg.zip'; }
+
   protected function getTestIntegrationConfig() {
     $integration_config = parent::getTestIntegrationConfig();
     $integration_config

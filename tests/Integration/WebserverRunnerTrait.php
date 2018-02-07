@@ -19,7 +19,16 @@ trait WebserverRunnerTrait {
    *
    * @return void
    */
-  protected abstract static function installDownloadData();
+  protected static function installDownloadData() { }
+
+  /**
+   * Returns a string representing the portion of a URL below the docroot
+   * where a file is expected to be found. This is used to poll the server and
+   * wait for it to be up before running the actual tests.
+   *
+   * @return string
+   */
+  protected static function getSampleFilePath() { return ''; }
 
   // Start a development webserver on :8080.
   public static function setUpBeforeClass() {
@@ -31,7 +40,7 @@ trait WebserverRunnerTrait {
     $foo = [];
 
     $h_server_proc = proc_open(
-      'exec /usr/bin/env php -S localhost:8080 -t /tmp',
+      sprintf('exec /usr/bin/env php -S localhost:8080 -t %s', static::getPhpServerDocroot()),
       [0 => $devnull, 1 => $devnull, 2 => $devnull],
       $foo
     );
@@ -39,9 +48,10 @@ trait WebserverRunnerTrait {
 
     // Wait for the development server to start listening.
     $attempts = 0;
-    while ($attempts < 100000) {
+    $url = getenv('TEST_HTTP_SERVER') . static::getSampleFilePath();
+    while ($attempts < 10000) {
       usleep(1000);
-      if (@file_get_contents(getenv('TEST_HTTP_SERVER') . 'random512.dat')) {
+      if (@file_get_contents($url)) {
         break;
       }
       $attempts++;
@@ -57,5 +67,7 @@ trait WebserverRunnerTrait {
     self::$h_server_proc = FALSE;
   }
 
-
+  protected static function getPhpServerDocroot() {
+    return '/tmp';
+  }
 }

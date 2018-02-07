@@ -41,6 +41,8 @@ class CurlDownloadBatchRunnableTest extends \PHPUnit_Framework_TestCase {
     self::$random512 = $random512;
   }
 
+  protected static function getSampleFilePath() { return 'random512.dat'; }
+
   public function setUp() {
     parent::setUp();
 

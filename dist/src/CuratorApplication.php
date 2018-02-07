@@ -23,6 +23,7 @@ use Curator\Persistence\SessionFauxPersistence;
 use Curator\Status\StatusService;
 use Curator\Authorization\AuthorizationMiddleware;
 use Curator\Task\Decoder\TaskDecoderServicesProvider;
+use Curator\Util\SessionPrepService;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -53,7 +54,7 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
         'name' => 'CURATOR_' . substr(md5($this->curator_filename), 0, 8),
         'cookie_httponly' => true,
       ],
-      'session.test' => getenv('PHPUNIT-TEST') === '1']
+      'session.test' => getenv('PHPUNIT-TEST') === '1' && php_sapi_name() == 'cli']
     );
 
     $this->register(new \Silex\Provider\ServiceControllerServiceProvider());
@@ -226,6 +227,9 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
       return new TaskGroupManager($app['persistence'], $app['batch.task_scheduler']);
     });
 
+    $this['session.prep'] = $this->share(function($app) {
+      return new SessionPrepService();
+    });
   }
 
   /**

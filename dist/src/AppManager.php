@@ -138,6 +138,7 @@ class AppManager {
       $this->createApplication(TRUE);
     }
 
+    $this->silexApp['session.prep']->prepareForNewSession();
     $this->silexApp['session']->set('IsAuthenticated', TRUE);
 
     if (! $this->silexApp->isIntegrationConfigSet()) {
