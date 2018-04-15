@@ -4,7 +4,7 @@ services:
     image: curatorwik/docker_test_env
     environment:
       - PHP_VERSION=7.1.0
-      - PHPUNIT=/usr/local/bin/phpunit-5.5
+      - PHPUNIT=/usr/local/bin/phpunit-5.7.phar
     volumes:
       - .:/curator:z
       - /tmp:/host_tmp
@@ -16,7 +16,7 @@ services:
     image: curatorwik/docker_test_env
     environment:
       - PHP_VERSION=7.0.14
-      - PHPUNIT=/usr/local/bin/phpunit-5.5
+      - PHPUNIT=/usr/local/bin/phpunit-5.7.phar
     volumes:
       - .:/curator:z
       - /tmp:/host_tmp
@@ -28,7 +28,7 @@ services:
     image: curatorwik/docker_test_env
     environment:
       - PHP_VERSION=5.6.29
-      - PHPUNIT=/usr/local/bin/phpunit-5.5
+      - PHPUNIT=/usr/local/bin/phpunit-5.7.phar
     volumes:
       - .:/curator:z
       - /tmp:/host_tmp
