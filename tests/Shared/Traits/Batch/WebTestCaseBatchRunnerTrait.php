@@ -25,6 +25,12 @@ trait WebTestCaseBatchRunnerTrait {
     $incomplete_runner_ids = $curr_task->getRunnerIds();
     $this->assertGreaterThan(0, count($incomplete_runner_ids));
 
+    // In case the above hack to obtain the first runner ids resumed the session,
+    // close it again before the actual clients try to use it.
+    if ($this->app['session']->isStarted()) {
+      $this->app['session']->save();
+    }
+
     while (count($incomplete_runner_ids)) {
       shuffle($incomplete_runner_ids);
       $runner_id = reset($incomplete_runner_ids);
