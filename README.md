@@ -67,7 +67,7 @@ Incomplete features are:
 [this graph](https://wordpress.org/about/stats/), so it could be bumped somewhat if there was a compelling
 reason.
 
-### Development:
+### Development getting started:
 For a good developer experience, Curator can be hosted directly from its source tree
 rather than out of a .phar.
 The recommended way to do this is to install Docker and docker-compose if necessary, 

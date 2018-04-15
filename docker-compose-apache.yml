@@ -5,10 +5,11 @@ services:
       image: curatorwik/docker_host_env
       environment:
         - PHP_VERSION=7.0.14
+        - XDEBUG2HOST=serverName=docker-test-env.curatorwik
       volumes:
-        - .:/var/www/html
+        - .:/var/www/html:z
         - /tmp:/host_tmp
-        - php-builds:/usr/local/phpenv/versions
+        - php-builds:/usr/local/phpenv/versions:z
       ports:
         - "8080:80"
       tmpfs:
