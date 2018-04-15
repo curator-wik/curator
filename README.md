@@ -94,6 +94,11 @@ README.md for details.
 -->
 
 ### Running the tests
+First, install dependencies via composer:
+```bash
+composer install && composer install --no-dev --optimize-autoloader -d dist/
+```
+
 Curator has environment-independent unit tests, as well as integration tests that require
 a particular OS, filesystem, and services. It is easy to run both types locally. 
 

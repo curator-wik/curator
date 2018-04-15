@@ -4,7 +4,9 @@ services:
   - docker
 env:
   - CURATOR_DO_COVERAGE=1
-install: composer install
+install:
+  - composer install
+  - composer install --no-dev --optimize-autoloader -d dist/
 script:
   - ./docker-all_tests.sh --coverage
 after_success:
