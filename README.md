@@ -42,7 +42,7 @@ As of April 2018, the problems solved in developed & tested code are:
     on whether the operation is a read or a write. ([`Curator\FSAccess` namespace](https://github.com/curator-wik/curator/tree/master/dist/src/FSAccess)).  
     This is a performance optimization allowing the updater to read the current state of files via
     the mounted filesystem even when writes must be performed through a slower method like FTP.
-  * Code that downloads packaged deltas and translates the download to a batch job that applies it
+  * Code that downloads packaged deltas and translates the package to a batch job that applies it
     on a source tree via the filesystem abstraction layer.
     ([`BatchTaskTranslationService` &](https://github.com/curator-wik/curator/blob/master/dist/src/Cpkg/BatchTaskTranslationService.php)
     friends in the [`Curator\Cpkg` namespace](https://github.com/curator-wik/curator/tree/master/dist/src/Cpkg)).
@@ -52,15 +52,16 @@ Some nearly-complete / experimental features are:
     Lightweight integrations use the build of Curator that exhibits self-sufficiency and simply allow
     user authz and update task configuration to flow from the target application to the updater. They
     can be implemented as simple modules / plugins / extensions to the target application.
-  * Application of patch files to possibly modified original source files with no requirement for
-    external utilities. (Patches do not always apply correctly.) The goal here would be to offer
-    tooling to deploy small but highly critical patches even to sites with user modified sources.
+  * Application of .patch files to possibly modified original source files with no requirement for
+    external utilities. (Nearly complete because the php code for patch application is buggy and they do not always apply correctly.)
+    The goal here would be to offer tooling to deploy small but highly critical patches even to sites with user modified sources.
 
 Incomplete features are:
   * [The UI](https://github.com/curator-wik/curator-gui).
   * Any kind of support for cryptographic verification of new code before it is installed. The project
     currently runs on PHP all the way back to 5.4 in the interests of providing a low bar for as many
-    users as possible to receive updates<sup>*</sup>, and sodium-compat was not yet a thing.
+    users as possible to receive updates<sup>*</sup>, and sodium-compat was not yet a thing when most of
+    the work was done.
   * Awareness of the Composer ecosystem.
     
 <sup>*</sup> The 5.4 decision was made 2 years ago when 5.4 was much more predominant on
