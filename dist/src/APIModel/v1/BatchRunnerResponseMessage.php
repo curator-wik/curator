@@ -20,23 +20,31 @@ class BatchRunnerResponseMessage extends BatchRunnerMessage {
 
   protected $incomplete_runner_ids;
 
+  protected $num_runners;
+
   /**
    * BatchRunnerResponseMessage constructor.
    * @param \Symfony\Component\HttpFoundation\Response $response
    *   The Response from the completed Task.
    * @param int[] $incomplete_runner_ids
    *   A list of runner ids used by any next enqueued task for the session.
+   *   It has length 0 if there are no more enqueued tasks.
+   * @param int $num_runners
+   *   The maximum number of concurrent runners supported by the next enqueued task.
+   *   It has value 0 if there are no more enqueued tasks.
    */
-  public function __construct(Response $response, $incomplete_runner_ids) {
+  public function __construct(Response $response, $incomplete_runner_ids, $num_runners) {
     $this->type = BatchRunnerMessage::TYPE_RESPONSE;
     $this->response = $response;
     $this->incomplete_runner_ids = $incomplete_runner_ids;
+    $this->num_runners = $num_runners;
   }
 
   public function toJson() {
     $data = [
       'type' => $this->type,
       'incomplete_runner_ids' => $this->incomplete_runner_ids,
+      'num_runners' => $this->num_runners,
       'headers' => $this->response->headers->all(),
       'body' => $this->response->getContent()
     ];
