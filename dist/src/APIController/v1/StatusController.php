@@ -5,7 +5,6 @@ namespace Curator\APIController\v1;
 use Curator\APIModel\v1\StatusModel as APIStatus;
 use Curator\Status;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Class StatusController

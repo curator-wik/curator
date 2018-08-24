@@ -141,6 +141,8 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     $this['fs_access'] = $this->share(function($app) {
       $manager = new FSAccessManager($app['fs_access.read_adapter'], $app['fs_access.write_adapter']);
       $manager->setWorkingPath($this['integration_config']->getSiteRootPath());
+      // TODO: create configuration system that allows selection of other write adapters and uses autodetectWriteWorkingPath()
+      $manager->setWriteWorkingPath($this['integration_config']->getSiteRootPath());
       return $manager;
     });
 

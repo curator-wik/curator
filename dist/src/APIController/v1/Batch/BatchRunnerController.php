@@ -127,6 +127,13 @@ class BatchRunnerController implements RunnerControllerInterface {
     }
   }
 
+  /**
+   * Registered by AuthenticatedOrUnconfiguredEndpointsProvider at api/v1/batch/runner.
+   *
+   * @param Request $request
+   * @param CuratorApplication $app_container
+   * @return BatchRunnerResponse
+   */
   public function handleRequest(Request $request, CuratorApplication $app_container) {
     $runner_id = $this->getRunnerId($request);
     if ($runner_id === NULL) {
@@ -156,11 +163,13 @@ class BatchRunnerController implements RunnerControllerInterface {
       if ($response !== NULL) {
         // Task done, send final outcome.
         $next_task_runner_ids = [];
+        $next_task_num_runners = 0;
         if ($this->task_instance !== NULL) {
           $next_task_runner_ids = $this->task_instance->getRunnerIds();
+          $next_task_num_runners = $this->task_instance->getNumRunners();
         }
         $this->runner_response->postMessage(
-          new BatchRunnerResponseMessage($response, $next_task_runner_ids)
+          new BatchRunnerResponseMessage($response, $next_task_runner_ids, $next_task_num_runners)
         );
       } else {
         // Task will finish during a subsequent request. Call back.

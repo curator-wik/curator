@@ -21,6 +21,7 @@ class AuthenticatedOrUnconfiguredEndpointsProvider implements ControllerProvider
       $app['authorization.middleware']->requireAuthenticatedOrNoAuthenticationConfigured();
     });
     $batch->post('/batch/runner', 'controller.apiv1.batch.runner:handleRequest');
+    $batch->get('/batch/current-task', 'controller.apiv1.batch.runner:handleTaskInfoRequest');
 
     return $batch;
   }
