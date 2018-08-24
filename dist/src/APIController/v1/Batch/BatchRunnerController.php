@@ -8,6 +8,7 @@ use Curator\APIModel\v1\BatchRunnerControlMessage;
 use Curator\APIModel\v1\BatchRunnerMessage;
 use Curator\APIModel\v1\BatchRunnerResponseMessage;
 use Curator\APIModel\v1\BatchRunnerUpdateMessage;
+use Curator\APIModel\v1\BatchTaskInfoModel;
 use Curator\Batch\BatchRunnerResponse;
 use Curator\Batch\DescribedRunnableInterface;
 use Curator\Batch\MessageCallbackRunnableInterface;
@@ -23,10 +24,13 @@ use mbaynton\BatchFramework\Controller\RunnerControllerInterface;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
+use mbaynton\BatchFramework\TaskInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // TODO: Ensure session not held during main loop, not opened while persistence lock is held.
 
@@ -166,6 +170,35 @@ class BatchRunnerController implements RunnerControllerInterface {
       }
 
       return $this->runner_response;
+    }
+  }
+
+  /**
+   * Registered by AuthenticatedOrUnconfiguredEndpointsProvider at api/v1/batch/current-task.
+   *
+   * @param Request $request
+   * @param CuratorApplication $app_container
+   * @return JsonResponse
+   */
+  public function handleTaskInfoRequest(Request $request, CuratorApplication $app_container) {
+    if ($this->task_instance != NULL) {
+      /**
+       * @var TaskInterface $task
+       */
+      $model = new BatchTaskInfoModel(
+        $this->group->friendlyDescription,
+        $this->task_instance->getRunnerIds(),
+        $this->task_instance->getNumRunners(),
+        $this->task_instance->getNumRunnables()
+      );
+      return new JsonResponse($model);
+    } else {
+      return new JsonResponse(new BatchTaskInfoModel(
+        'No tasks are scheduled in this session.',
+        [],
+        0,
+        0
+      ), 404);
     }
   }
 
