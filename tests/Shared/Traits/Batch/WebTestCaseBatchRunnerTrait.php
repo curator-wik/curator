@@ -70,14 +70,40 @@ trait WebTestCaseBatchRunnerTrait {
   }
 
   protected function decodeBatchResponseContent($content) {
+    // This method tests both that the response content as a whole is valid json,
+    // and that each independent chunk with minimal massaging is valid json.
+    // This ensures that both clients choosing to buffer and process the complete request
+    // and clients choosing to process streamed chunks will receive valid data.
+    $complete_buffer = '';
     $objects = [];
     while(strlen($content)) {
       list($chunk_len, $content) = explode("\r\n", $content, 2);
-      $chunk_len = hexdec($chunk_len) + strlen("\r\n"); // incl. trailing \r\n
+      $chunk_len = hexdec($chunk_len);
       $chunk = substr($content, 0, $chunk_len);
-      $objects[] = json_decode($chunk);
-      $content = substr($content, $chunk_len);
+      $complete_buffer .= $chunk;
+
+      // Remove things from the individual chunk that are there to make valid overall response json;
+      // the result should be a mini valid json.
+      // 1. All chunks except the last one begin with one unused character, either "[" or ","
+      // 2. The last chunk is an unused terminating ] and should be ignored.
+      $content = substr($content, $chunk_len + strlen("\r\n"));
+      $is_last_chunk = strlen($content) == 0;
+      $chunk = substr($chunk, $is_last_chunk ? 0 : 1);
+      if ($is_last_chunk) {
+        $this->assertEquals(']', $chunk);
+      } else {
+        $object = json_decode($chunk);
+        if ($object === null) {
+          throw new \RuntimeException('Response chunk was not valid json.');
+        }
+        $objects[] = json_decode($chunk);
+      }
     }
+
+    if (json_decode($complete_buffer) === null) {
+      throw new \RuntimeException('Overall batch runner response was not valid json.');
+    }
+
     return $objects;
   }
 }

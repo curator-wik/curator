@@ -21,15 +21,15 @@ class BatchRunnerResponse extends Response {
     // If in a phpunit test, do not print / echo things.
     if (getenv('PHPUNIT-TEST') == '1') {
       $this->is_test = TRUE;
+    } else {
+      // Make some attempts at preventing output buffering.
+      ini_set('output_handler', '');
+      ini_set('output_buffering', 'Off');
+      // These responses are usually small, and gzipping intermediaries often buffer.
+      ini_set('zlib.output_compression', 'Off');
+      apache_setenv('no-gzip', 1); // mod_deflate
+      $this->headers->add(['X-Accel-Buffering' => 'no']); // Nginx
     }
-
-    // Make some attempts at preventing output buffering.
-    ini_set('output_handler', '');
-    ini_set('output_buffering', 'Off');
-    // These responses are usually small, and gzipping intermediaries often buffer.
-    ini_set('zlib.output_compression', 'Off');
-    apache_setenv('no-gzip', 1); // mod_deflate
-    $this->headers->add(['X-Accel-Buffering' => 'no']); // Nginx
 
     foreach ($messages as $message) {
       $this->postMessage($message);
