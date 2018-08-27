@@ -2,8 +2,6 @@
 
 namespace Curator\FSAccess;
 
-use Curator\Util\ErrorHandling;
-
 trait WriteAdapterStreamWrapperTrait
 {
   /**
