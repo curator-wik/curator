@@ -11,25 +11,22 @@ use Symfony\Component\HttpKernel\Client;
 
 trait WebTestCaseBatchRunnerTrait {
   private $ENDPOINT_BATCH_RUNNER = '/api/v1/batch/runner';
+  private $ENDPOINT_BATCH_TASK_INFO = '/api/v1/batch/current-task';
 
   protected function runBatchTasks(Client $client, TaskGroup $taskgroup, $run_subsequent_tasks = TRUE) {
-    /**
-     * @var TaskGroupManager $taskgroup_manager
-     */
-    $taskgroup_manager = $this->app['batch.taskgroup_manager'];
-
     $prev_task = NULL;
-    // Seed the requests to the batch controller by looking up the runner ids
-    // of the first Task. In real world, will need to be pulled from an API.
-    $curr_task = $taskgroup_manager->getActiveTaskInstance($taskgroup);
-    $incomplete_runner_ids = $curr_task->getRunnerIds();
+    // Seed the requests to the batch controller by asking it for the current task information.
+    $client->request('GET', $this->ENDPOINT_BATCH_TASK_INFO);
+    $task_info_response = $client->getResponse();
+    $batch_info_response = json_decode($task_info_response->getContent(), TRUE);
+    $this->assertTrue(is_array($batch_info_response));
+    $this->assertCount(0, array_diff_key([
+      'friendlyName' => '',
+      'runnerIds' => '',
+      'numRunners' => '',
+      'numRunnables' => ''], $batch_info_response));
+    $incomplete_runner_ids = $batch_info_response['runnerIds'];
     $this->assertGreaterThan(0, count($incomplete_runner_ids));
-
-    // In case the above hack to obtain the first runner ids resumed the session,
-    // close it again before the actual clients try to use it.
-    if ($this->app['session']->isStarted()) {
-      $this->app['session']->save();
-    }
 
     while (count($incomplete_runner_ids)) {
       shuffle($incomplete_runner_ids);
