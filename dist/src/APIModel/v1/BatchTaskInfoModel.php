@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: mbaynton
- * Date: 8/23/18
- * Time: 1:19 PM
- */
 
 namespace Curator\APIModel\v1;
 
@@ -16,17 +10,17 @@ class BatchTaskInfoModel
 {
   public function __construct($taskGroupDescription, $runnerIds, $numRunners, $numRunnables)
   {
-    $this->taskGroupDescription = $taskGroupDescription;
+    $this->friendlyName = $taskGroupDescription;
     $this->runnerIds = $runnerIds;
     $this->numRunners = $numRunners;
     $this->numRunnables = $numRunnables;
   }
 
   /**
-   * @var string $taskGroupDescription
+   * @var string $friendlyName
    *   A friendly description of the task group that the current task is a member of.
    */
-  public $taskGroupDescription = '';
+  public $friendlyName = '';
 
   /**
    * @var int[] $runnerIds

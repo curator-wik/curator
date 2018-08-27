@@ -22,6 +22,8 @@ class BatchRunnerResponseMessage extends BatchRunnerMessage {
 
   protected $num_runners;
 
+  protected $friendly_name;
+
   /**
    * BatchRunnerResponseMessage constructor.
    * @param \Symfony\Component\HttpFoundation\Response $response
@@ -32,12 +34,15 @@ class BatchRunnerResponseMessage extends BatchRunnerMessage {
    * @param int $num_runners
    *   The maximum number of concurrent runners supported by the next enqueued task.
    *   It has value 0 if there are no more enqueued tasks.
+   * @param string $friendly_name
+   *   The friendly name of the next enqueued task, for UI.
    */
-  public function __construct(Response $response, $incomplete_runner_ids, $num_runners) {
+  public function __construct(Response $response, $incomplete_runner_ids, $num_runners, $friendly_name) {
     $this->type = BatchRunnerMessage::TYPE_RESPONSE;
     $this->response = $response;
     $this->incomplete_runner_ids = $incomplete_runner_ids;
     $this->num_runners = $num_runners;
+    $this->friendly_name = $friendly_name;
   }
 
   public function toJson() {
@@ -45,6 +50,7 @@ class BatchRunnerResponseMessage extends BatchRunnerMessage {
       'type' => $this->type,
       'incomplete_runner_ids' => $this->incomplete_runner_ids,
       'num_runners' => $this->num_runners,
+      'friendlyName' => $this->friendly_name,
       'headers' => $this->response->headers->all(),
       'body' => $this->response->getContent()
     ];

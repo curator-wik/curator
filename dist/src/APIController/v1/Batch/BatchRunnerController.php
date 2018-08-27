@@ -30,7 +30,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // TODO: Ensure session not held during main loop, not opened while persistence lock is held.
 
@@ -164,12 +163,15 @@ class BatchRunnerController implements RunnerControllerInterface {
         // Task done, send final outcome.
         $next_task_runner_ids = [];
         $next_task_num_runners = 0;
+        $next_task_name = '';
+        // $this->task_instance was updated by BatchRunnerController::onTaskComplete()
         if ($this->task_instance !== NULL) {
           $next_task_runner_ids = $this->task_instance->getRunnerIds();
           $next_task_num_runners = $this->task_instance->getNumRunners();
+          $next_task_name = $this->task_scheduler->getCurrentGroupInSession()->friendlyDescription;
         }
         $this->runner_response->postMessage(
-          new BatchRunnerResponseMessage($response, $next_task_runner_ids, $next_task_num_runners)
+          new BatchRunnerResponseMessage($response, $next_task_runner_ids, $next_task_num_runners, $next_task_name)
         );
       } else {
         // Task will finish during a subsequent request. Call back.
