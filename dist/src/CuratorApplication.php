@@ -122,6 +122,13 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
 
   protected function prepareRoutes() {
     $this->get('/', 'static_content_controller:generateSinglePageHost');
+    $this->get('/batch-client_alpha.js', function(CuratorApplication $app) {
+      /**
+       * @var StaticContentController $static_controller
+       */
+      $static_controller = $app['static_content_controller'];
+      return $static_controller->serveStaticFileAtPath($static_controller->getWebPath() . "batch-client_alpha.js");
+    });
     $this->mount('/api/v1', new Provider\APIv1\UnauthenticatedEndpointsProvider());
     $this->mount('/api/v1', new Provider\APIv1\AuthenticatedOrUnconfiguredEndpointsProvider());
   }

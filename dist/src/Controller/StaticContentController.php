@@ -21,45 +21,6 @@ class StaticContentController {
   }
 
   public function generateSinglePageHost(Request $request) {
-    /*
-    $template = <<<TPL
-<!doctype html>
-<html ng-app="application">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Curator</title>
-    <base href="%s" />
-    <link href="assets/css/app.css" rel="stylesheet" type="text/css">
-    <script src="assets/js/app.js"></script>
-    <script src="assets/js/routes.js"></script>
-    <script src="assets/js/angular.js"></script>
-  </head>
-
-  <style>
-    .menu-bar {margin-bottom: 0;}
-    #sub-nav, .messages {border-right: 1px solid #eee;}
-    .medium-grid-content {padding:1rem !important;}
-  </style>
-
-  <body>
-    <div class="grid-frame vertical">
-      <div class="primary title-bar">
-        <div class="center title"><a ui-sref="home">zMail</a></div>
-        <span class="right"><a ui-sref="settings">Settings</a></span>
-      </div>
-      <div ui-view class="grid-block">
-
-      </div>
-    </div>
-  </body>
-</html>
-
-TPL;
-
-    return sprintf($template, $request->getSchemeAndHttpHost() . ':' . $request->getPort() . $request->getBaseUrl() . '/');
-    */
-
     $index_html = static::getGuiPath() . DIRECTORY_SEPARATOR . 'index.html';
     if (file_exists($index_html)) {
       $base = $request->getSchemeAndHttpHost() . ':' . $request->getPort() . $request->getBaseUrl() . '/';
@@ -115,11 +76,15 @@ TPL;
     return NULL;
   }
 
-  protected function getGuiPath() {
+  public function getGuiPath() {
+    return $this->getWebPath() . "curator-gui";
+  }
+
+  public function getWebPath() {
     if ($this->app_manager->isPhar()) {
-      $root = 'phar://curator/web/curator-gui';
+      $root = 'phar://curator/web/';
     } else {
-      $root = 'curator-gui';
+      $root = '';
     }
     return $root;
   }

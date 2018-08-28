@@ -8,19 +8,35 @@ namespace Curator\APIModel\v1;
  */
 class BatchTaskInfoModel
 {
-  public function __construct($taskGroupDescription, $runnerIds, $numRunners, $numRunnables)
+  public function __construct($taskGroupDescription, $runnerIds, $numRunners, $numRunnables, $taskGroupId, $numTasksInGroup)
   {
     $this->friendlyName = $taskGroupDescription;
     $this->runnerIds = $runnerIds;
     $this->numRunners = $numRunners;
     $this->numRunnables = $numRunnables;
+    $this->taskGroupId = $taskGroupId;
+    $this->numTasksInGroup = $numTasksInGroup;
   }
+
+  /**
+   * @var int $taskGroupId
+   *   The internal id number that Curator is using to track the current task group.
+   *   Useful to clients for detecting when a new task group has started.
+   */
+  public $taskGroupId;
 
   /**
    * @var string $friendlyName
    *   A friendly description of the task group that the current task is a member of.
    */
   public $friendlyName = '';
+
+  /**
+   * @var int $numTasksInGroup
+   *   The number of tasks in the current task group.
+   *   Useful to clients for estimating overall completion of a task group.
+   */
+  public $numTasksInGroup = 0;
 
   /**
    * @var int[] $runnerIds

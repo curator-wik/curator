@@ -22,7 +22,13 @@ class BatchRunnerResponseMessage extends BatchRunnerMessage {
 
   protected $num_runners;
 
+  protected $num_runnables;
+
   protected $friendly_name;
+
+  protected $task_group_id;
+
+  protected $num_tasks_in_group;
 
   /**
    * BatchRunnerResponseMessage constructor.
@@ -37,12 +43,15 @@ class BatchRunnerResponseMessage extends BatchRunnerMessage {
    * @param string $friendly_name
    *   The friendly name of the next enqueued task, for UI.
    */
-  public function __construct(Response $response, $incomplete_runner_ids, $num_runners, $friendly_name) {
+  public function __construct(Response $response, $incomplete_runner_ids, $num_runners, $num_runnables, $friendly_name, $task_group_id, $num_tasks_in_group) {
     $this->type = BatchRunnerMessage::TYPE_RESPONSE;
     $this->response = $response;
     $this->incomplete_runner_ids = $incomplete_runner_ids;
     $this->num_runners = $num_runners;
+    $this->num_runnables = $num_runnables;
     $this->friendly_name = $friendly_name;
+    $this->task_group_id = $task_group_id;
+    $this->num_tasks_in_group = $num_tasks_in_group;
   }
 
   public function toJson() {
@@ -50,7 +59,10 @@ class BatchRunnerResponseMessage extends BatchRunnerMessage {
       'type' => $this->type,
       'incomplete_runner_ids' => $this->incomplete_runner_ids,
       'num_runners' => $this->num_runners,
+      'numRunnables' => $this->num_runnables,
+      'taskGroupId' => $this->task_group_id,
       'friendlyName' => $this->friendly_name,
+      'numTasksInGroup' => $this->num_tasks_in_group,
       'headers' => $this->response->headers->all(),
       'body' => $this->response->getContent()
     ];

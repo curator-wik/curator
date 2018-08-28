@@ -163,15 +163,27 @@ class BatchRunnerController implements RunnerControllerInterface {
         // Task done, send final outcome.
         $next_task_runner_ids = [];
         $next_task_num_runners = 0;
+        $next_task_num_runnables = 0;
         $next_task_name = '';
+        $next_taskgroup_num_tasks = 0;
+        $next_taskgroup_id = 0;
         // $this->task_instance was updated by BatchRunnerController::onTaskComplete()
         if ($this->task_instance !== NULL) {
           $next_task_runner_ids = $this->task_instance->getRunnerIds();
           $next_task_num_runners = $this->task_instance->getNumRunners();
-          $next_task_name = $this->task_scheduler->getCurrentGroupInSession()->friendlyDescription;
+          $next_task_num_runnables = $this->task_instance->getNumRunnables();
+          $next_task_name = $this->group->friendlyDescription;
+          $next_taskgroup_id = $this->group->taskGroupId;
+          $next_taskgroup_num_tasks = count($this->group->taskIds);
         }
         $this->runner_response->postMessage(
-          new BatchRunnerResponseMessage($response, $next_task_runner_ids, $next_task_num_runners, $next_task_name)
+          new BatchRunnerResponseMessage($response,
+            $next_task_runner_ids,
+            $next_task_num_runners,
+            $next_task_num_runnables,
+            $next_task_name,
+            $next_taskgroup_id,
+            $next_taskgroup_num_tasks)
         );
       } else {
         // Task will finish during a subsequent request. Call back.
@@ -193,6 +205,8 @@ class BatchRunnerController implements RunnerControllerInterface {
    */
   public function handleTaskInfoRequest(Request $request, CuratorApplication $app_container) {
     if ($this->task_instance != NULL) {
+      // TODO: The task group task count will be inaccurate once group has finished tasks, but this
+      // API isn't typically invoked at other times, and the count is for % complete estimation only.
       /**
        * @var TaskInterface $task
        */
@@ -200,7 +214,9 @@ class BatchRunnerController implements RunnerControllerInterface {
         $this->group->friendlyDescription,
         $this->task_instance->getRunnerIds(),
         $this->task_instance->getNumRunners(),
-        $this->task_instance->getNumRunnables()
+        $this->task_instance->getNumRunnables(),
+        $this->group->taskGroupId,
+        count($this->group->taskIds)
       );
       return new JsonResponse($model);
     } else {
