@@ -129,6 +129,13 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
       $static_controller = $app['static_content_controller'];
       return $static_controller->serveStaticFileAtPath($static_controller->getWebPath() . "batch-client_alpha.js");
     });
+    $this->get('/jquery-2.2.4.min.js', function(CuratorApplication $app) {
+      /**
+       * @var StaticContentController $static_controller
+       */
+      $static_controller = $app['static_content_controller'];
+      return $static_controller->serveStaticFileAtPath($static_controller->getWebPath() . "jquery-2.2.4.min.js");
+    });
     $this->mount('/api/v1', new Provider\APIv1\UnauthenticatedEndpointsProvider());
     $this->mount('/api/v1', new Provider\APIv1\AuthenticatedOrUnconfiguredEndpointsProvider());
   }
