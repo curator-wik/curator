@@ -17,6 +17,7 @@ class BatchRunnerResponse extends Response {
 
   public function __construct(array $messages = []) {
     parent::__construct('', 200, ['Transfer-Encoding' => 'chunked', 'Content-Type' => 'application/json']);
+    $this->setProtocolVersion('1.1');
 
     // If in a phpunit test, do not print / echo things.
     if (getenv('PHPUNIT-TEST') == '1') {
@@ -80,6 +81,10 @@ class BatchRunnerResponse extends Response {
     if ($this->is_test) {
       return parent::sendContent();
     } else {
+      // Send chunked encoding terminstor.
+      $this->frameAndSendChunk('');
+      print "\r\n";
+
       $this->flush();
       return $this;
     }
