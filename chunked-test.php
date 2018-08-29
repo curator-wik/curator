@@ -13,7 +13,7 @@ flush();
 
 function getThingsToSay() {
   $results = [];
-  for ($i = 0; $i < 80; $i++) {
+  for ($i = 0; $i < 40; $i++) {
     $output = [];
     exec('/usr/games/fortune', $output);
     $results[] = implode("\n", $output);
@@ -37,4 +37,5 @@ foreach ($things as $fortune) {
  usleep(3e5);
 }
 
-
+send_chunk('');
+print "\r\n";
