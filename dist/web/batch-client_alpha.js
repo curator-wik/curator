@@ -8,6 +8,7 @@ window.CuratorBatchClient = function($) {
     var messageCallback;
     var progressCallback;
     var completeCallback;
+    var errorCallback;
 
     var exports = {
         GRANULARITY_ALL: 100,
@@ -32,12 +33,16 @@ window.CuratorBatchClient = function($) {
      * @param _completeCallback
      *   An optional function that will be called when all scheduled batched processes have
      *   completed.
+     * @param _errorCallback
+     *   An optional function that will be called whenever a runnable in the batch could not
+     *   complete its task.
      */
-    exports.go = function(_api_url, _messageCallback, _progressCallback, _completeCallback) {
+    exports.go = function(_api_url, _messageCallback, _progressCallback, _completeCallback, _errorCallback) {
         api_url = _api_url;
         messageCallback = _messageCallback;
         progressCallback = _progressCallback;
         completeCallback = _completeCallback;
+        errorCallback = _errorCallback;
 
         $.get(api_url + 'status')
             .done(function(data) {
@@ -179,7 +184,8 @@ window.CuratorBatchClient = function($) {
     };
 
     BatchRunner.complete = function(result) {
-        // This client not fancy enough to do streaming response processing.
+        // This client not fancy enough to do streaming response processing; we just process
+        // the whole response at the end in here for now.
         // Message types:
         // 0: TYPE_CONTROL. Sent at end of runner's work when there are more runnables to do.
         // 1: TYPE_UPDATE.  Sent in chunks as runner works, one for each runnable. Tells us how
@@ -204,7 +210,7 @@ window.CuratorBatchClient = function($) {
                 case 1:
                     // Maybe move to a function of this.client?
                     var oldPct = this.client.taskCompletePct;
-                    if (batchMessage.hasOwnProperty('n')) {
+                    if (batchMessage.hasOwnProperty('n') && batchMessage.n != null) {
                         this.client.numCompletedRunnables++;
                         this.client.taskCompletePct = Math.min((this.client.numCompletedRunnables / this.client.numRunnables) * 100, 100);
                     } else if (batchMessage.hasOwnProperty('pct')) {
@@ -213,9 +219,14 @@ window.CuratorBatchClient = function($) {
 
                     if (oldPct !== this.client.taskCompletePct) {
                         reportProgress(exports.GRANULARITY_TASK, this.client.taskCompletePct);
+                        globalTaskGroup.onTaskProgress(this.client.taskCompletePct, this.client);
                     }
 
-                    globalTaskGroup.onTaskProgress(this.client.taskCompletePct, this.client);
+                    if (batchMessage.ok === false) {
+                        if (errorCallback !== undefined) {
+                            errorCallback(batchMessage.chatter);
+                        }
+                    }
                     break;
                 case 2:
                     this.client.promise.resolveWith(this.client, [{
