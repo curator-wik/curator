@@ -278,9 +278,9 @@ class BatchRunnerController implements RunnerControllerInterface {
        * @var DescribedRunnableInterface $runnable
        */
       $message->chatter[0] = $runnable->describe();
-      $message->chatter[1] = $exception->__toString();
+      $message->chatter[1] = $exception->getMessage();
     } else {
-      $message->chatter[0] = $exception->__toString();
+      $message->chatter[0] = $exception->getMessage();
     }
     $this->runner_response->postMessage($message);
   }
