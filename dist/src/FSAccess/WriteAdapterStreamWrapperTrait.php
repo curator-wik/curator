@@ -41,15 +41,16 @@ trait WriteAdapterStreamWrapperTrait
     $flags = ($lock_if_able && $this->getStreamContext()->getScheme() === 'file://'
       ? LOCK_EX : 0);
 
+    $filename = $this->alterPathForStreamWrapper($filename);
     try {
       return file_put_contents(
-        $this->alterPathForStreamWrapper($filename),
+        $filename,
         $data,
         $flags,
         $this->getStreamContext()->getContext()
       );
     } catch (\ErrorException $e) {
-      throw new FileException($e->getMessage(), $filename, 0, $e);
+      $this->failPath($filename, 'w', sprintf('Writing to file at %s', $filename), $e);
     }
   }
 
