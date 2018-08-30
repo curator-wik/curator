@@ -65,13 +65,18 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
       ->getMock();
     $detector->method('getTargeter')->willReturn(new AppTargeterMock());
 
+    $scheduler = $this->getMockBuilder('\\Curator\\Batch\\TaskScheduler')
+      ->disableOriginalConstructor()
+      ->setMethods(['removeGroupFromSession'])
+      ->getMock();
+
     $sut = new BatchTaskTranslationService(
       $detector,
       $this->reader,
       $this->taskgroup_manager,
       $this->task_scheduler,
       $this->persistence,
-      new DeleteRenameBatchTask($this->reader, new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')))
+      new DeleteRenameBatchTask($this->reader, new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')), $scheduler)
     );
 
     return $sut;

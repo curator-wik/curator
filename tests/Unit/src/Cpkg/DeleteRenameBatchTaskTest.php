@@ -12,9 +12,15 @@ use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
 class DeleteRenameBatchTaskTest extends \PHPUnit_Framework_TestCase {
   protected function sutFactory() {
+    $scheduler = $this->getMockBuilder('\\Curator\\Batch\\TaskScheduler')
+      ->disableOriginalConstructor()
+      ->setMethods(['removeGroupFromSession'])
+      ->getMock();
+
     return new DeleteRenameBatchTask(
       new CpkgReader(),
-      new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/'))
+      new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')),
+      $scheduler
     );
   }
 

@@ -17,14 +17,16 @@ class CpkgServicesProvider implements ServiceProviderInterface {
     $app['cpkg.delete_rename_batch_task'] = $app->share(function($app) {
       return new DeleteRenameBatchTask(
         $app['cpkg.reader'],
-        $app['fs_access']
+        $app['fs_access'],
+        $app['batch.task_scheduler']
       );
     });
 
     $app['cpkg.patch_copy_batch_task'] = $app->share(function($app) {
       return new PatchCopyBatchTask(
         $app['cpkg.reader'],
-        $app['fs_access']
+        $app['fs_access'],
+        $app['batch.task_scheduler']
       );
     });
 

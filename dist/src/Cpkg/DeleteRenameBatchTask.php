@@ -4,6 +4,7 @@
 namespace Curator\Cpkg;
 
 
+use Curator\Batch\TaskScheduler;
 use Curator\FSAccess\FSAccessManager;
 use mbaynton\BatchFramework\RunnerInterface;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
@@ -23,8 +24,8 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
   /**
    * DeleteRenameBatchTask constructor.
    */
-  public function __construct(CpkgReader $reader, FSAccessManager $fs_access) {
-    parent::__construct($reader);
+  public function __construct(CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler) {
+    parent::__construct($reader, $scheduler);
     $this->fs_access = $fs_access;
   }
 
