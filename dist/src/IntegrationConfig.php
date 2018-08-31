@@ -33,6 +33,12 @@ class IntegrationConfig {
   protected $siteName;
 
   /**
+   * @var bool $preauthenticated
+   *   Boolean indicating whether Curator should regard the user as preauthenticated.
+   */
+  protected $preauthenticated;
+
+  /**
    * @var TargeterInterface|null $targeter
    */
   protected $targeter;
@@ -44,6 +50,25 @@ class IntegrationConfig {
 
   public function __construct() {
     $this->taskBuilder = NULL;
+    $this->preauthenticated = FALSE;
+  }
+
+  /**
+   * Allows the adjoining application to indicate that the user is authorized to run Curator.
+   *
+   * Currently, it is necessary for the adjoining application to call this method on the
+   * IntegrationConfig it passes to applyIntegrationConfig in order for the resulting session to be useful.
+   *
+   * @param bool $preauthenticated_stance
+   * @return $this
+   */
+  public function setPreauthenticated($preauthenticated_stance = TRUE) {
+    $this->preauthenticated = (bool)$preauthenticated_stance;
+    return $this;
+  }
+
+  public function isPreauthenticated() {
+    return $this->preauthenticated;
   }
 
   public function setSiteRootPath($site_root_path) {

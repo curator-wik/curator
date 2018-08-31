@@ -27,10 +27,11 @@ class ApplicationIntegrationTest extends \PHPUnit_Framework_TestCase {
     $appManager = include __DIR__ . '/../../dist/web/index.php';
 
     if ($mode === self::MODE_PREAUTHORIZED) {
-      // Create and apply an IntegrationConfig. This behavior implies the
+      // Create and apply an IntegrationConfig claiming preauthorization. This behavior implies the
       // integration script has determined we should regard the user as authz'd.
+      $config = clone IntegrationConfig::getNullConfig();
       return $appManager->applyIntegrationConfig(
-        IntegrationConfig::getNullConfig()
+        $config->setPreauthenticated()
       );
     } else {
       // Simulate the behavior of a direct access script, which calls run().

@@ -13,11 +13,13 @@ use Curator\Authorization\AuthorizationMiddleware;
 class AuthorizationMiddlewareStandaloneTest extends WebTestCase  {
 
   const ENDPOINT_ALLOWS_UNCONFIGURED = '/api/v1/batch/runner';
+  const ENDPOINT_STATUS = '/api/v1/status';
 
   public function __construct() {
     parent::__construct(TRUE);
   }
 
+  // Sets $this->app for each test in \Silex\WebTestCase
   public function createApplication() {
     return parent::doCreateApplication(FALSE);
   }
@@ -82,6 +84,14 @@ class AuthorizationMiddlewareStandaloneTest extends WebTestCase  {
       200,
       $client->getResponse()->getStatusCode()
     );
+  }
+
+  public function testAnonymousConnectionIsNotRegardedAuthenticated() {
+    $client = self::createClient();
+    $client->request('GET', self::ENDPOINT_STATUS);
+    $json = json_decode($client->getResponse()->getContent());
+
+    $this->assertFalse($json->is_authenticated, 'An anonymous connection is being regarded as authenticated.');
   }
 
 }

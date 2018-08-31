@@ -36,7 +36,8 @@
  1. The adjoining application core or kernel is fully initialized, the user is authorized,
     configuration settings are gathered and user input is processed;
  2. The Curator .phar is `include`ed, and `AppManager::applyIntegrationConfig()` is called
-    with information about the task for Curator to perform along with relevant configuration;
+    with direction to create an authenticated Curator session and information about the task
+    for Curator to perform.
  3. Curator initializes its own application kernel in order to start a session for the user
     and persist the task and configuration that was passed in. At this time, both applications
     (Curator and adjoining application) are simultaneously loaded and initialized from the
@@ -55,10 +56,15 @@
    examine the name to determine whether it is in embedded mode. If it is named 
    `curator.php` or `curator.phar`, Curator will select standalone mode rather than 
    embedded mode.
- * It should simply `include` the .phar archive inside a `try/catch` block that handles
-   `Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException` exceptions by
-   redirecting the user back to a URL that bootstraps the adjoining application and uses
-   its authentication/authorization facilities to restart the authentication with Curator.
+ * It should simply `include` the .phar archive, capture the returned `\Curator\AppManager`,
+   and call `run()` on it:
+   ```php
+   <?php
+   $appManager = require __DIR__ . DIRECTORY_SEPARATOR . 'drupal_curator.phar';
+   $appManager->run();
+   ```
+   When started and accessed through this script, the user must already possess an authenticated
+   Curator session.
    > There is [a github issue](https://github.com/curator-wik/curator/issues/2) to provide 
      an alternative means to reauthenticate that is not adjoining app dependent, in case 
      an attempted update renders the adjoining app unusable.
@@ -66,23 +72,3 @@
 ## More about `\Curator\AppManager` 
  To be documented: main public methods and creating an IntegrationConfig.
  
-## Authentication model
- > Curator has no permissions system. Any user that is trusted to run
-   Curator is able to use all its functionality.
- 
- When in embedded mode, Curator relies on the integration to work with the the adjoining 
- application's authentication and authorization facilities to determine whether use of 
- Curator is permitted.
-
- Simultaneously, Curator issues its own session cookie and manages a session independently 
- of the adjoining application. This allows a user originally authorized by the adjoining
- application to continue using Curator via the Direct Access Script.
-
- The way the adjoining application initially communicates to Curator that a user as
- authorized is simple: it assumes that if the adjoining application core-dependent logic
- calls `AppManager::applyIntegrationConfig()`, then that logic must want the user to be
- able to use Curator as well.
- 
- In contrast, calls to `AppManager::run()`, which should be made from the Direct Access
- Script, will result in Curator requiring a session that has already been authorized using
- the above method.
