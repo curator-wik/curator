@@ -135,7 +135,7 @@ class CurlDownloadBatchRunnable extends AbstractRunnable implements MessageCallb
   }
 
   protected function getFile() {
-    $hash = md5($this->status_service->getStatus()->site_root . $this->url);
+    $hash = substr(md5($this->status_service->getStatus()->site_root . $this->url), 0, 8);
     $parts = pathinfo($this->url);
     $ext_from_url = array_key_exists('extension', $parts) ? $parts['extension'] : '';
 
