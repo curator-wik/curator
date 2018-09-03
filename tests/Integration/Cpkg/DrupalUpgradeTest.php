@@ -22,6 +22,12 @@ class DrupalUpgradeTest extends IntegrationWebTestCase {
     return '/root/drupal-7.53';
   }
 
+  public function getTestIntegrationConfig()
+  {
+    // Force autodetection of drupal 7
+    return parent::getTestIntegrationConfig()->setCustomAppTargeter(null);
+  }
+
   public function testDrupal7Upgrade() {
     $client = self::createClient();
     /**

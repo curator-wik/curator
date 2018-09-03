@@ -7,6 +7,7 @@ namespace Curator\Download;
 use Curator\APIModel\v1\BatchRunnerRawProgressMessage;
 use Curator\Batch\MessageCallbackRunnableInterface;
 use Curator\IntegrationConfig;
+use Curator\Status\StatusService;
 use mbaynton\BatchFramework\AbstractRunnable;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
 use mbaynton\BatchFramework\TaskInterface;
@@ -29,9 +30,9 @@ class CurlDownloadBatchRunnable extends AbstractRunnable implements MessageCallb
   const PROGRESS_UPDATE_INTERVAL_MS = 0.5;
 
   /**
-   * @var IntegrationConfig $integration_config
+   * @var StatusService $status_service
    */
-  protected $integration_config;
+  protected $status_service;
 
   /**
    * @var callable $progressMessageCallback
@@ -63,9 +64,9 @@ class CurlDownloadBatchRunnable extends AbstractRunnable implements MessageCallb
    */
   protected $handle_curl_progress_flap = 0;
 
-  public function __construct(IntegrationConfig $integration_config, $id, $url, $file_extension = '') {
+  public function __construct(StatusService $statusService, $id, $url, $file_extension = '') {
     parent::__construct($id);
-    $this->integration_config = $integration_config;
+    $this->status_service = $statusService;
     $this->url = $url;
     $this->file_extension = $file_extension;
   }
@@ -134,7 +135,7 @@ class CurlDownloadBatchRunnable extends AbstractRunnable implements MessageCallb
   }
 
   protected function getFile() {
-    $hash = md5($this->integration_config->getSiteRootPath() . $this->url);
+    $hash = md5($this->status_service->getStatus()->site_root . $this->url);
     $parts = pathinfo($this->url);
     $ext_from_url = array_key_exists('extension', $parts) ? $parts['extension'] : '';
 

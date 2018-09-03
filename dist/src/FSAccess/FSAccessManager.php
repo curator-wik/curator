@@ -87,6 +87,16 @@ class FSAccessManager implements FSAccessInterface {
     $this->writeWorkingPath = $dir;
   }
 
+  public function isWorkingPathSet()
+  {
+    return !empty($this->workingPath);
+  }
+
+  public function isWriteWorkingPathSet()
+  {
+    return !empty($this->writeWorkingPath);
+  }
+
   /**
    * Probes the read and write adapters to try and identify the path
    * prefix the write adapter uses to reference the working path.
@@ -297,7 +307,7 @@ class FSAccessManager implements FSAccessInterface {
     }
 
     if ($wd === NULL) {
-      throw new \LogicException('setWorkingPath() must have been called as a precondition to using normalizePath()');
+      throw new \LogicException('setWorkingPath() must have been called as a precondition to normalizing a relative path.');
     }
 
     $abs_path = $this->readOps->realPath($path, $wd, $resolve_symlink);
@@ -337,13 +347,14 @@ class FSAccessManager implements FSAccessInterface {
       throw new \RuntimeException('A file write operation was attempted before calling FSAccessManager::setWriteWorkingPath().');
     }
 
-    // Path by def'n begins with $this->workingPath; make a relative path.
+    // $normalized_path starts with $this->workingPath by definition
     $relative_path = substr($normalized_path, strlen($this->workingPath));
+
     if ($this->readOps->getPathParser()->pathIsAbsolute($relative_path)) {
       // TODO. Can this happen?
     }
     $write_path = $this->writeWorkingPath
-      . $this->writeOps->getPathParser()->getDirectorySeparators()[0]
+      . $this->writeSeparator
       . $this->readOps->getPathParser()->translate($relative_path, $this->writeOps->getPathParser());
 
     return $write_path;
@@ -398,7 +409,6 @@ class FSAccessManager implements FSAccessInterface {
     $location = $this->normalizePath($location);
     $filename = $location . $this->readSeparator . basename($filename);
     $write_filename = $this->toWritePath($filename);
-    // todo: Swap out absolute base of read path with that of write adapter.
     $bytes = $this->writeOps->filePutContents($write_filename, $data);
     if ($this->readOps instanceof ClearStatCacheInterface) {
       $this->readOps->clearstatcache($filename);

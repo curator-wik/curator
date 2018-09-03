@@ -25,6 +25,7 @@ use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
 use mbaynton\BatchFramework\TaskInterface;
+use Symfony\Component\Debug\ErrorHandler;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -64,6 +65,12 @@ class BatchRunnerController implements RunnerControllerInterface {
   protected $persistence;
 
   /**
+   * @var ErrorHandler $error_handler
+   *   The app-wide ErrorHandler provided by Symfony.
+   */
+  protected $error_handler;
+
+  /**
    * @var BatchRunnerResponse $runner_response
    */
   protected $runner_response;
@@ -95,12 +102,13 @@ class BatchRunnerController implements RunnerControllerInterface {
    */
   protected $group;
 
-  public function __construct(SessionInterface $session, PersistenceInterface $persistence, RunnerService $runner_service, TaskScheduler $task_scheduler, TaskGroupManager $taskgroup_mgr) {
+  public function __construct(SessionInterface $session, PersistenceInterface $persistence, RunnerService $runner_service, TaskScheduler $task_scheduler, TaskGroupManager $taskgroup_mgr, ErrorHandler $errorHandler) {
     $this->session = $session;
     $this->runner_service = $runner_service;
     $this->taskgroup_manager = $taskgroup_mgr;
     $this->task_scheduler = $task_scheduler;
     $this->persistence = $persistence;
+    $this->error_handler = $errorHandler;
 
     // The Pimple service injector gives us a new RunnerService unpaired to a
     // batch runner controller. That's us, so make the coupling.
@@ -151,6 +159,10 @@ class BatchRunnerController implements RunnerControllerInterface {
        */
       $this->runner_response = new BatchRunnerResponse();
 
+      // Have the ErrorHandler hand off any unhandled exceptions to us; we'll
+      // send them and terminate the response message.
+      $this->error_handler->setExceptionHandler([$this, 'handleExceptionWhileRunning']);
+
       /**
        * @var Response $response
        */
@@ -192,6 +204,8 @@ class BatchRunnerController implements RunnerControllerInterface {
         );
       }
 
+      $this->error_handler->setExceptionHandler(null); // seems like this cleanup would be wise
+
       return $this->runner_response;
     }
   }
@@ -227,6 +241,14 @@ class BatchRunnerController implements RunnerControllerInterface {
         0
       ), 404);
     }
+  }
+
+  public function handleExceptionWhileRunning($exception) {
+    $message = new BatchRunnerUpdateMessage();
+    $message->ok = FALSE;
+    $message->chatter[0] = $exception->getMessage();
+    $this->runner_response->postMessage($message);
+    $this->runner_response->sendContent();
   }
 
   /**

@@ -40,7 +40,7 @@ trait WebserverRunnerTrait {
     $foo = [];
 
     $h_server_proc = proc_open(
-      sprintf('exec /usr/bin/env php -S localhost:8080 -t %s', static::getPhpServerDocroot()),
+      sprintf('exec /usr/bin/env php -S localhost:8080 -d error_log=/tmp/php.log -t %s', static::getPhpServerDocroot()),
       [0 => $devnull, 1 => $devnull, 2 => $devnull],
       $foo
     );

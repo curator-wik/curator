@@ -6,6 +6,7 @@ namespace Curator\Download;
 
 use Curator\Cpkg\BatchTaskTranslationService;
 use Curator\IntegrationConfig;
+use Curator\Status\StatusService;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
@@ -24,8 +25,8 @@ class CpkgDownloadBatchTask extends CurlDownloadBatchTask {
    */
   protected $cpkg_task_builder;
 
-  public function __construct(IntegrationConfig $integration_config, BatchTaskTranslationService $cpkg_task_builder) {
-    parent::__construct($integration_config);
+  public function __construct(StatusService $statusService, BatchTaskTranslationService $cpkg_task_builder) {
+    parent::__construct($statusService);
     $this->cpkg_task_builder = $cpkg_task_builder;
   }
 

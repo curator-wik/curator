@@ -29,7 +29,7 @@ class AuthenticatedOrUnconfiguredEndpointsProvider implements ControllerProvider
   protected function registerServiceControllers(Application $app) {
     // Batch
     $app['controller.apiv1.batch.runner'] = function($app) {
-      return new BatchRunnerController($app['session'], $app['persistence'], $app['batch.runner_service'], $app['batch.task_scheduler'], $app['batch.taskgroup_manager']);
+      return new BatchRunnerController($app['session'], $app['persistence'], $app['batch.runner_service'], $app['batch.task_scheduler'], $app['batch.taskgroup_manager'], $app['error_handler']);
     };
   }
 }

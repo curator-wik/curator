@@ -3,19 +3,19 @@
 namespace Curator\Util;
 
 
+use Curator\Status\StatusService;
+
 class Flock implements ReaderWriterLockInterface {
+  /**
+   * @var string $key
+   */
+  protected $key;
 
   /**
    * @var resource $fh
    *   File handle to perform advisory locks on.
    */
-  protected $filename;
-
-  /**
-   * @var string $key
-   *   The string uniquely identifying this lock.
-   */
-  protected $key;
+  protected $filename = '';
 
   /**
    * @var int $lock_level
@@ -28,17 +28,23 @@ class Flock implements ReaderWriterLockInterface {
   public function __construct($key) {
     $this->key = $key;
     $this->lock_level = LOCK_UN;
-    $this->filename = sys_get_temp_dir()
-      . DIRECTORY_SEPARATOR
-      . 'curator_lock_'
-      . md5($key);
+  }
+
+  protected function getFilename() {
+    if ($this->filename == '') {
+      $this->filename = sys_get_temp_dir()
+        . DIRECTORY_SEPARATOR
+        . 'curator_lock_'
+        . md5($this->key);
+    }
+    return $this->filename;
   }
 
   protected function getFileHandle() {
     if (array_key_exists($this->key, static::$keys_to_handles)) {
       return static::$keys_to_handles[$this->key];
     } else {
-      $fh = fopen($this->filename, 'w+');
+      $fh = fopen($this->getFilename(), 'w+');
       static::$keys_to_handles[$this->key] = $fh;
       return $fh;
     }

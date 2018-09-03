@@ -23,7 +23,8 @@ class PersistenceTest extends \PHPUnit_Framework_TestCase {
     /**
      * @var AppManager $app_manager
      */
-    $app_manager = require __DIR__ . '/../../../dist/web/index.php';
+    $app_manager = \Curator\AppManager::create();
+    $app_manager->determineRunMode(self::TEST_PATH . '/index.php');
     $integration_config = new IntegrationConfig();
     $integration_config->setSiteRootPath(self::TEST_PATH);
     $this->appContainer = $app_manager->applyIntegrationConfig($integration_config);

@@ -44,6 +44,20 @@ interface FSAccessInterface {
   function setWriteWorkingPath($dir);
 
   /**
+   * Indicates whether setWorkingPath() has been successfully called.
+   *
+   * @return bool
+   */
+  function isWorkingPathSet();
+
+  /**
+   * Indicates whether setWriteWorkingPath() has been successfully called.
+   *
+   * @return bool
+   */
+  function isWriteWorkingPathSet();
+
+  /**
    * Provides a path terminated with a read adapter's directory separator.
    *
    * @param string $path

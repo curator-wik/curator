@@ -12,11 +12,6 @@ use Curator\Status\StatusService;
 
 class AppDetector {
   /**
-   * @var IntegrationConfig $curatorConfig
-   */
-  protected $curatorConfig;
-
-  /**
    * @var StatusService $status
    */
   protected $status;
@@ -31,8 +26,7 @@ class AppDetector {
    */
   protected $targeter = NULL;
 
-  function __construct(IntegrationConfig $curator_config, StatusService $status, AppTargeterFactoryInterface $targeter_factory, FSAccessManager $fs_access) {
-    $this->curatorConfig = $curator_config;
+  function __construct(StatusService $status, AppTargeterFactoryInterface $targeter_factory, FSAccessManager $fs_access) {
     $this->status = $status;
     $this->targeter_factory = $targeter_factory;
     $this->fs_access = $fs_access;
@@ -45,11 +39,22 @@ class AppDetector {
    */
   function getTargeter() {
     if ($this->targeter == NULL) {
-      if ($this->curatorConfig->getCustomAppTargeter()) {
-        $this->targeter = $this->curatorConfig->getCustomAppTargeter();
-      } else if ($this->status->getStatus()->adjoining_app_targeter) {
-        $targeter_service_name = $this->status->getStatus()->adjoining_app_targeter;
-        $this->targeter = $this->targeter_factory->getAppTargeterById($targeter_service_name);
+      $targeter_string = $this->status->getStatus()->adjoining_app_targeter;
+      if ($targeter_string) {
+        // This may be a registered service id, or the name of a callable we can invoke to get
+        // a custom AppTargeter from the integration.
+        $matches = [];
+        $is_service_id = preg_match('/^service:([^:].*)$/', $targeter_string,$matches);
+        if ($is_service_id) {
+          $targeter_service_name = $matches[1];
+          $this->targeter = $this->targeter_factory->getAppTargeterById($targeter_service_name);
+        } else {
+          if (is_callable($targeter_string)) {
+            $this->targeter = call_user_func($targeter_string); // TODO: pass useful parameters
+          } else {
+            throw new \RuntimeException("Factory for application targeter, \"$targeter_string\", is not a callable function.");
+          }
+        }
       } else {
         $id = $this->detectAdjoiningApp();
         if ($id !== NULL) {

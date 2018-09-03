@@ -68,8 +68,6 @@ class UpdateFromUrlTest extends WebTestCase {
       ->taskIs()->update('MockApp')
       ->fromPackage(getenv('TEST_HTTP_SERVER') . 'oh_look_an_update.cpkg.zip');
 
-    $integration_config->setCustomAppTargeter(new AppTargeterMock());
-
     return $integration_config;
   }
 

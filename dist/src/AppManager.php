@@ -135,10 +135,9 @@ class AppManager {
     $this->integration_configuration = $integration_configuration;
 
     if ($this->silexApp === NULL) {
-      $this->createApplication(TRUE);
+      $this->createApplication();
     }
 
-    $this->silexApp['session.prep']->prepareForNewSession();
     if ($integration_configuration->isPreauthenticated()) {
       $this->silexApp['session']->set('IsAuthenticated', TRUE);
     }
@@ -196,11 +195,7 @@ class AppManager {
     if ($this->hasRun()) {
       throw new \LogicException('Curator has already been run().');
     } else {
-      $this->createApplication(FALSE);
-    }
-
-    if ($this->integration_configuration === NULL) {
-      $this->applyIntegrationConfig(IntegrationConfig::getNullConfig());
+      $this->createApplication();
     }
 
     return $this->silexApp;
@@ -225,21 +220,39 @@ class AppManager {
 
 
     // Engage conversion of errors to ErrorExceptions.
-    \Symfony\Component\Debug\ErrorHandler::register();
+    $errorHandler = \Symfony\Component\Debug\ErrorHandler::register();
 
-    $app = new CuratorApplication($this, $this->curator_filename);
+    $app = new CuratorApplication($this, $this->curator_filename, $errorHandler);
 
     // For now, nobody's running this outside a phar that isn't a developer
     if (! $this->isPhar()) {
       $app['debug'] = TRUE;
     }
 
+    $app['session.prep']->prepareForNewSession();
     if ($this->integration_configuration !== NULL) {
       $app->setIntegrationConfig($this->integration_configuration);
     }
 
+    // If we can, we'll set the working path here and now.
+    // This is the only chance to do so for scripts that bootstrap Curator but do not pass it any Requests,
+    // such as when an app integration sends us an IntegrationConfig. However, when being used via a direct
+    // access script, we may need to receive a request and its cookies first, before we can access persistence.
+    // So, there is also request middleware that rechecks for a site root.
+    $site_root = $app['status']->getStatus()->site_root;
+    if (! empty($site_root)) {
+      $app['fs_access']->setWorkingPath($app['status']->getStatus()->site_root);
+      // TODO: Whole configuration layer that looks at persistence and sets write path better,
+      // or does not do it if not in persistence, reports via /status, and expects client to fix.
+      $app['fs_access']->setWriteWorkingPath($app['status']->getStatus()->site_root);
+    }
+
     $this->silexApp = $app;
     return $app;
+  }
+
+  public function getServiceOverride($id, $app) {
+    return null;
   }
 
   public function hasRun() {

@@ -21,7 +21,6 @@ class AppTargetingProvider implements ServiceProviderInterface {
   public function register(Application $app) {
     $app['app_targeting.app_detector'] = $app->share(function ($app) {
       return new AppDetector(
-        $app['integration_config'],
         $app['status'],
         $app,
         $app['fs_access']
@@ -29,7 +28,7 @@ class AppTargetingProvider implements ServiceProviderInterface {
     });
 
     $app['app_targeting.drupal7'] = $app->share(function($app) {
-      return new Drupal7AppTargeter($app['integration_config'], $app['fs_access']);
+      return new Drupal7AppTargeter($app['status'], $app['fs_access']);
     });
   }
 

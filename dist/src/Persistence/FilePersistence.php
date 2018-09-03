@@ -2,10 +2,13 @@
 
 
 namespace Curator\Persistence;
+
 use Curator\FSAccess\FileException;
 use Curator\FSAccess\FileNotFoundException;
+use Curator\FSAccess\ReadAdapterInterface;
 use Curator\IntegrationConfig;
 use Curator\FSAccess\FSAccessInterface;
+use Curator\Status\StatusService;
 use Curator\Util\ReaderWriterLockInterface;
 
 /**
@@ -14,7 +17,8 @@ use Curator\Util\ReaderWriterLockInterface;
  *
  * @package Curator\Persistence
  */
-class FilePersistence implements PersistenceInterface {
+class FilePersistence implements PersistenceInterface
+{
 
   /**
    * A string prepended to the serialized persistence file to ensure the data is
@@ -24,16 +28,27 @@ class FilePersistence implements PersistenceInterface {
   const SAFETY_HEADER = '<?php __HALT_COMPILER();';
 
   /**
+   * @var string $safe_extension
+   *   An extension known to be processed by the interpreter on this server.
+   */
+  protected $safe_extension;
+
+  /**
    * @var string $filename
    *   The path accepted by the FSAccessManager to the persistence store.
    */
-  protected $filename;
+  protected $filename = '';
 
   /**
    * @var FSAccessInterface $fs_access
    *   Injected dependency.
    */
   protected $fs_access;
+
+  /**
+   * @var ReadAdapterInterface $direct_reader
+   */
+  protected $direct_reader;
 
   /**
    * @var ReaderWriterLockInterface $lock
@@ -46,12 +61,6 @@ class FilePersistence implements PersistenceInterface {
    *   Number of repeated calls to beginReadOnly() and/or beginReadWrite().
    */
   protected $lock_counter;
-
-  /**
-   * @var IntegrationConfig $integration_config
-   *   Injected dependency.
-   */
-  protected $integration_config;
 
   /**
    * @var mixed[]
@@ -71,50 +80,40 @@ class FilePersistence implements PersistenceInterface {
    * @param \Curator\FSAccess\FSAccessInterface $fs_access
    *   The filesystem access service.
    *
+   * @param \Curator\FSAccess\ReadAdapterInterface $direct_reader
+   *   The AdapterInterface in use by the FSAccessInterface.
+   *   Use of it directly here rather than through the FSAccessManager is exceptional. Typically, we want the
+   *   FSAccessManager to wrap all access to the read and write adapters, ensuring the paths accessed are within
+   *   the project root. However, since determination of the project root requires an operational persistence service,
+   *   we instead build the absolute path to the file backing this FilePersistence in a way that user input cannot
+   *   influence, and then read through the read adapter directly here.
+   *
    * @param \Curator\Util\ReaderWriterLockInterface $lock
    *   The ReaderWriterLock service.
    *
-   * @param IntegrationConfig $integration_config
+   * @param string $persistence_directory
+   *   The directory our persistence file lives in.
+   *
    * @param string $safe_extension
    *   A file extension that is interpreted as PHP by this webserver.
-   *
    *   We include this extension in the filename backing the storage to help
    *   ensure the webserver doesn't serve the data out.
    */
-  public function __construct(FSAccessInterface $fs_access, ReaderWriterLockInterface $lock, IntegrationConfig $integration_config, $safe_extension) {
+  public function __construct(FSAccessInterface $fs_access, ReadAdapterInterface $direct_reader, ReaderWriterLockInterface $lock, $persistence_directory, $safe_extension)
+  {
     $this->fs_access = $fs_access;
+    $this->direct_reader = $direct_reader;
     $this->lock = $lock;
-    $this->integration_config = $integration_config;
-
-    $this->filename = $this->fs_access->ensureTerminatingSeparator($this->integration_config->getSiteRootPath())
-      . '.curator-data.' . $safe_extension;
+    $this->safe_extension = $safe_extension;
     $this->lock_counter = 0;
+    $this->filename = $persistence_directory . $direct_reader->getPathParser()->getDirectorySeparators()[0] . '.curator-data.' . $this->safe_extension;
   }
 
-  protected function ensureValuesDictionary() {
-    if ($this->_values === NULL) {
-      $this->_values = $this->_read();
-    }
-
-    return $this->_values;
-  }
-
-  protected function _read() {
-    try {
-      $raw = $this->fs_access->fileGetContents($this->filename);
-      // First 24 bytes are __HALT_COMPILER(); safety header
-      return unserialize(substr($raw, strlen(self::SAFETY_HEADER)));
-    } catch (FileNotFoundException $e) {
-      return [];
-    } catch (FileException $e) {
-      throw new PersistenceException("Failed reading persistent data file. Inner exception may provide specifics.", 0, $e);
-    }
-  }
-
-  public function _write() {
+  public function _write()
+  {
     $raw = self::SAFETY_HEADER . serialize($this->_values);
     try {
-      $this->fs_access->filePutContents($this->filename, $raw);
+      $this->fs_access->filePutContents($this->getFilename(), $raw);
     } catch (FileException $e) {
       throw new PersistenceException("Failed writing to persistent data file. Inner exception may provide specifics.", 0, $e);
     }
@@ -123,7 +122,8 @@ class FilePersistence implements PersistenceInterface {
   /**
    * @inheritdoc
    */
-  public function set($key, $value) {
+  public function set($key, $value)
+  {
     if ($this->lock->getLockLevel() != LOCK_EX) {
       throw new \LogicException('Attempted to persist data without a write lock.');
     }
@@ -133,7 +133,7 @@ class FilePersistence implements PersistenceInterface {
     if ($value === NULL && $exists) {
       $this->unpersisted_changes = TRUE;
       unset($this->_values[$key]);
-    } else if (($exists && $this->_values[$key] !== $value) || ! $exists) {
+    } else if (($exists && $this->_values[$key] !== $value) || !$exists) {
       $this->unpersisted_changes = TRUE;
       $this->_values[$key] = $value;
     }
@@ -142,7 +142,8 @@ class FilePersistence implements PersistenceInterface {
   /**
    * @inheritdoc
    */
-  public function get($key, $defaultValue = NULL) {
+  public function get($key, $defaultValue = NULL)
+  {
     if ($this->lock->getLockLevel() == LOCK_UN) {
       throw new \LogicException('Attempted to access persistent data without a lock.');
     }
@@ -156,7 +157,8 @@ class FilePersistence implements PersistenceInterface {
     }
   }
 
-  public function beginReadOnly() {
+  public function beginReadOnly()
+  {
     $this->lock_counter++;
     if ($this->lock->getLockLevel() == LOCK_UN) {
       try {
@@ -167,7 +169,8 @@ class FilePersistence implements PersistenceInterface {
     }
   }
 
-  public function beginReadWrite() {
+  public function beginReadWrite()
+  {
     $this->lock_counter++;
     if ($this->lock->getLockLevel() != LOCK_EX) {
       try {
@@ -178,7 +181,8 @@ class FilePersistence implements PersistenceInterface {
     }
   }
 
-  public function popEnd() {
+  public function popEnd()
+  {
     if ($this->lock_counter == 0) {
       return;
     } else if ($this->lock_counter == 1) {
@@ -188,10 +192,41 @@ class FilePersistence implements PersistenceInterface {
     }
   }
 
+  protected function getFilename()
+  {
+    return $this->filename;
+  }
+
+  protected function ensureValuesDictionary()
+  {
+    if ($this->_values === NULL) {
+      $this->_values = $this->_read();
+      if (! is_array($this->_values)) {
+        $this->_values = [];
+      }
+    }
+
+    return $this->_values;
+  }
+
+  protected function _read()
+  {
+    try {
+      $raw = $this->direct_reader->fileGetContents($this->getFilename());
+      // need to skip initial bytes of safety header
+      return unserialize(substr($raw, strlen(self::SAFETY_HEADER)));
+    } catch (FileNotFoundException $e) {
+      return [];
+    } catch (FileException $e) {
+      throw new PersistenceException("Failed reading persistent data file. Inner exception may provide specifics.", 0, $e);
+    }
+  }
+
   /**
    * @inheritdoc
    */
-  public function end() {
+  public function end()
+  {
     $lock_level = $this->lock->getLockLevel();
     if ($lock_level == LOCK_EX) {
       if ($this->unpersisted_changes) {

@@ -7,6 +7,7 @@ use Curator\CuratorApplication;
 use Curator\FSAccess\FileExistsException;
 use \Curator\FSAccess\FSAccessManager;
 use Curator\IntegrationConfig;
+use Curator\Tests\Functional\FunctionalTestAppManager;
 
 class FSAccessTest extends \PHPUnit_Framework_TestCase
 {
@@ -15,40 +16,54 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
    */
   protected $app;
 
-  function setUp() {
-    // Re-initialize service container to provide default services.
-    $app_manager = new AppManager(AppManager::RUNMODE_STANDALONE);
-    $this->app = $app_manager->createApplication();
-    $app_manager->applyIntegrationConfig(IntegrationConfig::getNullConfig());
-    $this->app['fs_access.ftp_config'] = $this->app->share(function() {
-      return new TestFtpConfigurationProvider();
-    });
+  /**
+   * @param array $io_adapters
+   * @return FSAccessManager
+   */
+  protected function sutFactory($site_root, $io_adapters = ['filesystem', 'filesystem'], $ftp_user = NULL) {
+    // Re-initialize service container to provide desired services.
+    $serviceOverrides = [
+      'fs_access.read_adapter' => 'fs_access.read_adapter.' . $io_adapters[0],
+      'fs_access.write_adapter' => 'fs_access.write_adapter.' . $io_adapters[1],
+      'fs_access.ftp_config' => [
+        function() use($ftp_user) {
+          return new TestFtpConfigurationProvider($ftp_user);
+        },
+        TRUE
+      ],
+    ];
+
+    $app_manager = new FunctionalTestAppManager(AppManager::RUNMODE_STANDALONE, $serviceOverrides);
+    $this->app = $app_manager->applyIntegrationConfig((new IntegrationConfig())->setSiteRootPath($site_root));
+
+    return $this->app['fs_access'];
   }
 
   /**
    * @param string $which
    *   'read' or 'write' adapters
    * @return string[]
-   *   The full service names for all read or write adapters.
+   *   The service names for all read or write adapters.
    */
   protected function getAdapterServices($which) {
+    static $app = null;
+    if ($app === null) {
+      // most any instance will do, we just want to examine the services
+      $this->sutFactory('/');
+      $app = $this->app;
+    }
     $prefix = "fs_access.${which}_adapter.";
-    return array_filter(
-      $this->app->keys(),
+
+    $full_service_ids = array_filter(
+      $app->keys(),
       function($service_name) use ($prefix) {
         return strncmp($service_name, $prefix, strlen($prefix)) === 0;
       }
     );
-  }
 
-  protected function chrootSetup() {
-    $this->app['fs_access.ftp_config'] = $this->app->share(function() {
-      return new TestFtpConfigurationProvider('ftptest_chroot');
-    });
-    $this->app['fs_access.write_adapter'] = $this->app->raw('fs_access.write_adapter.ftp');
-    $fs = $this->app['fs_access'];
-    $fs->setWorkingPath('/home/ftptest_chroot/www');
-    $fs->setWriteWorkingPath('/www');
+    return array_map(function($item) use ($prefix) {
+      return substr($item, strlen($prefix));
+    }, $full_service_ids);
   }
 
   /**
@@ -56,44 +71,25 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
    * @expectedExceptionMessage FTP server reports 553 Could not create file
    */
   function testFtpFileException() {
-    $this->app['fs_access.write_adapter'] = $this->app->raw('fs_access.write_adapter.ftp');
     /**
      * @var FSAccessManager $fs
      */
-    $fs = $this->app['fs_access'];
-    // In the docker_test_env, '/' isn't writable to the FTP user.
-    $fs->setWorkingPath('/');
-    $fs->setWriteWorkingPath('/');
-
+    $fs = $this->sutFactory('/', ['filesystem', 'ftp']);
     $fs->filePutContents('test', 'this data from integration tests.');
   }
 
   function testFileExists() {
-    $this->app['fs_access.read_adapter'] = $this->app['fs_access.read_adapter.filesystem'];
-    /**
-     * @var FSAccessManager $fs
-     */
-    $fs = $this->app['fs_access'];
-    $fs->setWorkingPath('/');
-    $fs->setWriteWorkingPath('/');
-
+    $fs = $this->sutFactory('/');
     $fs->isFile('/root/test');
   }
 
-  function testFilePut() {
+  function testFilePut_AllRegisteredWriteAdapters() {
     $adapters_tested = 0;
     foreach ($this->getAdapterServices('write') as $writeAdapterService) {
       // FSAccessManager needs to be reinitialized for each write adapter
-      $this->setUp();
-
-      $this->app['fs_access.write_adapter'] = $this->app->raw($writeAdapterService);
+      $fs = $this->sutFactory('/home/ftptest/www', ['filesystem', $writeAdapterService]);
       $name = $this->app['fs_access.write_adapter']->getAdapterName();
 
-      /**
-       * @var FSAccessManager $fs
-       */
-      $fs = $this->app['fs_access'];
-      $fs->setWorkingPath('/home/ftptest/www');
       $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
 
       $test_data = "Data from integration test via $name";
@@ -110,16 +106,11 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
   }
 
   function testAutodetectWriteWorkingPath_chroot() {
-    $this->app['fs_access.ftp_config'] = $this->app->share(function() {
-      return new TestFtpConfigurationProvider('ftptest_chroot');
-    });
-    $this->app['fs_access.write_adapter'] = $this->app->raw('fs_access.write_adapter.ftp');
-
     /**
      * @var FSAccessManager $fs
      */
-    $fs = $this->app['fs_access'];
-    $fs->setWorkingPath('/home/ftptest_chroot/www');
+    $fs = $this->sutFactory('/home/ftptest_chroot/www', ['filesystem', 'ftp'], 'ftptest_chroot');
+
     $this->assertEquals(
       '/www',
       $fs->autodetectWriteWorkingPath()
@@ -134,8 +125,8 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
   }
 
   function testFilePut_chroot() {
-    $this->chrootSetup();
-    $fs = $this->app['fs_access'];
+    $fs = $this->sutFactory('/home/ftptest_chroot/www', ['filesystem', 'ftp'], 'ftptest_chroot');
+    $fs->setWriteWorkingPath('/www');
     $expected = $this->_testFilePut_chroot();
     $this->assertEquals(
       $expected,
@@ -145,12 +136,10 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
   }
 
   function testMv_chroot() {
-    $this->chrootSetup();
+    $fs = $this->sutFactory('/home/ftptest_chroot/www', ['filesystem', 'ftp'], 'ftptest_chroot');
+    $fs->setWriteWorkingPath('/www');
     $expected = $this->_testFilePut_chroot();
-    /**
-     * @var FSAccessManager $fs
-     */
-    $fs = $this->app['fs_access'];
+
     $fs->mv('test-ftp-chroot', 'test-ftp-chroot-moved');
     $this->assertEquals(
       $expected,
@@ -159,23 +148,19 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
   }
 
   function testUnlink_chroot() {
-    $this->chrootSetup();
+    $fs = $this->sutFactory('/home/ftptest_chroot/www', ['filesystem', 'ftp'], 'ftptest_chroot');
+    $fs->setWriteWorkingPath('/www');
     $this->_testFilePut_chroot();
-    /**
-     * @var FSAccessManager $fs
-     */
-    $fs = $this->app['fs_access'];
+
     $this->assertTrue($fs->isFile('test-ftp-chroot'));
     $fs->unlink('test-ftp-chroot');
     $this->assertFalse($fs->isFile('test-ftp-chroot'));
   }
 
   function testMkdirRmdir_chroot() {
-    $this->chrootSetup();
-    /**
-     * @var FSAccessManager $fs
-     */
-    $fs = $this->app['fs_access'];
+    $fs = $this->sutFactory('/home/ftptest_chroot/www', ['filesystem', 'ftp'], 'ftptest_chroot');
+    $fs->setWriteWorkingPath('/www');
+
     $this->assertFalse($fs->isDir('test-mkdir'));
     $fs->mkdir('test-mkdir');
     $this->assertTrue($fs->isDir('test-mkdir'));
@@ -187,17 +172,9 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
     $adapters_tested = 0;
     foreach ($this->getAdapterServices('write') as $writeAdapterService) {
       // FSAccessManager needs to be reinitialized for each write adapter
-      $this->setUp();
-
-      $this->app['fs_access.write_adapter'] = $this->app->raw($writeAdapterService);
-      $name = $this->app['fs_access.write_adapter']->getAdapterName();
-
-      /**
-       * @var FSAccessManager $fs
-       */
-      $fs = $this->app['fs_access'];
-      $fs->setWorkingPath('/home/ftptest');
+      $fs = $this->sutFactory('/home/ftptest', ['filesystem', $writeAdapterService]);
       $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
+      $name = $this->app['fs_access.write_adapter']->getAdapterName();
 
       try {
         $fs->mkdir('www');
@@ -219,17 +196,9 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
     $adapters_tested = 0;
     foreach ($this->getAdapterServices('write') as $writeAdapterService) {
       // FSAccessManager needs to be reinitialized for each write adapter
-      $this->setUp();
-
-      $this->app['fs_access.write_adapter'] = $this->app->raw($writeAdapterService);
-      $name = $this->app['fs_access.write_adapter']->getAdapterName();
-
-      /**
-       * @var FSAccessManager $fs
-       */
-      $fs = $this->app['fs_access'];
-      $fs->setWorkingPath('/home/ftptest');
+      $fs = $this->sutFactory('/home/ftptest', ['filesystem', $writeAdapterService]);
       $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
+      $name = $this->app['fs_access.write_adapter']->getAdapterName();
 
       try {
         $fs->mkdir('.profile');

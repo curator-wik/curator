@@ -26,7 +26,7 @@ class IntegrationConfig {
    *   The path to the root of the site on the host filesystem or custom
    *   filesystem read adapter.
    */
-  protected $siteRootPath;
+  protected $siteRootPath = '';
 
   protected $appVersion;
 
@@ -39,7 +39,7 @@ class IntegrationConfig {
   protected $preauthenticated;
 
   /**
-   * @var TargeterInterface|null $targeter
+   * @var string|null $targeter
    */
   protected $targeter;
 
@@ -108,7 +108,21 @@ class IntegrationConfig {
     return $this->taskBuilder;
   }
 
-  public function setCustomAppTargeter(TargeterInterface $targeter) {
+  /**
+   * Sets the name of a callable factory that should return your custom implementation
+   * of \Curator\AppTargeting\TargeterInterface.
+   *
+   * @param string $targeter
+   *   The name of a function or static method that you have made available to the interpreter
+   *   at all times Curator is running, which should return an instantiated implementation of
+   *   \Curator\AppTargeting\TargeterInterface.
+   *
+   *   Special values beginning with "service:" are interpreted as a service id of an
+   *   app targeter that ships with the Curator .phar and is registered in the DI container.
+   *
+   * @return $this
+   */
+  public function setCustomAppTargeter($targeter) {
     $this->targeter = $targeter;
     return $this;
   }

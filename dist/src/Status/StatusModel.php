@@ -44,6 +44,18 @@ class StatusModel {
   public $flush_works = FALSE;
 
   /**
+   * @var string $site_root
+   *   The mounted, possibly read-only path to the root of the adjoining application.
+   */
+  public $site_root;
+
+  /**
+   * @var string $timezone
+   *   The user's preferred timezone
+   */
+  public $timezone;
+
+  /**
    * @var string $write_working_path
    *   The path corresponding to the site root for write operations.
    */

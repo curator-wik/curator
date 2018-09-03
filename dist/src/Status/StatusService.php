@@ -56,9 +56,11 @@ class StatusService {
       $result->is_configured = TRUE;
     }
 
+    $result->timezone = $this->persistence->get('timezone', 'UTC');
     $result->alarm_signal_works = $this->persistence->get('alarm_signal_works', FALSE);
     $result->flush_works = $this->persistence->get('flush_works', FALSE);
     $result->adjoining_app_targeter = $this->persistence->get('adjoining_app_targeter');
+    $result->site_root = $this->persistence->get('site_root');
     $result->write_working_path = $this->persistence->get('write_working_path');
     $this->persistence->end();
 

@@ -5,6 +5,7 @@ namespace Curator\Download;
 
 
 use Curator\IntegrationConfig;
+use Curator\Status\StatusService;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
@@ -26,12 +27,12 @@ use Symfony\Component\HttpFoundation\Response;
 class CurlDownloadBatchTask implements TaskInterface {
 
   /**
-   * @var IntegrationConfig $integration_config
+   * @var StatusService $status_service
    */
-  protected $integration_config;
+  protected $status_service;
 
-  public function __construct(IntegrationConfig $integration_config) {
-    $this->integration_config = $integration_config;
+  public function __construct(StatusService $statusService) {
+    $this->status_service = $statusService;
   }
 
   public function onRunnableComplete(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $result, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {
@@ -43,7 +44,7 @@ class CurlDownloadBatchTask implements TaskInterface {
     /**
      * @var CurlDownloadBatchTaskInstanceState $schedule
      */
-    return new CurlDownloadBatchRunnableIterator($this->integration_config, $schedule->getUrl());
+    return new CurlDownloadBatchRunnableIterator($this->status_service, $schedule->getUrl());
   }
 
   public function onRunnableError(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $exception, ProgressInfo $progress) { }

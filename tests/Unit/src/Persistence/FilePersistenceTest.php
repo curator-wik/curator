@@ -67,23 +67,22 @@ class FilePersistenceTest extends \PHPUnit_Framework_TestCase {
   }
 
   protected function sutFactory($sys_root = FALSE) {
-    $integration_config = new IntegrationConfig();
-
     if ($sys_root === TRUE) {
       $fs = new FSAccessManager(self::$readAdapter_root, self::$writeAdapter_root);
-      $fs->setWorkingPath('/');
-      $fs->setWriteWorkingPath('/');
-      $integration_config->setSiteRootPath('/');
+      $ra = self::$readAdapter_root;
+      $dir = '/';
     } else {
       $fs = new FSAccessManager(self::$readAdapter_proj, self::$writeAdapter_proj);
-      $fs->setWorkingPath(self::PROJECT_PATH);
-      $fs->setWriteWorkingPath(self::PROJECT_PATH);
-      $integration_config->setSiteRootPath(self::PROJECT_PATH);
+      $ra = self::$readAdapter_proj;
+      $dir = self::PROJECT_PATH;
     }
+
+    $fs->setWorkingPath($dir);
+    $fs->setWriteWorkingPath($dir);
 
     $lock_stub = new ReaderWriterLockMock();
 
-    $s = new FilePersistence($fs, $lock_stub, $integration_config, '.php');
+    $s = new FilePersistence($fs, $ra, $lock_stub, $dir, 'php');
     return $s;
   }
 

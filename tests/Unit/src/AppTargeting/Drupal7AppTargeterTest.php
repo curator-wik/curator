@@ -6,15 +6,13 @@ namespace Curator\Tests\Unit\AppTargeting;
 
 use Curator\AppTargeting\Drupal7AppTargeter;
 use Curator\FSAccess\FSAccessManager;
+use Curator\Tests\Shared\Mocks\StatusServiceMock;
 use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
 class Drupal7AppTargeterTest extends \PHPUnit_Framework_TestCase {
   protected function setupVersionDetectionTest($files) {
-    $ic_mock = $this->getMockBuilder('\Curator\IntegrationConfig')->getMock();
-    $ic_mock->method('getSiteRootPath')->willReturn('/app');
-
     $fs_contents = new MockedFilesystemContents();
     $fs_contents->clearAll();
     $fs_contents->directories = ['includes', 'modules/system'];
@@ -28,7 +26,7 @@ class Drupal7AppTargeterTest extends \PHPUnit_Framework_TestCase {
     $fs = new FSAccessManager($read_adapter, $write_adapter);
     $fs->setWorkingPath('/app');
 
-    $sut = new Drupal7AppTargeter($ic_mock, $fs);
+    $sut = new Drupal7AppTargeter(new StatusServiceMock(), $fs);
     return $sut;
   }
 

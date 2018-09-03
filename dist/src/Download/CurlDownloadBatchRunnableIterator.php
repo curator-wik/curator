@@ -5,6 +5,7 @@ namespace Curator\Download;
 
 
 use Curator\IntegrationConfig;
+use Curator\Status\StatusService;
 use mbaynton\BatchFramework\AbstractRunnableIterator;
 
 class CurlDownloadBatchRunnableIterator extends AbstractRunnableIterator {
@@ -19,9 +20,9 @@ class CurlDownloadBatchRunnableIterator extends AbstractRunnableIterator {
    */
   protected $is_valid;
 
-  public function __construct(IntegrationConfig $integration_config, $url) {
+  public function __construct(StatusService $statusService, $url) {
     $this->runnable = new CurlDownloadBatchRunnable(
-      $integration_config,
+      $statusService,
       1,
       $url
     );

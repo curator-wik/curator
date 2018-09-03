@@ -20,6 +20,7 @@ switch ($_GET['action']) {
      */
     $app_manager = require __DIR__ . '/../../../dist/web/index.php';
     $config = new \Curator\IntegrationConfig();
+    $config->setSiteRootPath('/')->setPreauthenticated();
     $app_manager->applyIntegrationConfig($config);
 
     header('Location: /tests/Integration/fixtures/adjoining_application_integration.php/api/v1/status');

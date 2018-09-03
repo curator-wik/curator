@@ -9,6 +9,7 @@ use Curator\Download\CurlDownloadBatchRunnable;
 use Curator\IntegrationConfig;
 use Curator\Task\TaskInterface;
 use Curator\Tests\Integration\WebserverRunnerTrait;
+use Curator\Tests\Shared\Mocks\StatusServiceMock;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
 
 class CurlDownloadBatchRunnableTest extends \PHPUnit_Framework_TestCase {
@@ -62,7 +63,7 @@ class CurlDownloadBatchRunnableTest extends \PHPUnit_Framework_TestCase {
     $url = isset($opts['url']) ? $opts['url'] : sprintf("%srandom512.dat?count=%d", getenv('TEST_HTTP_SERVER'), $this->count);
 
     $sut = new CurlDownloadBatchRunnable(
-      IntegrationConfig::getNullConfig(),
+      new StatusServiceMock(),
       1,
       $url
     );

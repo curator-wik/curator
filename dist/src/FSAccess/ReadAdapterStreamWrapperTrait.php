@@ -123,11 +123,16 @@ trait ReadAdapterStreamWrapperTrait
   }
 
   public function fileGetContents($filename) {
-    return file_get_contents(
-        $this->alterPathForStreamWrapper($filename),
+    $filename = $this->alterPathForStreamWrapper($filename);
+    try {
+      return file_get_contents(
+        $filename,
         null,
         $this->getStreamContext()->getContext()
-    );
+      );
+    } catch (\ErrorException $e) {
+      $this->failPath($filename, 'r', sprintf('Reading from file at %s', $filename), $e);
+    }
   }
 
 }

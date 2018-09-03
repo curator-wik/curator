@@ -18,4 +18,8 @@ class AppTargeterMock implements TargeterInterface {
   public function getVariantTags() {
     return [];
   }
+
+  public static function factory() {
+    return new AppTargeterMock();
+  }
 }

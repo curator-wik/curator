@@ -6,6 +6,7 @@ namespace Curator\AppTargeting;
 
 use Curator\FSAccess\FSAccessManager;
 use Curator\IntegrationConfig;
+use Curator\Status\StatusService;
 
 class Drupal7AppTargeter extends AbstractTargeter {
   /**
@@ -20,8 +21,8 @@ class Drupal7AppTargeter extends AbstractTargeter {
 
   protected $current_version = NULL;
 
-  public function __construct(IntegrationConfig $integration_config, FSAccessManager $fs_access) {
-    $this->site_root = $integration_config->getSiteRootPath();
+  public function __construct(StatusService $statusService, FSAccessManager $fs_access) {
+    $this->site_root = $statusService->getStatus()->site_root;
     $this->fs_access = $fs_access;
   }
 

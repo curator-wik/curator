@@ -27,37 +27,29 @@ abstract class CpkgWebTestCase extends WebTestCase {
    */
   protected $client;
 
-  protected function injectTestDependencies(Application $app) {
-    parent::injectTestDependencies($app);
+  protected function injectTestDependencies() {
+    $deps = parent::injectTestDependencies();
 
-    $app['batch.runner_service'] = function (Application $app) {
-      $time_mock = $this->getMockBuilder('\mbaynton\BatchFramework\Internal\FunctionWrappers')
-        ->enableProxyingToOriginalMethods()
-        ->getMock();
+    $deps['batch.runner_service'] = [
+      function (Application $app) {
+        $time_mock = $this->getMockBuilder('\mbaynton\BatchFramework\Internal\FunctionWrappers')
+          ->enableProxyingToOriginalMethods()
+          ->getMock();
 
-      // Make all runnables take 5 seconds.
-      $faketime = 10e9;
-      $increment = 5e6;
-      $time_mock->method('microtime')->willReturnCallback(function() use(&$faketime, $increment) {
-        $faketime += $increment;
-        return $faketime;
-      });
+        // Make all runnables take 5 seconds.
+        $faketime = 10e9;
+        $increment = 5e6;
+        $time_mock->method('microtime')->willReturnCallback(function () use (&$faketime, $increment) {
+          $faketime += $increment;
+          return $faketime;
+        });
 
-      return new MockedTimeRunnerService($app['persistence'], $app['status'], $time_mock);
-    };
+        return new MockedTimeRunnerService($app['persistence'], $app['status'], $time_mock);
+      },
+      FALSE
+    ];
 
-    // Add the mock app targeter, and make it selected.
-    $app['app_targeting.mock'] = $app->share(function() {
-      return new AppTargeterMock();
-    });
-
-    /**
-     * @var PersistenceInterface $persistence
-     */
-    $persistence = $app['persistence'];
-    $persistence->beginReadWrite();
-    $persistence->set('adjoining_app_targeter', 'mock');
-    $persistence->end();
+    return $deps;
   }
 
   public function setUp() {

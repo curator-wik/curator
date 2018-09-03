@@ -11,7 +11,7 @@ use Symfony\Component\HttpKernel\Client;
 class ApplicationIntegrationTest extends \PHPUnit_Framework_TestCase {
   /*
    * The challenge with WebTestCase is it creates one HttpKernelInterface
-   * instance and reuses it for all requests, whereas this test is specificially
+   * instance and reuses it for all requests, whereas this test is specifically
    * to ensure that kernels constructed to trust all incoming requests (pre-
    * authorized) do so, and that they issue sessions which regularly
    * constructed kernels recognize as authorized.
@@ -31,7 +31,7 @@ class ApplicationIntegrationTest extends \PHPUnit_Framework_TestCase {
       // integration script has determined we should regard the user as authz'd.
       $config = clone IntegrationConfig::getNullConfig();
       return $appManager->applyIntegrationConfig(
-        $config->setPreauthenticated()
+        $config->setPreauthenticated()->setSiteRootPath('/')
       );
     } else {
       // Simulate the behavior of a direct access script, which calls run().
