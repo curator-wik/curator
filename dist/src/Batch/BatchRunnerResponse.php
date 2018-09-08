@@ -28,7 +28,9 @@ class BatchRunnerResponse extends Response {
       ini_set('output_buffering', 'Off');
       // These responses are usually small, and gzipping intermediaries often buffer.
       ini_set('zlib.output_compression', 'Off');
-      apache_setenv('no-gzip', 1); // mod_deflate
+      if (function_exists('apache_setenv')) {
+        apache_setenv('no-gzip', 1); // mod deflate
+      }
       $this->headers->add(['X-Accel-Buffering' => 'no']); // Nginx
     }
 
