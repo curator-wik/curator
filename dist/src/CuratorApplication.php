@@ -216,8 +216,15 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
       return new InstallationAge();
     };
 
+    // Main fs_access service, may use ftp etc. for writes.
     $this['fs_access'] = $this->share(function($app) {
       $manager = new FSAccessManager($app['fs_access.read_adapter'], $app['fs_access.write_adapter']);
+      return $manager;
+    });
+
+    // Mounted fs_access service, always uses mounted filesystem for writes.
+    $this['fs_access.mounted'] = $this->share(function ($app) {
+      $manager = new FSAccessManager($app['fs_access.read_adapter.filesystem'], $app['fs_access.write_adapter.filesystem']);
       return $manager;
     });
 
