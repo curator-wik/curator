@@ -339,6 +339,12 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/a/b');
   }
 
+  public function testMkdir_inputPathEndsInAscendDots() {
+    $sut = static::sutFactory(FALSE);
+    $sut->mkdir('test/a/nother/file.txt/..', TRUE);
+    self::assertMockDirExists($sut, self::PROJECT_PATH . '/test/a/nother');
+  }
+
   /**
    * @expectedException \Curator\FSAccess\FileNotFoundException
    */

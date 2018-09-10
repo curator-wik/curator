@@ -551,8 +551,9 @@ class FSAccessManager implements FSAccessInterface {
       $this->normalizePath($path);
       throw new FileExistsException($path, $this->isDir($path) ? 0 : 1);
     } catch (FileNotFoundException $e) {
-      array_unshift($dirs_needed, $this->readOps->getPathParser()->baseName($path));
-      $parent = $this->readOps->simplifyPath($path . $this->readSeparator . '..');
+      $sp = $this->readOps->simplifyPath($path);
+      array_unshift($dirs_needed, $this->readOps->getPathParser()->baseName($sp));
+      $parent = $this->readOps->simplifyPath($sp . $this->readSeparator . '..');
     }
 
     while ($parent != '.') {
