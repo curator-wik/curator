@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/curator-wik/curator.svg?branch=master)](https://travis-ci.org/curator-wik/curator)
+[![Coverage Status](https://coveralls.io/repos/github/curator-wik/curator/badge.svg?branch=master)](https://coveralls.io/github/curator-wik/curator?branch=master)
+
 # What's this?
 
 Server-side components for the Curator web install toolkit.
