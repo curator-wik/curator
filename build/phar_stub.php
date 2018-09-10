@@ -2,7 +2,7 @@
 /*
  * Curator: Web Installation Kit.
  *
- * (c) 2016 Michael Baynton <mike@mbaynton.com>
+ * (c) 2018 Michael Baynton <mike@mbaynton.com>
  *
  * Licensed under the MIT License.
  */

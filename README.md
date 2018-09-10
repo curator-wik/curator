@@ -143,4 +143,4 @@ random access performance.
 ## License
 MIT
 
-Copyright &copy; 2017 Mike Baynton
+Copyright &copy; 2018 Mike Baynton
