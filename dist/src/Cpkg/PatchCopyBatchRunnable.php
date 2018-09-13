@@ -6,7 +6,13 @@ namespace Curator\Cpkg;
 
 use Curator\Batch\DescribedRunnableInterface;
 use Curator\FSAccess\FileExistsException;
+use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\FSAccessManager;
+use Curator\Rollback\ChangeTypeDelete;
+use Curator\Rollback\ChangeTypeMkdirTree;
+use Curator\Rollback\ChangeTypePatch;
+use Curator\Rollback\ChangeTypeWrite;
+use Curator\Rollback\RollbackCaptureService;
 use DiffMatchPatch\DiffMatchPatch;
 use mbaynton\BatchFramework\AbstractRunnable;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
@@ -27,6 +33,11 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
   protected $reader;
 
   /**
+   * @var RollbackCaptureService $rollback
+   */
+  protected $rollback;
+
+  /**
    * @var string $operation
    *   'patch' or 'copy'
    */
@@ -44,11 +55,12 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
    */
   protected $destination;
 
-  public function __construct(FSAccessManager $fs_access, ArchiveFileReader $reader, $id, $operation, $source_in_cpkg, $destination) {
+  public function __construct(FSAccessManager $fs_access, ArchiveFileReader $reader, RollbackCaptureService $rollback, $id, $operation, $source_in_cpkg, $destination) {
     parent::__construct($id);
 
     $this->fs_access = $fs_access;
     $this->reader = $reader;
+    $this->rollback = $rollback;
     $this->operation = $operation;
     $this->source_in_cpkg = $source_in_cpkg;
     $this->destination = $destination;
@@ -58,6 +70,10 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
     return sprintf('%sing %s', ucfirst($this->operation), $this->destination);
   }
 
+  /**
+   * @param \mbaynton\BatchFramework\TaskInterface $task
+   * @param CpkgBatchTaskInstanceState $instance_state
+   */
   public function run(\mbaynton\BatchFramework\TaskInterface $task, TaskInstanceStateInterface $instance_state) {
     if (empty($this->source_in_cpkg)) {
       throw new \RuntimeException('No path within cpkg provided.');
@@ -68,34 +84,40 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
     }
 
     if ($this->operation == 'copy') {
-      $this->copy();
+      $this->copy($instance_state->getRollbackPath());
     } else if ($this->operation == 'patch') {
-      $this->patch();
+      $this->patch($instance_state->getRollbackPath());
     }
   }
 
-  protected function copy() {
+  protected function copy($rollback_path) {
     if ($this->reader->isDir($this->source_in_cpkg)) {
       if ($this->fs_access->isFile($this->destination)) {
-        $this->fs_access->unlink($this->destination);
+        $this->rollback->capture(new ChangeTypeDelete($this->destination), $rollback_path, $this->getId());
+        try {
+          $this->fs_access->unlink($this->destination);
+        } catch (FileNotFoundException $e) {
+          // It's okay if the file we want to ensure isn't there already isn't there.
+        }
       }
 
       if (! $this->fs_access->isDir($this->destination)) {
-        $this->optimisticMkdir($this->destination);
+        $this->optimisticMkdir($this->destination, $rollback_path);
       }
     } else if ($this->reader->isFile($this->source_in_cpkg)) {
       $containing_directory = $this->fs_access->ensureTerminatingSeparator($this->destination) . '..';
       if (! $this->fs_access->isDir(
         $containing_directory
       )) {
-        $this->optimisticMkdir($containing_directory);
+        $this->optimisticMkdir($containing_directory, $rollback_path);
       }
 
+      $this->rollback->capture(new ChangeTypeWrite($this->destination), $rollback_path, $this->getId());
       $this->fs_access->filePutContents($this->destination, $this->reader->getContent($this->source_in_cpkg));
     }
   }
 
-  protected function patch() {
+  protected function patch($rollback_path) {
     // Sanity check.
     if (substr($this->source_in_cpkg, -6) != '.patch') {
       throw new \RuntimeException('Expected a .patch file, got ' . $this->source_in_cpkg);
@@ -133,12 +155,16 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
       );
     }
 
+    $this->rollback->capture(new ChangeTypePatch($this->destination), $rollback_path, $this->getId());
     $this->fs_access->filePutContents($this->destination, $patched_data);
   }
 
-  protected function optimisticMkdir($path) {
+  protected function optimisticMkdir($path, $rollback_path) {
+    $required_dirs = NULL;
     try {
+      $required_dirs = $this->fs_access->mkdir($path, TRUE, TRUE);
       $this->fs_access->mkdir($path, TRUE);
+      $this->optimisticMkdirCaptureRollback($required_dirs, $rollback_path);
     } catch (FileExistsException $e) {
       // A race exists among runners creating the directory structure -
       // a runner creating some descendant of $destination may run first,
@@ -146,9 +172,16 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
       // FileExistsException code 0 indicates object already exists; it
       // cannot be anything but a directory object since we already deleted
       // any file at this path, assuming the cpkg is coherent.
+      if ($required_dirs !== NULL) {
+        $this->optimisticMkdirCaptureRollback($required_dirs, $rollback_path);
+      }
       if ($e->getCode() != 0) {
         throw $e;
       }
     }
+  }
+
+  protected function optimisticMkdirCaptureRollback($created_dirs, $rollback_path) {
+    $this->rollback->capture(new ChangeTypeMkdirTree($created_dirs), $rollback_path, $this->getId());
   }
 }

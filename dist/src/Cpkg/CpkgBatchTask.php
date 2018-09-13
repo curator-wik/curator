@@ -5,6 +5,7 @@ namespace Curator\Cpkg;
 
 
 use Curator\Batch\TaskScheduler;
+use Curator\Rollback\RollbackCaptureService;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
@@ -23,9 +24,15 @@ abstract class CpkgBatchTask implements TaskInterface {
    */
   protected $scheduler;
 
-  public function __construct(CpkgReader $reader, TaskScheduler $scheduler) {
+  /**
+   * @var RollbackCaptureService $rollback
+   */
+  protected $rollback;
+
+  public function __construct(CpkgReader $reader, TaskScheduler $scheduler, RollbackCaptureService $rollback) {
     $this->reader = $reader;
     $this->scheduler = $scheduler;
+    $this->rollback = $rollback;
   }
 
   /**

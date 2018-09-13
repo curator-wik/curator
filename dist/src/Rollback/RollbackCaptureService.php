@@ -4,12 +4,15 @@
 namespace Curator\Rollback;
 
 
+use Curator\AppTargeting\AppDetector;
 use Curator\FSAccess\FileExistsException;
 use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\FSAccessManager;
 
 /**
  * Class RollbackCaptureService
+ *
+ * Service ID: rollback
  *
  * This service is invoked by and works in concert with the runnables that apply cpkg updates.
  * The idea is to create a directory structure at a writable scratch location that is itself more or
@@ -69,13 +72,19 @@ class RollbackCaptureService
   protected $payloadPathCache;
 
   /**
+   * @var AppDetector $appDetector
+   */
+  protected $appDetector;
+
+  /**
    * RollbackCaptureService constructor.
    * @param FSAccessManager $fs
    *   The FSAccessManager whose read and write adapters are both using mounted filesystems.
    */
-  public function __construct(FSAccessManager $fs)
+  public function __construct(FSAccessManager $fs, AppDetector $appDetector)
   {
     $this->fs = $fs;
+    $this->appDetector = $appDetector;
     $this->payloadPathCache = [];
   }
 
@@ -83,14 +92,20 @@ class RollbackCaptureService
     try {
       $this->fs->mkdir($captureDir, TRUE);
     } catch (FileExistsException $e) {
-      if ($e->getCode() != 0) { // 0 = it's already there
+      if ($e->getCode() == 0) {
+        // 0 = it's already there. Make sure we're starting with a clean slate.
+        $this->fs->rm($captureDir);
+        $this->fs->mkdir($captureDir);
+      } else {
         throw $e;
       }
     }
 
     $captureDir = $this->fs->ensureTerminatingSeparator($captureDir);
 
-    // TODO: application, component.
+    // TODO: component file; not needed unless we start doing modules.
+    $appTargeter = $this->appDetector->getTargeter();
+    $this->fs->filePutContents($captureDir . 'application', $appTargeter->getAppName());
     $this->fs->filePutContents($captureDir . 'package-format-version', '1.0');
     $this->fs->filePutContents($captureDir . 'version', 'rollback');
     $this->fs->filePutContents($captureDir . 'prev-versions-inorder', 'partial update');
@@ -122,9 +137,13 @@ class RollbackCaptureService
           $this->captureDelete($change->getTarget(), $captureDir, $runnerId);
         }
         break;
+      case Change::OPERATION_MKDIRTREE:
+        $this->captureDeletes($change->getTarget(), $captureDir, $runnerId);
+        break;
       case Change::OPERATION_PATCH:
-        // Similar to OPERATION_WRITE, but we'll assume there's a file there, and we cannot capture destructively.
-        $this->captureFile($change->getTarget(), FALSE, $captureDir);
+        // Similar to OPERATION_WRITE, but we'll assume there's a file there.
+        // Current patch strategy is to patch an in-memory copy and rewrite whole file, so destructive is okay.
+        $this->captureFile($change->getTarget(), TRUE, $captureDir);
         break;
       case Change::OPERATION_DELETE:
         $this->captureFile($change->getTarget(), TRUE, $captureDir);
@@ -154,14 +173,39 @@ class RollbackCaptureService
       }
     }
 
-    if ($destructive) {
-      $this->fs->mv($path, $destination);
-    } else {
-      $this->fs->filePutContents($destination, $this->fs->fileGetContents($path));
+    try {
+      if ($destructive) {
+        // Should be safe even when $path is a directory since we know backend is mounted fs
+        $this->fs->mv($path, $destination);
+      } else {
+        if ($this->fs->isDir($path)) {
+          $this->fs->mkdir($destination);
+        } else {
+          $this->fs->filePutContents($destination, $this->fs->fileGetContents($path));
+        }
+      }
+    } catch (FileNotFoundException $e) {
+      // The fs methods might throw this due to the $destination's dirtree being incomplete or
+      // due to the source file at $path being absent. We assume the former isn't the case
+      // because we just ensured the directory structure was present, therefore it must be that
+      // $path is not there.
+      // This is actually not necessarily cause for alarm, because a common user of this
+      // function is DeleteRenameBatchRunnable's delete(), which currently removes files and
+      // directories in an undefined order with the possibility of several concurrent runners
+      // trying to delete the same file (see github issue #5 for discussion.) If another runner
+      // beat us to removing $path, then it will exist now at $destination, and in that case we
+      // can safely swallow this exception.
+      if (! $this->fs->isFile($destination) &&  ! $this->fs->isDir($destination)) {
+        throw $e;
+      }
     }
   }
 
   protected function captureDelete($path, $captureDir, $runnerId) {
+    $this->captureDeletes([$path], $captureDir, $runnerId);
+  }
+
+  protected function captureDeletes($paths, $captureDir, $runnerId) {
     $capturePath = $this->payloadPath($captureDir);
     $deletesFile = $capturePath . 'deleted_files';
     if ($runnerId !== null) {
@@ -175,7 +219,7 @@ class RollbackCaptureService
       $currentDeletes = '';
     }
 
-    $currentDeletes .= $path . "\n";
+    $currentDeletes .= explode("\n", $paths) . "\n";
     $this->fs->filePutContents($deletesFile, $currentDeletes);
   }
 

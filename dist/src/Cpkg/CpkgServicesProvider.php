@@ -18,7 +18,8 @@ class CpkgServicesProvider implements ServiceProviderInterface {
       return new DeleteRenameBatchTask(
         $app['cpkg.reader'],
         $app['fs_access'],
-        $app['batch.task_scheduler']
+        $app['batch.task_scheduler'],
+        $app['rollback']
       );
     });
 
@@ -26,12 +27,14 @@ class CpkgServicesProvider implements ServiceProviderInterface {
       return new PatchCopyBatchTask(
         $app['cpkg.reader'],
         $app['fs_access'],
-        $app['batch.task_scheduler']
+        $app['batch.task_scheduler'],
+        $app['rollback']
       );
     });
 
     $app['cpkg.batch_task_translator'] = $app->share(function($app) {
       return new BatchTaskTranslationService(
+        $app['status'],
         $app['app_targeting.app_detector'],
         $app['cpkg.reader'],
         $app['batch.taskgroup_manager'],

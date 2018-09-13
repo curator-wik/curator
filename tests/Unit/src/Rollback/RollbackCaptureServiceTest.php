@@ -10,6 +10,7 @@ use Curator\Rollback\ChangeTypePatch;
 use Curator\Rollback\ChangeTypeRename;
 use Curator\Rollback\ChangeTypeWrite;
 use Curator\Rollback\RollbackCaptureService;
+use Curator\Tests\Shared\Mocks\AppTargeterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\MockedFilesystemContents;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
@@ -54,14 +55,20 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
     self::$fsAccessManager->setWriteWorkingPath(self::PROJECT_PATH);
   }
 
-  protected static function sutFactory() {
-    $sut = new RollbackCaptureService(self::$fsAccessManager);
+  protected function sutFactory() {
+    $detector = $this->getMockBuilder('\Curator\AppTargeting\AppDetector')
+      ->disableOriginalConstructor()
+      ->setMethods(['getTargeter'])
+      ->getMock();
+    $detector->method('getTargeter')->willReturn(new AppTargeterMock());
+
+    $sut = new RollbackCaptureService(self::$fsAccessManager, $detector);
     $sut->initializeCaptureDir(self::ROLLBACK_CAPTURE_PATH);
     return $sut;
   }
 
   public function testSingleDelete() {
-    $sut = self::sutFactory();
+    $sut = $this->sutFactory();
     $this->assertTrue(self::$fsAccessManager->isFile('README'));
     $contents = self::$fsAccessManager->fileGetContents('README');
     $sut->capture(new ChangeTypeDelete('README'), self::ROLLBACK_CAPTURE_PATH, 1);
@@ -72,7 +79,7 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
   }
 
   public function testSinglePatch() {
-    $sut = self::sutFactory();
+    $sut = $this->sutFactory();
     $this->assertTrue(self::$fsAccessManager->isFile('test/file_depth1'));
     $contents = self::$fsAccessManager->fileGetContents('test/file_depth1');
     $sut->capture(new ChangeTypePatch('test/file_depth1'), self::ROLLBACK_CAPTURE_PATH, 1);
@@ -83,14 +90,14 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
   }
 
   public function testSingleWrite_newFile() {
-    $sut = self::sutFactory();
+    $sut = $this->sutFactory();
     $sut->capture(new ChangeTypeWrite('some/sort/of/file.php'), self::ROLLBACK_CAPTURE_PATH, '2');
 
     $this->assertDeletion('some/sort/of/file.php', '2');
   }
 
   public function testSingleWrite_overwrite() {
-    $sut = self::sutFactory();
+    $sut = $this->sutFactory();
     $contents = self::$fsAccessManager->fileGetContents('test/file_depth1');
     $this->assertNotEmpty($contents);
     $sut->capture(new ChangeTypeWrite('test/file_depth1'), self::ROLLBACK_CAPTURE_PATH, '2');
@@ -99,7 +106,7 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
   }
 
   public function testSingleRename() {
-    $sut = self::sutFactory();
+    $sut = $this->sutFactory();
     $contents = self::$fsAccessManager->fileGetContents('test/file_depth1');
     $sut->capture(new ChangeTypeRename('test/file_depth1', 'test/file_renamed'), self::ROLLBACK_CAPTURE_PATH, '1');
 

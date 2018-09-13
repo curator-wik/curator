@@ -28,6 +28,8 @@ class IntegrationConfig {
    */
   protected $siteRootPath = '';
 
+  protected $rollbackCapturePath = '';
+
   protected $appVersion;
 
   protected $siteName;
@@ -78,6 +80,15 @@ class IntegrationConfig {
 
   public function getSiteRootPath() {
     return $this->siteRootPath;
+  }
+
+  public function setRollbackCapturePath($rollback_capture_path) {
+    $this->rollbackCapturePath = $rollback_capture_path;
+    return $this;
+  }
+
+  public function getRollbackCapturePath() {
+    return $this->rollbackCapturePath;
   }
 
   public function setDefaultTimezone($tz_string) {

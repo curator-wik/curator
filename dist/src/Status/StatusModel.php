@@ -50,6 +50,12 @@ class StatusModel {
   public $site_root;
 
   /**
+   * @var string $rollback_capture_path
+   *   A location under the site_root where backup copies of modified files are stored.
+   */
+  public $rollback_capture_path;
+
+  /**
    * @var string $timezone
    *   The user's preferred timezone
    */

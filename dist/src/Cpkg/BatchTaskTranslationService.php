@@ -8,6 +8,7 @@ use Curator\Batch\TaskGroup;
 use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Persistence\PersistenceInterface;
+use Curator\Status\StatusService;
 use mbaynton\BatchFramework\TaskSchedulerInterface;
 
 /**
@@ -16,6 +17,8 @@ use mbaynton\BatchFramework\TaskSchedulerInterface;
  *   to apply the archive.
  */
 class BatchTaskTranslationService {
+
+  protected $status_service;
 
   /**
    * @var AppDetector $app_detector
@@ -48,6 +51,7 @@ class BatchTaskTranslationService {
   protected $delete_rename_task;
 
   public function __construct(
+    StatusService $status_service,
     AppDetector $app_detector,
     CpkgReaderInterface $cpkg_reader,
     TaskGroupManager $task_group_mgr,
@@ -55,6 +59,7 @@ class BatchTaskTranslationService {
     PersistenceInterface $persistence,
     DeleteRenameBatchTask $delete_rename_task
   ) {
+    $this->status_service = $status_service;
     $this->app_detector = $app_detector;
     $this->cpkg_reader = $cpkg_reader;
     $this->task_group_mgr = $task_group_mgr;
@@ -100,6 +105,8 @@ class BatchTaskTranslationService {
         $this->cpkg_reader->getVersion($path_to_cpkg))
     );
 
+    $rollback_path = $this->status_service->getStatus()->rollback_capture_path;
+
     foreach ($versions as $version) {
       /*
        * Up to two tasks may be scheduled per version, in this order, depending on
@@ -118,7 +125,8 @@ class BatchTaskTranslationService {
           $num_runners,
           $num_renames + $num_deletes,
           $path_to_cpkg,
-          $version
+          $version,
+          $rollback_path
         );
         $this->task_group_mgr->appendTaskInstance($group, $del_rename_task);
       }
@@ -140,7 +148,8 @@ class BatchTaskTranslationService {
           4,
           $patch_copy_runnables,
           $path_to_cpkg,
-          $version
+          $version,
+          $rollback_path
         );
 
         $this->task_group_mgr->appendTaskInstance($group, $patch_copy_task);

@@ -61,6 +61,7 @@ class StatusService {
     $result->flush_works = $this->persistence->get('flush_works', FALSE);
     $result->adjoining_app_targeter = $this->persistence->get('adjoining_app_targeter');
     $result->site_root = $this->persistence->get('site_root');
+    $result->rollback_capture_path = $this->persistence->get('rollback_capture_path');
     $result->write_working_path = $this->persistence->get('write_working_path');
     $this->persistence->end();
 

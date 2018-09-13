@@ -22,6 +22,7 @@ use Curator\FSAccess\StreamWrapperFtpAdapter;
 use Curator\Persistence\FilePersistence;
 use Curator\Persistence\PersistenceInterface;
 use Curator\Persistence\SessionFauxPersistence;
+use Curator\Rollback\RollbackCaptureService;
 use Curator\Status\StatusModel;
 use Curator\Status\StatusService;
 use Curator\Authorization\AuthorizationMiddleware;
@@ -144,6 +145,11 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     $site_root = $this['integration_config']->getSiteRootPath();
     if ($config->site_root != $site_root) {
       $changes['site_root'] = $site_root;
+    }
+
+    $rollback_capture_path = $this['integration_config']->getRollbackCapturePath();
+    if ($config->rollback_capture_path != $rollback_capture_path) {
+      $changes['rollback_capture_path'] = $rollback_capture_path;
     }
 
     $targeter = $this['integration_config']->getCustomAppTargeter();
@@ -313,6 +319,10 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
 
     $this['session.prep'] = $this->share(function($app) {
       return new SessionPrepService();
+    });
+
+    $this['rollback'] = $this->share(function($app) {
+      return new RollbackCaptureService($app['fs_access.mounted'], $app['app_targeting.app_detector']);
     });
   }
 
