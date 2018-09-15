@@ -133,13 +133,21 @@ interface FSAccessInterface {
    *
    * @param string $path
    *   The path to delete.
+   * @param bool $recursive
+   *   Whether to delete any children of the path as well.
+   *
+   *   If FALSE and the path has children, an exception will be thrown instead.
+   *
+   *   This should only be applied to directories containing a reasonable number of
+   *   descendants. Directories that might be very large should be removed via a batch
+   *   task.
    * @return void
    * @throws FileNotFoundException
    *   When the $path to delete does not exist.
    * @throws FileException
    *   On permission or I/O errors.
    */
-  function rm($path);
+  function rm($path, $recursive = FALSE);
 
   /**
    * Unlinks (deletes) a non-directory filesystem object.

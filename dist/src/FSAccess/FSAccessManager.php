@@ -463,15 +463,29 @@ class FSAccessManager implements FSAccessInterface {
    *
    * @param string $path
    *   The path to delete.
+   * @param bool $recursive
+   *   Whether to delete any children of the path as well.
+   *
+   *   If FALSE and the path has children, an exception will be thrown instead.
+   *
+   *   This should only be applied to directories containing a reasonable number of
+   *   descendants. Directories that might be very large should be removed via a batch
+   *   task.
    * @return void
    * @throws FileNotFoundException
    *   When the $path to delete does not exist.
    * @throws FileException
    *   On permission or I/O errors.
    */
-  public function rm($path) {
+  public function rm($path, $recursive = FALSE) {
     $path = $this->normalizePath($path, NULL, FALSE);
     if ($this->readOps->isDir($path)) {
+      if ($recursive) {
+        $ls = $this->ls($path);
+        foreach ($ls as $child) {
+          $this->rm($this->ensureTerminatingSeparator($path) . $child, $recursive);
+        }
+      }
       $this->rmDir($path);
     } else {
       $this->unlink($path);
