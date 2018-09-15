@@ -198,34 +198,32 @@ interface FSAccessInterface {
    *
    * @param string $filename
    *   Absolute path, or relative path under the working path.
+   * @param bool $resolve_symlinks
+   *   Whether to follow symlinks and report on their targets.
    * @return bool
    *   TRUE if the file exists, FALSE otherwise.
-   *
-   *   Symbolic links are treated as existing when they point to valid regular
-   *   files.
    * @throws FileException
    *   Resulting from permission or I/O errors.
    * @throws \InvalidArgumentException
    *   If $path is outside the working path.
    */
-  public function isFile($filename);
+  public function isFile($filename, $resolve_symlinks = TRUE);
 
   /**
    * Determines whether a path exists and is a directory.
    *
    * @param string $path
    *   Absolute path, or relative path under the working path.
+   * @param bool $resolve_symlinks
+   *   Whether to follow symlinks and report on their targets.
    * @return bool
    *   TRUE if the directory exists, FALSE otherwise.
-   *
-   *   Symbolic links are treated as existing when they point to valid
-   *   directories.
    * @throws FileException
    *   Resulting from permission or I/O errors.
    * @throws \InvalidArgumentException
    *   If $path is outside the working path.
    */
-  public function isDir($path);
+  public function isDir($path, $resolve_symlinks = TRUE);
 
   /**
    * Lists the contents of a directory.
