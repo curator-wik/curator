@@ -218,4 +218,36 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
 
     $this->assertGreaterThan(0, $adapters_tested);
   }
+
+  /**
+   * @dataProvider symlinkResolutionTestProvider
+   */
+  function testSymlinkResolution($resolve_symlinks, $expected) {
+    $fs = $this->sutFactory('/home/ftptest');
+    $fs->setWriteWorkingPath('/home/ftptest');
+    $name = $this->app['fs_access.write_adapter']->getAdapterName();
+
+    $this->assertEquals(
+      $expected,
+      $fs->isDir('good_dirlink', $resolve_symlinks),
+      sprintf('Using read adapter %s with symlink resolution %d, isDir("good_dirlink") did not return %d',
+        $name, $resolve_symlinks, $expected
+      )
+    );
+
+    $this->assertEquals(
+      $expected,
+      $fs->isFile('good_filelink', $resolve_symlinks),
+      sprintf('Using read adapter %s with symlink resolution %d, isFile("good_filelink") did not return %d',
+        $name, $resolve_symlinks, $expected
+      )
+    );
+  }
+
+  function symlinkResolutionTestProvider() {
+    return [
+      [true, true],
+      [false, false]
+    ];
+  }
 }

@@ -64,6 +64,8 @@ interface ReadAdapterInterface {
   /**
    * Determines whether a directory exists at $path.
    *
+   * This method should not resolve symbolic links.
+   *
    * @param string $path
    *   Absolute path to test.
    * @return bool
@@ -73,6 +75,8 @@ interface ReadAdapterInterface {
 
   /**
    * Determines whether a regular file exists at $path.
+   *
+   * This method should not resolve symbolic links.
    *
    * @param string $path
    *   Absolute path to test.

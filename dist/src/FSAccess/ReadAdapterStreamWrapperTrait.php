@@ -115,11 +115,13 @@ trait ReadAdapterStreamWrapperTrait
   }
 
   public function isDir($path) {
-    return is_dir($this->alterPathForStreamWrapper($path));
+    $path = $this->alterPathForStreamWrapper($path);
+    return is_dir($path) && ! is_link($path);
   }
 
   public function isFile($path) {
-    return is_file($this->alterPathForStreamWrapper($path));
+    $path = $this->alterPathForStreamWrapper($path);
+    return is_file($path) && ! is_link($path);
   }
 
   public function fileGetContents($filename) {

@@ -494,6 +494,36 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     $sut->rmDir('test/empty_dir');
     $this->assertFalse($sut->isDir('test/empty_dir'));
   }
+
+  /**
+   * @ExpectedException \Curator\FSAccess\FileException
+   */
+  public function testRm_nonrecursive_throws() {
+    $sut = static::sutFactory();
+    $sut->rm('test');
+  }
+
+  public function testRm_recursive() {
+    $contents = new MockedFilesystemContents();
+    $contents->files['test/a/file_in_here'] = 'w/e';
+    $contents->files['test/a/nother_file_in_here'] = 'w/e';
+    $contents->symlinks['test/README'] = '../README';
+    $sut = static::sutFactory(FALSE, TRUE, $contents);
+
+    $sut->rm('test', TRUE);
+
+    $this->assertCount(0,
+      array_intersect($contents->directories, ['test', 'test/a', 'test/empty_dir'])
+    );
+    $this->assertCount(0,
+      array_intersect($contents->files, ['test/file_depth1', 'test/a/file_in_here', 'test/a/nother_file_in_here'])
+    );
+    $this->assertCount(0,
+      array_intersect($contents->symlinks, ['test/a/up.link', 'test/a/root.link', 'test/README'])
+    );
+    // And verify symlinks weren't followed.
+    $this->assertTrue($sut->isFile('README'));
+  }
   //</editor-fold>
 
   //<editor-fold desc="autodetectWriteWorkingPath">

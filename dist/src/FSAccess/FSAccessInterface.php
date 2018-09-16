@@ -133,13 +133,21 @@ interface FSAccessInterface {
    *
    * @param string $path
    *   The path to delete.
+   * @param bool $recursive
+   *   Whether to delete any children of the path as well.
+   *
+   *   If FALSE and the path has children, an exception will be thrown instead.
+   *
+   *   This should only be applied to directories containing a reasonable number of
+   *   descendants. Directories that might be very large should be removed via a batch
+   *   task.
    * @return void
    * @throws FileNotFoundException
    *   When the $path to delete does not exist.
    * @throws FileException
    *   On permission or I/O errors.
    */
-  function rm($path);
+  function rm($path, $recursive = FALSE);
 
   /**
    * Unlinks (deletes) a non-directory filesystem object.
@@ -190,34 +198,32 @@ interface FSAccessInterface {
    *
    * @param string $filename
    *   Absolute path, or relative path under the working path.
+   * @param bool $resolve_symlinks
+   *   Whether to follow symlinks and report on their targets.
    * @return bool
    *   TRUE if the file exists, FALSE otherwise.
-   *
-   *   Symbolic links are treated as existing when they point to valid regular
-   *   files.
    * @throws FileException
    *   Resulting from permission or I/O errors.
    * @throws \InvalidArgumentException
    *   If $path is outside the working path.
    */
-  public function isFile($filename);
+  public function isFile($filename, $resolve_symlinks = TRUE);
 
   /**
    * Determines whether a path exists and is a directory.
    *
    * @param string $path
    *   Absolute path, or relative path under the working path.
+   * @param bool $resolve_symlinks
+   *   Whether to follow symlinks and report on their targets.
    * @return bool
    *   TRUE if the directory exists, FALSE otherwise.
-   *
-   *   Symbolic links are treated as existing when they point to valid
-   *   directories.
    * @throws FileException
    *   Resulting from permission or I/O errors.
    * @throws \InvalidArgumentException
    *   If $path is outside the working path.
    */
-  public function isDir($path);
+  public function isDir($path, $resolve_symlinks = TRUE);
 
   /**
    * Lists the contents of a directory.

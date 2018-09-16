@@ -34,14 +34,14 @@ class ReadAdapterMock implements ReadAdapterInterface {
     if (! self::pathIsAbsolute($path)) {
       throw new \LogicException('Relative paths not allowed');
     }
-    return $this->_isDir($path);
+    return $this->_isDir($path, FALSE);
   }
 
   public function isFile($path) {
     if (! self::pathIsAbsolute($path)) {
       throw new \LogicException('Relative paths not allowed');
     }
-    return $this->_isFile($path);
+    return $this->_isFile($path, FALSE);
   }
 
   public function fileGetContents($filename) {
