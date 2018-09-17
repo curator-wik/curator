@@ -10,8 +10,12 @@ class CurlDownloadBatchTaskInstanceState extends TaskInstanceState {
   protected $url;
 
   public function __construct($task_id, $url, $task_service_name = 'download.curl_download_batch_task') {
-    parent::__construct($task_service_name, $task_id, 1, 1);
+    $this->parentConstruct($task_service_name, $task_id, 1, 1);
     $this->url = $url;
+  }
+
+  protected function parentConstruct($task_service_name, $task_id, $num_runners, $num_runnables) {
+    parent::__construct($task_service_name, $task_id, $num_runners, $num_runnables);
   }
 
   public function getUrl() {

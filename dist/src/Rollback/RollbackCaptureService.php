@@ -94,7 +94,7 @@ class RollbackCaptureService
     } catch (FileExistsException $e) {
       if ($e->getCode() == 0) {
         // 0 = it's already there. Make sure we're starting with a clean slate.
-        $this->fs->rm($captureDir);
+        $this->fs->rm($captureDir, TRUE);
         $this->fs->mkdir($captureDir);
       } else {
         throw $e;
@@ -219,7 +219,7 @@ class RollbackCaptureService
       $currentDeletes = '';
     }
 
-    $currentDeletes .= explode("\n", $paths) . "\n";
+    $currentDeletes .= implode("\n", $paths) . "\n";
     $this->fs->filePutContents($deletesFile, $currentDeletes);
   }
 

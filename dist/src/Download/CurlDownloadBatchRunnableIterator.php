@@ -20,9 +20,9 @@ class CurlDownloadBatchRunnableIterator extends AbstractRunnableIterator {
    */
   protected $is_valid;
 
-  public function __construct(StatusService $statusService, $url) {
+  public function __construct(StatusService $status_service, $url) {
     $this->runnable = new CurlDownloadBatchRunnable(
-      $statusService,
+      $status_service,
       1,
       $url
     );

@@ -6,7 +6,9 @@ namespace Curator\Task\Decoder;
 
 use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
+use Curator\Download\CpkgDownloadBatchTaskInstanceState;
 use Curator\Download\CurlDownloadBatchTaskInstanceState;
+use Curator\Status\StatusService;
 use Curator\Task\TaskDecoderInterface;
 use Curator\Task\TaskInterface;
 use Curator\Task\UpdateTask;
@@ -24,9 +26,15 @@ class UpdateTaskDecoder implements TaskDecoderInterface {
    */
   protected $taskScheduler;
 
-  public function __construct(TaskGroupManager $task_group_manager, TaskScheduler $task_scheduler) {
+  /**
+   * @var StatusService $status
+   */
+  protected $status;
+
+  public function __construct(TaskGroupManager $task_group_manager, TaskScheduler $task_scheduler, StatusService $status) {
     $this->taskGroupManager = $task_group_manager;
     $this->taskScheduler = $task_scheduler;
+    $this->status = $status;
   }
 
   public function decodeTask(TaskInterface $task) {
@@ -40,9 +48,10 @@ class UpdateTaskDecoder implements TaskDecoderInterface {
       "Download " . ucfirst($task->getComponent()) . " " . $task->getToVersion() . ' update package'
     );
 
-    $download_task_instance = new CurlDownloadBatchTaskInstanceState(
+    $download_task_instance = new CpkgDownloadBatchTaskInstanceState(
       $this->taskScheduler->assignTaskInstanceId(),
       $task->getPackageLocation(),
+      $this->status->getStatus()->rollback_capture_path,
       'download.cpkg_download_batch_task'
     );
 

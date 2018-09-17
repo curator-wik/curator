@@ -75,6 +75,7 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
     }
     return new DeleteRenameBatchRunnableIterator(
       $this->fs_access,
+      $this->rollback,
       $this->reader->getDeletes($instance_state->getCpkgPath(), $instance_state->getVersion()),
       $this->reader->getRenames($instance_state->getCpkgPath(), $instance_state->getVersion()),
       $start,

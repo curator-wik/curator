@@ -166,6 +166,7 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
       return new PatchCopyBatchRunnable(
         $this->fs_access,
         $this->archive_reader,
+        $this->rollback,
         $this->current_index,
         $operation,
         $this->getSourceInCpkg($current->getPathname()),
