@@ -117,6 +117,9 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
         // TODO: Whole configuration layer that looks at persistence and sets write path better,
         // or does not do it if not in persistence, reports via /status, and expects client to fix.
         $app['fs_access']->setWriteWorkingPath($site_root);
+
+        $app['fs_access.mounted']->setWorkingPath($site_root);
+        $app['fs_access.mounted']->setWriteWorkingPath($site_root);
       }
 
       // Pull in timezone because symfony is much happier this way

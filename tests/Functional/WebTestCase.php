@@ -40,7 +40,7 @@ class WebTestCase extends \Silex\WebTestCase {
   }
 
   protected function injectTestDependencies() {
-    return [
+    $deps = [
       'persistence' => [
         function(){
           return new InMemoryPersistenceMock();
@@ -64,6 +64,11 @@ class WebTestCase extends \Silex\WebTestCase {
         TRUE
       ],
     ];
+
+    $deps['fs_access.read_adapter.filesystem'] = $deps['fs_access.read_adapter'];
+    $deps['fs_access.write_adapter.filesystem'] = $deps['fs_access.write_adapter'];
+
+    return $deps;
   }
 
   public function createApplication() {
@@ -78,6 +83,7 @@ class WebTestCase extends \Silex\WebTestCase {
     $integration = clone IntegrationConfig::getNullConfig();
     $integration
       ->setSiteRootPath($this->getTestSiteRoot())
+      ->setRollbackCapturePath($this->getTestSiteRoot() . '/' . 'rollback')
       ->setCustomAppTargeter('\Curator\Tests\Shared\Mocks\AppTargeterMock::factory');
     return $integration;
   }
@@ -96,6 +102,9 @@ class WebTestCase extends \Silex\WebTestCase {
     $this->app['debug'] = TRUE;
     $this->app['session.test'] = TRUE;
     unset($this->app['exception_handler']);
+
+    // Prep rollback capture area.
+    $this->app['rollback']->initializeCaptureDir($this->getTestSiteRoot() . '/' . 'rollback');
 
     // Make sure the session is started.
     /**

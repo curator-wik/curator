@@ -17,10 +17,16 @@ class DeleteRenameBatchTaskTest extends \PHPUnit_Framework_TestCase {
       ->setMethods(['removeGroupFromSession'])
       ->getMock();
 
+    $rollback = $this->getMockBuilder('\\Curator\\Rollback\\RollbackCaptureService')
+      ->disableOriginalConstructor()
+      ->setMethods(['initializeCaptureDir', 'capture'])
+      ->getMock();
+
     return new DeleteRenameBatchTask(
       new CpkgReader(),
       new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')),
-      $scheduler
+      $scheduler,
+      $rollback
     );
   }
 

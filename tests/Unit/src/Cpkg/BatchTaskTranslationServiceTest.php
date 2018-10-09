@@ -13,6 +13,7 @@ use Curator\Cpkg\CpkgReader;
 use Curator\Cpkg\DeleteRenameBatchTask;
 use Curator\FSAccess\FSAccessManager;
 use Curator\IntegrationConfig;
+use Curator\Status\StatusModel;
 use Curator\Tests\Shared\Mocks\AppTargeterMock;
 use Curator\Tests\Shared\Mocks\InMemoryPersistenceMock;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
@@ -70,13 +71,28 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
       ->setMethods(['removeGroupFromSession'])
       ->getMock();
 
+    $rollback = $this->getMockBuilder('\\Curator\\Rollback\\RollbackCaptureService')
+      ->disableOriginalConstructor()
+      ->setMethods(['initializeCaptureDir', 'capture'])
+      ->getMock();
+
+    $status = $this->getMockBuilder('\\Curator\\Status\\StatusService')
+      ->disableOriginalConstructor()
+      ->setMethods(['getStatus'])
+      ->getMock();
+    $statusModel = new StatusModel();
+    $statusModel->rollback_capture_path = '/test-rollback-path';
+    $status->method('getStatus')
+      ->willReturn($statusModel);
+
     $sut = new BatchTaskTranslationService(
+      $status,
       $detector,
       $this->reader,
       $this->taskgroup_manager,
       $this->task_scheduler,
       $this->persistence,
-      new DeleteRenameBatchTask($this->reader, new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')), $scheduler)
+      new DeleteRenameBatchTask($this->reader, new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')), $scheduler, $rollback)
     );
 
     return $sut;

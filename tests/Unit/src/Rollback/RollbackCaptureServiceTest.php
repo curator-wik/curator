@@ -84,8 +84,6 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
     $contents = self::$fsAccessManager->fileGetContents('test/file_depth1');
     $sut->capture(new ChangeTypePatch('test/file_depth1'), self::ROLLBACK_CAPTURE_PATH, 1);
 
-    // This capture must not be destructive; verify file remains.
-    $this->assertEquals($contents, self::$fsAccessManager->fileGetContents('test/file_depth1'));
     $this->assertEquals($contents, self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/test/file_depth1'));
   }
 

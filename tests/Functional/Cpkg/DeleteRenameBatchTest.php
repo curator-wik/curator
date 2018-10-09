@@ -24,7 +24,7 @@ class DeleteRenameBatchTest extends CpkgWebTestCase {
       $initial_files["renames/fileA$i"] = $i;
     }
 
-    $expected_dirs = ['renames'];
+    $expected_dirs = ['renames', '/app'];
     $expected_files = [];
     for ($i = 1; $i <= 30; $i++) {
       $expected_files["renames/fileB$i"] = $i;
@@ -48,7 +48,7 @@ class DeleteRenameBatchTest extends CpkgWebTestCase {
       $initial_files["renames/fileA$i"] = $i;
     }
 
-    $expected_dirs = ['renames'];
+    $expected_dirs = ['renames', '/app'];
     $expected_files = [];
     for ($i = 1; $i <= 30; $i++) {
       $expected_files["renames/fileB$i"] = $i;
@@ -74,7 +74,7 @@ class DeleteRenameBatchTest extends CpkgWebTestCase {
       $initial_files["renames/fileA$i"] = $i;
     }
 
-    $expected_dirs = ['renames'];
+    $expected_dirs = ['renames', '/app'];
     $expected_files = [];
     for ($i = 1; $i <= 30; $i++) {
       $expected_files["renames/fileB$i"] = $i;
@@ -94,7 +94,7 @@ class DeleteRenameBatchTest extends CpkgWebTestCase {
       $initial_files["renames/fileA$i"] = $i;
     }
 
-    $expected_dirs = ['renames'];
+    $expected_dirs = ['renames', '/app'];
     $expected_files = [];
     for ($i = 1; $i <= 35; $i++) {
       $expected_files["renames/fileB$i"] = $i;

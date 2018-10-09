@@ -236,4 +236,41 @@ class RollbackCaptureService
 
     return $this->payloadPathCache[$captureDir];
   }
+
+  /**
+   * Transforms the almost-cpkg rollback capture directory into a correct cpkg structure.
+   *
+   * @param string $captureDir
+   */
+  public function fixupToCpkg($captureDir) {
+    $capturePath = $this->payloadPath($captureDir);
+    $deleted_things = $this->fixupDeletes($capturePath);
+    $this->fixupRenamePatch($capturePath, $deleted_things);
+  }
+
+  protected function fixupDeletes($capturePath) {
+    // combines all deleted_files.* files into deleted_files
+    $listing = $this->fs->ls($capturePath);
+    $buffer = [];
+    foreach ($listing as $inode_name) {
+      if (strpos($inode_name, 'deleted_files') === 0) {
+        $buffer = array_merge($buffer, explode("\n", $this->fs->fileGetContents($capturePath . $inode_name)));
+      }
+    }
+
+    $this->fs->filePutContents($capturePath . 'deleted_files', implode("\n", $buffer));
+    return $buffer;
+  }
+
+  protected function fixupRenamePatch($capturePath, $deleted_things) {
+    // Search for paths that are both being deleted and written; remove the write.
+    // See comment block at top.
+    $captured_writes_path = $this->fs->ensureTerminatingSeparator($capturePath . 'files');
+    foreach ($deleted_things as $path) {
+      $check = $captured_writes_path . $path;
+      if ($this->fs->isFile($check)) {
+        $this->fs->rm($check);
+      }
+    }
+  }
 }

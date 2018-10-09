@@ -3,13 +3,11 @@
 
 namespace Curator\Cpkg;
 use Curator\AppTargeting\AppDetector;
-use Curator\AppTargeting\TargeterInterface;
 use Curator\Batch\TaskGroup;
 use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Persistence\PersistenceInterface;
 use Curator\Status\StatusService;
-use mbaynton\BatchFramework\TaskSchedulerInterface;
 
 /**
  * Class BatchTaskTranslationService

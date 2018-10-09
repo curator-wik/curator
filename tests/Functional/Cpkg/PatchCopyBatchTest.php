@@ -18,7 +18,7 @@ This is the second file that needs to be patched.
 Little boxes on the hillside.'
     ];
 
-    $expected_dirs = ['subdir', 'empty_subdir'];
+    $expected_dirs = ['subdir', 'empty_subdir', '/app'];
 
     $this->_testCpkgBatchApplication($cpkg_path, $initial_dirs, $expected_dirs, $initial_files, $expected_files, 1);
   }

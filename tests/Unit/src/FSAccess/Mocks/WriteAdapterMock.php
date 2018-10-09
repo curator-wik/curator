@@ -65,6 +65,14 @@ class WriteAdapterMock implements WriteAdapterInterface {
     }
   }
 
+  /*
+   * The implementation of this is kind of interesting / debateable.
+   * It's currently meant to imitate php's rename() applied to a mounted filesystem,
+   * but that's not necessarily great in the long term. The potential problem with
+   * php's rename() is that it abstracts away rename(2)'s inability to do it across
+   * filesystems, so instead is doing unknown-duration operations if you invoke it
+   * on a big directory.
+   */
   public function rename($old_name, $new_name) {
     if ($this->_isInProjectRoot($old_name)) {
       $old_name = $this->_realPath($old_name, NULL, TRUE, FALSE); // throws if no $old_name.
@@ -72,7 +80,7 @@ class WriteAdapterMock implements WriteAdapterInterface {
 
       if ($this->_isInProjectRoot($new_name)) {
         if ($this->_pathExists($new_name, TRUE, FALSE)) {
-          $this->unlink($new_name);
+          $this->_rm($new_name);
         } else {
           if (! $this->_isDir(dirname($new_name))) {
             throw new FileNotFoundException('Destination directory does not exist.', $new_name);
@@ -98,7 +106,7 @@ class WriteAdapterMock implements WriteAdapterInterface {
         throw new \LogicException('Mock filesystem path ' . $old_name . ' is a filesystem object per _realPath, but was not found in any type array');
       }
 
-      $this->unlink($old_name);
+      $this->_rm($old_name);
       if ($this->_isInProjectRoot($new_name)) {
         switch ($manip_style) {
           case 'value':

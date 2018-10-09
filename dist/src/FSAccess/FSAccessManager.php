@@ -693,6 +693,19 @@ class FSAccessManager implements FSAccessInterface {
     return $this->readOps->isDir($path);
   }
 
+  /**
+   * Lists the contents of a directory.
+   *
+   * @param $path
+   *   Absolute path, or relative path under the working path.
+   * @return string[]
+   *   An array containing the file and directory names found within the path.
+   *   '.' and '..' are not included.
+   * @throws FileException
+   *   If a directory listing cannot be obtained from the given path.
+   * @throws \InvalidArgumentException
+   *   If $path is outside the working path.
+   */
   public function ls($path) {
     $path = $this->normalizePath($path);
     return $this->readOps->ls($path);
