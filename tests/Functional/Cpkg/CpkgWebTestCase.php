@@ -102,7 +102,7 @@ abstract class CpkgWebTestCase extends WebTestCase {
     $this->assertEquals($expected_files, $files_less_rollback_capture, 'Expected files differed from actual.');
 
     // Now do the rollback and verify it's right.
-    // $this->app['rollback']->fixupToCpkg('rollback');
+    $this->app['rollback']->fixupToCpkg('rollback');
 
   }
 

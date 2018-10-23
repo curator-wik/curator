@@ -56,7 +56,7 @@ use Curator\FSAccess\FSAccessManager;
  *       This telltale sign of a write and a delete at the same path is explicitly searched for in post-processing,
  *       and resolved by removing the write (thus preventing two copies of the original from being restored.)
  */
-class RollbackCaptureService
+class RollbackCaptureService implements RollbackCaptureInterface
 {
   /**
    * @var FSAccessManager $fs

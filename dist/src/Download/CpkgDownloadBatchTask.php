@@ -39,15 +39,18 @@ class CpkgDownloadBatchTask extends CurlDownloadBatchTask {
     /**
      * @var CurlDownloadBatchTaskInstanceState $schedule
      */
-    return new CpkgDownloadBatchRunnableIterator($this->status_service, $this->rollback_service, $schedule->getUrl());
+    return new CpkgDownloadBatchRunnableIterator($this->status_service, $this->rollback_service, $schedule->getUrl(), $last_processed_runnable_id);
   }
-
 
   public function onRunnableComplete(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $result, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {
     parent::onRunnableComplete($schedule, $runnable, $result, $aggregator, $progress);
 
-    // Tell the Cpkg\BatchTaskTranslationService to make the batch tasks that
-    // will apply the package we've downloaded.
-    $this->cpkg_task_builder->makeBatchTasks($result);
+    // There are two runnables as part of this task, the rollback prep which results in NULL and the actual download,
+    // which results in a path to the downloaded file on disk.
+    if ($result !== NULL) {
+      // Tell the Cpkg\BatchTaskTranslationService to make the batch tasks that
+      // will apply the package we've downloaded.
+      $this->cpkg_task_builder->makeBatchTasks($result);
+    }
   }
 }

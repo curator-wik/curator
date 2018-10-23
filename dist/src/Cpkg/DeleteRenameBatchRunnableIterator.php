@@ -5,7 +5,7 @@ namespace Curator\Cpkg;
 
 
 use Curator\FSAccess\FSAccessManager;
-use Curator\Rollback\RollbackCaptureService;
+use Curator\Rollback\RollbackCaptureInterface;
 use mbaynton\BatchFramework\AbstractRunnableIterator;
 
 class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
@@ -16,7 +16,7 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
   protected $fs_access;
 
   /**
-   * @var RollbackCaptureService $rollback
+   * @var RollbackCaptureInterface $rollback
    */
   protected $rollback;
 
@@ -50,7 +50,7 @@ class DeleteRenameBatchRunnableIterator extends AbstractRunnableIterator {
    *   0-based index into an imaginary concatenation of $deletes + $renames
    * @param $increment
    */
-  public function __construct(FSAccessManager $fs_access, RollbackCaptureService $rollback, $deletes, $renames, $start_index, $increment) {
+  public function __construct(FSAccessManager $fs_access, RollbackCaptureInterface $rollback, $deletes, $renames, $start_index, $increment) {
     $this->fs_access = $fs_access;
     $this->rollback = $rollback;
     $this->start_index = $start_index;

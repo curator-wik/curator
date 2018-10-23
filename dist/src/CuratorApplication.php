@@ -323,10 +323,6 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     $this['session.prep'] = $this->share(function($app) {
       return new SessionPrepService();
     });
-
-    $this['rollback'] = $this->share(function($app) {
-      return new RollbackCaptureService($app['fs_access.mounted'], $app['app_targeting.app_detector']);
-    });
   }
 
   /**

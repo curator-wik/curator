@@ -53,7 +53,7 @@ trait WebTestCaseBatchRunnerTrait {
 
       $last_message = end($messages);
       if ($last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
-        $incomplete_runner_ids = $last_message->incomplete_runner_ids;
+         $incomplete_runner_ids = $last_message->incomplete_runner_ids;
       } else if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE) {
         if ($run_subsequent_tasks) {
           $incomplete_runner_ids = $last_message->incomplete_runner_ids;

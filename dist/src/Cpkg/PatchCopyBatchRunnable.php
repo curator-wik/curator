@@ -12,6 +12,7 @@ use Curator\Rollback\ChangeTypeDelete;
 use Curator\Rollback\ChangeTypeMkdirTree;
 use Curator\Rollback\ChangeTypePatch;
 use Curator\Rollback\ChangeTypeWrite;
+use Curator\Rollback\RollbackCaptureInterface;
 use Curator\Rollback\RollbackCaptureService;
 use DiffMatchPatch\DiffMatchPatch;
 use mbaynton\BatchFramework\AbstractRunnable;
@@ -33,7 +34,7 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
   protected $reader;
 
   /**
-   * @var RollbackCaptureService $rollback
+   * @var RollbackCaptureInterface $rollback
    */
   protected $rollback;
 
@@ -55,7 +56,7 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
    */
   protected $destination;
 
-  public function __construct(FSAccessManager $fs_access, ArchiveFileReader $reader, RollbackCaptureService $rollback, $id, $operation, $source_in_cpkg, $destination) {
+  public function __construct(FSAccessManager $fs_access, ArchiveFileReader $reader, RollbackCaptureInterface $rollback, $id, $operation, $source_in_cpkg, $destination) {
     parent::__construct($id);
 
     $this->fs_access = $fs_access;

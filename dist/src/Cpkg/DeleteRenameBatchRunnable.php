@@ -9,6 +9,7 @@ use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\FSAccessManager;
 use Curator\Rollback\ChangeTypeDelete;
 use Curator\Rollback\ChangeTypeRename;
+use Curator\Rollback\RollbackCaptureInterface;
 use Curator\Rollback\RollbackCaptureService;
 use mbaynton\BatchFramework\AbstractRunnable;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
@@ -21,7 +22,7 @@ class DeleteRenameBatchRunnable extends AbstractRunnable implements DescribedRun
   protected $fs_access;
 
   /**
-   * @var RollbackCaptureService $rollback
+   * @var RollbackCaptureInterface $rollback
    */
   protected $rollback;
 
@@ -55,7 +56,7 @@ class DeleteRenameBatchRunnable extends AbstractRunnable implements DescribedRun
    * @param string|null $destination
    *   If a rename, the FSAccessManager-recognized new name of the file.
    */
-  public function __construct(FSAccessManager $fs_access, RollbackCaptureService $rollback, $id, $operation, $source, $destination = NULL) {
+  public function __construct(FSAccessManager $fs_access, RollbackCaptureInterface $rollback, $id, $operation, $source, $destination = NULL) {
     parent::__construct($id);
     $this->fs_access = $fs_access;
     $this->rollback = $rollback;

@@ -6,6 +6,7 @@ namespace Curator\Cpkg;
 
 use Curator\Batch\TaskScheduler;
 use Curator\FSAccess\FSAccessManager;
+use Curator\Rollback\RollbackCaptureNoOpService;
 use Curator\Rollback\RollbackCaptureService;
 use mbaynton\BatchFramework\RunnerInterface;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
@@ -25,8 +26,8 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
   /**
    * DeleteRenameBatchTask constructor.
    */
-  public function __construct(CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler, RollbackCaptureService $rollback) {
-    parent::__construct($reader, $scheduler, $rollback);
+  public function __construct(CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler, RollbackCaptureService $rollback, RollbackCaptureNoOpService $null_rollback) {
+    parent::__construct($reader, $scheduler, $rollback, $null_rollback);
     $this->fs_access = $fs_access;
   }
 
@@ -73,9 +74,16 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
     } else {
       $start = $last_processed_runnable_id + $instance_state->getNumRunners();
     }
+
+    // An empty rollback capture path is set to indicate that no rollback
+    // should be captured, such as when actually applying previously captured
+    // rollback cpkgs.
+    $rollback_svc = $instance_state->getRollbackPath() === '' ?
+      $this->null_rollback : $this->rollback;
+
     return new DeleteRenameBatchRunnableIterator(
       $this->fs_access,
-      $this->rollback,
+      $rollback_svc,
       $this->reader->getDeletes($instance_state->getCpkgPath(), $instance_state->getVersion()),
       $this->reader->getRenames($instance_state->getCpkgPath(), $instance_state->getVersion()),
       $start,

@@ -5,7 +5,7 @@ namespace Curator\Cpkg;
 
 
 use Curator\FSAccess\FSAccessManager;
-use Curator\Rollback\RollbackCaptureService;
+use Curator\Rollback\RollbackCaptureInterface;
 use mbaynton\BatchFramework\AbstractRunnableIterator;
 
 class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
@@ -20,7 +20,7 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
   protected $archive_reader;
 
   /**
-   * @var RollbackCaptureService $rollback
+   * @var RollbackCaptureInterface $rollback
    */
   protected $rollback;
 
@@ -63,7 +63,7 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
    * @param \Curator\Cpkg\ArchiveFileReader $archive_reader
    * @param int $start_index
    */
-  public function __construct(FSAccessManager $fs_access, ArchiveFileReader $archive_reader, RollbackCaptureService $rollback, $version, $start_index, $end_index) {
+  public function __construct(FSAccessManager $fs_access, ArchiveFileReader $archive_reader, RollbackCaptureInterface $rollback, $version, $start_index, $end_index) {
     $this->fs_access = $fs_access;
     $this->archive_reader = $archive_reader;
     $this->rollback = $rollback;

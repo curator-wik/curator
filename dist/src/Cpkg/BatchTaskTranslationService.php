@@ -7,6 +7,7 @@ use Curator\Batch\TaskGroup;
 use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Persistence\PersistenceInterface;
+use Curator\Rollback\DoRollbackBatchTaskInstanceState;
 use Curator\Status\StatusService;
 
 /**
@@ -77,7 +78,7 @@ class BatchTaskTranslationService {
    * @throws \InvalidArgumentException
    *   When the cpkg does not contain upgrades for the application.
    */
-  public function makeBatchTasks($path_to_cpkg) {
+  public function makeBatchTasks($path_to_cpkg, TaskGroup $group = NULL) {
     $app_targeter = $this->app_detector->getTargeter();
     $this->cpkg_reader->validateCpkgStructure($path_to_cpkg);
     $this->validateCpkgIsApplicable($path_to_cpkg);
@@ -93,15 +94,14 @@ class BatchTaskTranslationService {
 
     // Assemble a Task Group to capture all tasks in the required order.
     $this->persistence->beginReadWrite();
-    /**
-     * @var \Curator\Batch\TaskGroup $group
-     */
-    $group = $this->task_group_mgr->makeNewGroup(
-      sprintf('Update %s from %s to %s',
-        $this->cpkg_reader->getApplication($path_to_cpkg),
-        $app_targeter->getCurrentVersion(),
-        $this->cpkg_reader->getVersion($path_to_cpkg))
-    );
+    if ($group === NULL) {
+      $group = $this->task_group_mgr->makeNewGroup(
+        sprintf('Update %s from %s to %s',
+          $this->cpkg_reader->getApplication($path_to_cpkg),
+          $app_targeter->getCurrentVersion(),
+          $this->cpkg_reader->getVersion($path_to_cpkg))
+      );
+    }
 
     $rollback_path = $this->status_service->getStatus()->rollback_capture_path;
 
@@ -154,8 +154,19 @@ class BatchTaskTranslationService {
       }
     }
 
+    // If there is a failure, the whole TaskGroup gets unscheduled by
+    // CpkgBatchTask::onRunnableError. Otherwise, clean up the rollback
+    // location at the end.
+    $cleanup_task = new DoRollbackBatchTaskInstanceState(
+      $this->task_scheduler->assignTaskInstanceId(),
+      $rollback_path,
+      'rollback.cleanup_rollback_batch_task'
+    );
+    $this->task_group_mgr->appendTaskInstance($group, $cleanup_task);
+
+
     $this->task_scheduler->scheduleGroupInSession($group);
-    $this->persistence->end();
+    $this->persistence->popEnd();
 
     return $group;
   }

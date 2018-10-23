@@ -22,14 +22,21 @@ class CpkgDownloadBatchRunnableIterator extends CurlDownloadBatchRunnableIterato
 
   protected $hasRun = false;
 
-  public function __construct(StatusService $status_service, RollbackCaptureService $rollback_service, $url)
+  public function __construct(StatusService $status_service, RollbackCaptureService $rollback_service, $url, $last_processed_runnable_id)
   {
     parent::__construct($status_service, $url);
 
-    $this->rollbackPrepRunnable = new RollbackCapturePrepBatchRunnable(
-      $rollback_service,
-      2
-    );
+    // If the framework has already done everything as indicated by a $last_processed_runnable_id >= 1,
+    // never do anything.
+    if ($last_processed_runnable_id >= 1) {
+      parent::next();
+      $this->next();
+    } else {
+      $this->rollbackPrepRunnable = new RollbackCapturePrepBatchRunnable(
+        $rollback_service,
+        2
+      );
+    }
   }
 
   public function current() {

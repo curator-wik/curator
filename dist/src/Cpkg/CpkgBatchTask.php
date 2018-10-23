@@ -5,7 +5,9 @@ namespace Curator\Cpkg;
 
 
 use Curator\Batch\TaskScheduler;
+use Curator\Rollback\RollbackCaptureNoOpService;
 use Curator\Rollback\RollbackCaptureService;
+use Curator\Rollback\RollbackInitiatorService;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
@@ -29,10 +31,22 @@ abstract class CpkgBatchTask implements TaskInterface {
    */
   protected $rollback;
 
-  public function __construct(CpkgReader $reader, TaskScheduler $scheduler, RollbackCaptureService $rollback) {
+  /**
+   * @var RollbackCaptureNoOpService $null_rollback
+   */
+  protected $null_rollback;
+
+  /**
+   * @var RollbackInitiatorService $rollback_initiator
+   */
+  protected $rollback_initiator;
+
+  public function __construct(CpkgReader $reader, TaskScheduler $scheduler, RollbackCaptureService $rollback, RollbackCaptureNoOpService $null_rollback, RollbackInitiatorService $rollback_initiator) {
     $this->reader = $reader;
     $this->scheduler = $scheduler;
     $this->rollback = $rollback;
+    $this->null_rollback = $null_rollback;
+    $this->rollback_initiator = $rollback_initiator;
   }
 
   /**
@@ -66,6 +80,15 @@ abstract class CpkgBatchTask implements TaskInterface {
     if ($taskGroup !== NULL) {
       $this->scheduler->removeGroupFromSession($taskGroup);
     }
+
+    // If there is a rollback capture path, initiate the rollback.
+    /** @var CpkgBatchTaskInstanceState $instance_state */
+    if ($instance_state->getRollbackPath() !== '') {
+      $this->rollback_initiator->makeBatchTasks($instance_state->getRollbackPath());
+    }
+
+    // TODO: explicit error message when rollback also fails. (very explicit? ;))
+
   }
 
   public function assembleResultResponse($final_results) {

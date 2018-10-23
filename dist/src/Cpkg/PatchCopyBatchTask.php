@@ -6,6 +6,7 @@ namespace Curator\Cpkg;
 
 use Curator\Batch\TaskScheduler;
 use Curator\FSAccess\FSAccessManager;
+use Curator\Rollback\RollbackCaptureNoOpService;
 use Curator\Rollback\RollbackCaptureService;
 use mbaynton\BatchFramework\RunnerInterface;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
@@ -16,8 +17,8 @@ class PatchCopyBatchTask extends CpkgBatchTask {
    */
   protected $fs_access;
 
-  public function __construct(\Curator\Cpkg\CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler, RollbackCaptureService $rollback) {
-    parent::__construct($reader, $scheduler, $rollback);
+  public function __construct(\Curator\Cpkg\CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler, RollbackCaptureService $rollback, RollbackCaptureNoOpService $null_rollback) {
+    parent::__construct($reader, $scheduler, $rollback, $null_rollback);
     $this->fs_access = $fs_access;
   }
 
@@ -36,10 +37,16 @@ class PatchCopyBatchTask extends CpkgBatchTask {
       $start = $last_processed_runnable_id + 1;
     }
 
+    // An empty rollback capture path is set to indicate that no rollback
+    // should be captured, such as when actually applying previously captured
+    // rollback cpkgs.
+    $rollback_svc = $instance_state->getRollbackPath() === '' ?
+      $this->null_rollback : $this->rollback;
+
     return new PatchCopyBatchRunnableIterator(
       $this->fs_access,
       new ArchiveFileReader($instance_state->getCpkgPath()),
-      $this->rollback,
+      $rollback_svc,
       $instance_state->getVersion(),
       $start,
       $end
