@@ -14,13 +14,19 @@ class CpkgServicesProvider implements ServiceProviderInterface {
       return new CpkgReader();
     });
 
+    $app['cpkg.classifier'] = $app->share(function($app) {
+      return new CpkgClassificationService($app['cpkg.reader']);
+    });
+
     $app['cpkg.delete_rename_batch_task'] = $app->share(function($app) {
       return new DeleteRenameBatchTask(
         $app['cpkg.reader'],
         $app['fs_access'],
         $app['batch.task_scheduler'],
         $app['rollback'],
-        $app['rollback.no-op']
+        $app['rollback.no-op'],
+        $app['rollback.rollback_initiator_service'],
+        $app['cpkg.classifier']
       );
     });
 
@@ -30,7 +36,8 @@ class CpkgServicesProvider implements ServiceProviderInterface {
         $app['fs_access'],
         $app['batch.task_scheduler'],
         $app['rollback'],
-        $app['rollback.no-op']
+        $app['rollback.no-op'],
+        $app['rollback.rollback_initiator_service']
       );
     });
 
@@ -42,7 +49,7 @@ class CpkgServicesProvider implements ServiceProviderInterface {
         $app['batch.taskgroup_manager'],
         $app['batch.task_scheduler'],
         $app['persistence'],
-        $app['cpkg.delete_rename_batch_task']
+        $app['cpkg.classifier']
       );
     });
 

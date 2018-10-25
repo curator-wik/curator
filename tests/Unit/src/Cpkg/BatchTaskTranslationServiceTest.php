@@ -9,6 +9,7 @@ use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Cpkg\BatchTaskTranslationService;
 use Curator\Cpkg\CpkgBatchTaskInstanceState;
+use Curator\Cpkg\CpkgClassificationService;
 use Curator\Cpkg\CpkgReader;
 use Curator\Cpkg\DeleteRenameBatchTask;
 use Curator\FSAccess\FSAccessManager;
@@ -66,16 +67,6 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
       ->getMock();
     $detector->method('getTargeter')->willReturn(new AppTargeterMock());
 
-    $scheduler = $this->getMockBuilder('\\Curator\\Batch\\TaskScheduler')
-      ->disableOriginalConstructor()
-      ->setMethods(['removeGroupFromSession'])
-      ->getMock();
-
-    $rollback = $this->getMockBuilder('\\Curator\\Rollback\\RollbackCaptureService')
-      ->disableOriginalConstructor()
-      ->setMethods(['initializeCaptureDir', 'capture'])
-      ->getMock();
-
     $status = $this->getMockBuilder('\\Curator\\Status\\StatusService')
       ->disableOriginalConstructor()
       ->setMethods(['getStatus'])
@@ -85,6 +76,8 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
     $status->method('getStatus')
       ->willReturn($statusModel);
 
+    $classifier = new CpkgClassificationService($this->reader);
+
     $sut = new BatchTaskTranslationService(
       $status,
       $detector,
@@ -92,7 +85,7 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
       $this->taskgroup_manager,
       $this->task_scheduler,
       $this->persistence,
-      new DeleteRenameBatchTask($this->reader, new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')), $scheduler, $rollback)
+      $classifier
     );
 
     return $sut;

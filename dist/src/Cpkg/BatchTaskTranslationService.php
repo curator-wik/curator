@@ -45,9 +45,9 @@ class BatchTaskTranslationService {
   protected $persistence;
 
   /**
-   * @var DeleteRenameBatchTask $delete_rename_task
+   * @var CpkgClassificationService $classifier
    */
-  protected $delete_rename_task;
+  protected $classifier;
 
   public function __construct(
     StatusService $status_service,
@@ -56,7 +56,7 @@ class BatchTaskTranslationService {
     TaskGroupManager $task_group_mgr,
     TaskScheduler $task_scheduler,
     PersistenceInterface $persistence,
-    DeleteRenameBatchTask $delete_rename_task
+    CpkgClassificationService $classifier
   ) {
     $this->status_service = $status_service;
     $this->app_detector = $app_detector;
@@ -64,7 +64,7 @@ class BatchTaskTranslationService {
     $this->task_group_mgr = $task_group_mgr;
     $this->task_scheduler = $task_scheduler;
     $this->persistence = $persistence;
-    $this->delete_rename_task = $delete_rename_task;
+    $this->classifier = $classifier;
   }
 
   /**
@@ -115,7 +115,7 @@ class BatchTaskTranslationService {
       $num_renames = count($this->cpkg_reader->getRenames($path_to_cpkg, $version));
       $num_deletes = count($this->cpkg_reader->getDeletes($path_to_cpkg, $version));
       if ($num_renames + $num_deletes > 0) {
-        $num_runners = $this->delete_rename_task->getRunnerCount($path_to_cpkg, $version);
+        $num_runners = $this->classifier->getRunnerCountDeleteRename($path_to_cpkg, $version);
         $task_id = $this->task_scheduler->assignTaskInstanceId();
         $del_rename_task = new CpkgBatchTaskInstanceState(
           'cpkg.delete_rename_batch_task',

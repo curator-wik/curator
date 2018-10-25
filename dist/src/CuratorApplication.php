@@ -23,6 +23,7 @@ use Curator\Persistence\FilePersistence;
 use Curator\Persistence\PersistenceInterface;
 use Curator\Persistence\SessionFauxPersistence;
 use Curator\Rollback\RollbackCaptureService;
+use Curator\Rollback\RollbackServicesProvider;
 use Curator\Status\StatusModel;
 use Curator\Status\StatusService;
 use Curator\Authorization\AuthorizationMiddleware;
@@ -75,6 +76,7 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
     $this->register(new CpkgServicesProvider());
     $this->register(new DownloadServicesProvider());
     $this->register(new TaskDecoderServicesProvider());
+    $this->register(new RollbackServicesProvider());
     $this->register(new \Silex\Provider\TranslationServiceProvider(), array(
       'locale_fallbacks' => array('en'),
     ));

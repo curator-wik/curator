@@ -8,6 +8,7 @@ use Curator\Batch\TaskScheduler;
 use Curator\FSAccess\FSAccessManager;
 use Curator\Rollback\RollbackCaptureNoOpService;
 use Curator\Rollback\RollbackCaptureService;
+use Curator\Rollback\RollbackInitiatorService;
 use mbaynton\BatchFramework\RunnerInterface;
 use mbaynton\BatchFramework\TaskInstanceStateInterface;
 
@@ -19,6 +20,11 @@ use mbaynton\BatchFramework\TaskInstanceStateInterface;
 class DeleteRenameBatchTask extends CpkgBatchTask {
 
   /**
+   * @var CpkgClassificationService $cpkg_classifier
+   */
+  protected $cpkg_classifier;
+
+  /**
    * @var FSAccessManager $fs_access
    */
   protected $fs_access;
@@ -26,43 +32,14 @@ class DeleteRenameBatchTask extends CpkgBatchTask {
   /**
    * DeleteRenameBatchTask constructor.
    */
-  public function __construct(CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler, RollbackCaptureService $rollback, RollbackCaptureNoOpService $null_rollback) {
-    parent::__construct($reader, $scheduler, $rollback, $null_rollback);
+  public function __construct(CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler, RollbackCaptureService $rollback, RollbackCaptureNoOpService $null_rollback, RollbackInitiatorService $rollback_initiator, CpkgClassificationService $cpkg_classifier) {
+    parent::__construct($reader, $scheduler, $rollback, $null_rollback, $rollback_initiator);
     $this->fs_access = $fs_access;
+    $this->cpkg_classifier = $cpkg_classifier;
   }
 
   public function getRunnerCount($cpkg_path, $version) {
-    if ($this->isParallelizable(
-      $cpkg_path,
-      $version
-    )) {
-      return 4;
-    } else {
-      return 1;
-    }
-  }
-
-  public function isParallelizable($cpkg_path, $version) {
-    /*
-     * Not safe to run in parallel if:
-     * - A directory is renamed to or from X, and other renames are into or out of X/.
-     * - X is renamed to Y, then Z is renamed to X.
-     */
-    $renames = $this->reader->getRenames($cpkg_path, $version);
-    $all_impacted_objects = array_merge(array_keys($renames), array_values($renames));
-    sort($all_impacted_objects, SORT_STRING);
-    $current = reset($all_impacted_objects);
-    while (($next = next($all_impacted_objects)) !== FALSE) {
-      $plus_slash = "$current/";
-      if(
-        $current === $next
-        || (strlen($next) >= strlen($plus_slash) + 1 && strncmp($plus_slash, $next, strlen($plus_slash)) === 0)
-      ) {
-        return FALSE;
-      }
-      $current = $next;
-    }
-    return TRUE;
+    return $this->cpkg_classifier->getRunnerCountDeleteRename($cpkg_path, $version);
   }
 
   public function getRunnableIterator(TaskInstanceStateInterface $instance_state, RunnerInterface $runner, $runner_rank, $last_processed_runnable_id) {
