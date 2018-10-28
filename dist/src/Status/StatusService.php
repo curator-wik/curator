@@ -13,6 +13,8 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
  *   This includes whether we have all the information needed to write to the
  *   filesystem, where is the root of the managed web application is, and if the
  *   connected user is authorized.
+ *
+ *   Service ID: status
  */
 class StatusService {
 

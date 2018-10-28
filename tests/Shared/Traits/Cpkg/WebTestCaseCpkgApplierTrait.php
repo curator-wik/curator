@@ -48,6 +48,11 @@ trait WebTestCaseCpkgApplierTrait {
    *   The expected number of tasks that will result from the given cpkg.
    */
   protected function runBatchApplicationOfCpkg($cpkg_path, Client $client, $num_tasks = NULL) {
+    // Prep rollback capture area
+    $rollback_capture_path = $this->app['status']->getStatus();
+    $rollback_capture_path = $rollback_capture_path->rollback_capture_path;
+    // $this->app['rollback']->initializeCaptureDir($rollback_capture_path);
+
     $taskgroup = $this->scheduleCpkg($cpkg_path);
     if ($num_tasks != NULL) {
       $this->assertEquals(

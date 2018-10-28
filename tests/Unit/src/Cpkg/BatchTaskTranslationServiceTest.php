@@ -14,6 +14,7 @@ use Curator\Cpkg\CpkgReader;
 use Curator\Cpkg\DeleteRenameBatchTask;
 use Curator\FSAccess\FSAccessManager;
 use Curator\IntegrationConfig;
+use Curator\Rollback\DoRollbackBatchTaskInstanceState;
 use Curator\Status\StatusModel;
 use Curator\Tests\Shared\Mocks\AppTargeterMock;
 use Curator\Tests\Shared\Mocks\InMemoryPersistenceMock;
@@ -146,30 +147,35 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
 
   public function testDeletionsCauseDeleteRenameTask() {
     $sut = $this->sutFactory();
-    $this->taskgroup_manager->expects($this->once())
-      ->method('appendTaskInstance')
-      ->with(
-        $this->isInstanceOf('\Curator\Batch\TaskGroup'),
-        $this->callback(function(CpkgBatchTaskInstanceState $instanceState) {
-          return $instanceState->getTaskServiceName() == 'cpkg.delete_rename_batch_task';
-        })
-      );
+    $this->installAppendTaskInstanceExpectations();
 
     $sut->makeBatchTasks($this->p('minimal+deletion.zip'));
   }
 
   public function testRenamesCauseDeleteRenameTask() {
     $sut = $this->sutFactory();
-    $this->taskgroup_manager->expects($this->once())
-      ->method('appendTaskInstance')
-      ->with(
-        $this->isInstanceOf('\Curator\Batch\TaskGroup'),
-        $this->callback(function(CpkgBatchTaskInstanceState $instanceState) {
-          return $instanceState->getTaskServiceName() == 'cpkg.delete_rename_batch_task';
-        })
-      );
+    $this->installAppendTaskInstanceExpectations();
 
     $sut->makeBatchTasks($this->p('minimal+renames.zip'));
+  }
+
+  protected function installAppendTaskInstanceExpectations() {
+    $this->taskgroup_manager->expects($this->exactly(2))
+      ->method('appendTaskInstance')
+      ->withConsecutive(
+        [
+          $this->isInstanceOf('\Curator\Batch\TaskGroup'),
+          $this->callback(function (CpkgBatchTaskInstanceState $instanceState) {
+            return $instanceState->getTaskServiceName() == 'cpkg.delete_rename_batch_task';
+          })
+        ],
+        [
+          $this->isInstanceOf('\Curator\Batch\TaskGroup'),
+          $this->callback(function (DoRollbackBatchTaskInstanceState $instanceState) {
+            return $instanceState->getTaskServiceName() == 'rollback.cleanup_rollback_batch_task';
+          })
+        ]
+      );
   }
 
 }

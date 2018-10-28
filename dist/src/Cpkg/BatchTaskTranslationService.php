@@ -14,6 +14,8 @@ use Curator\Status\StatusService;
  * Class BatchTaskTranslationService
  *   Evaluates a cpkg archive structure and builds the necessary batch tasks
  *   to apply the archive.
+ *
+ * DI ID: cpkg.batch_task_translator
  */
 class BatchTaskTranslationService {
 

@@ -20,7 +20,7 @@ Little boxes on the hillside.'
 
     $expected_dirs = ['subdir', 'empty_subdir', '/app'];
 
-    $this->_testCpkgBatchApplication($cpkg_path, $initial_dirs, $expected_dirs, $initial_files, $expected_files, 1);
+    $this->_testCpkgBatchApplication($cpkg_path, $initial_dirs, $expected_dirs, $initial_files, $expected_files, 2);
   }
 
   public function testMultipleFilesAndCopies() {
