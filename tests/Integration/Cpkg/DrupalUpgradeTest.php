@@ -9,6 +9,7 @@ use Curator\Tests\Integration\IntegrationWebTestCase;
 use Curator\Tests\Shared\Traits\Cpkg\WebTestCaseCpkgApplierTrait;
 use Silex\Application;
 use Symfony\Component\BrowserKit\Cookie;
+use Symfony\Component\HttpKernel\Client;
 
 /**
  * Class DrupalUpgradeTest
@@ -19,7 +20,7 @@ class DrupalUpgradeTest extends IntegrationWebTestCase {
   use WebTestCaseCpkgApplierTrait;
 
   protected function getTestSiteRoot() {
-    return '/root/drupal-7.53';
+    return '/home/www-data/drupal-7.53';
   }
 
   public function getTestIntegrationConfig()
@@ -40,13 +41,18 @@ class DrupalUpgradeTest extends IntegrationWebTestCase {
     $cj = $client->getCookieJar();
     $session_cookie = new Cookie($this->app['session']->getName(), $this->app['session']->getId());
     $cj->set($session_cookie);
-    $this->runBatchApplicationOfCpkg('/root/drupal-upgrade-test-allfiles.zip', $client);
+    $this->runBatchApplicationOfCpkg('/home/www-data/drupal-upgrade-test-allfiles.zip', $client);
 
-    $diff = `/usr/bin/diff --brief -r /root/drupal-7.53 /root/drupal-7.54 2>&1 | grep -Fv '.curator-data'`;
+    $this->verifyTreeIs754('7.53 source tree after updating to 7.54 does not match 7.54 source tree.');
+  }
+
+  protected function verifyTreeIs754($message) {
+    $diff = `/usr/bin/diff --brief -r /home/www-data/drupal-7.53 /home/www-data/drupal-7.54 2>&1 | grep -Fv '.curator-data'`;
     $this->assertEquals(
       '',
       trim($diff),
-      '7.53 source tree after updating to 7.54 does not match 7.54 source tree.'
+      $message
     );
+
   }
 }

@@ -118,17 +118,19 @@ class BatchRunnerController implements RunnerControllerInterface {
     $this->progress = new ProgressInfo();
     $this->progress->timeElapsed = $this->progress->runnablesExecuted = 0;
     $this->last_chatter_flush = -1 * static::CHATTER_FLUSH_INTERVAL;
+  }
 
+  protected function loadTaskGroupAndTaskInstance() {
     // Get the session's current TaskGroup
     /**
      * @var TaskGroup $group
      */
-    $this->group = $task_scheduler->getCurrentGroupInSession();
+    $this->group = $this->task_scheduler->getCurrentGroupInSession();
     if ($this->group !== NULL) {
       /**
        * @var TaskInstanceState $task_instance
        */
-      $this->task_instance = $taskgroup_mgr->getActiveTaskInstance($this->group);
+      $this->task_instance = $this->taskgroup_manager->getActiveTaskInstance($this->group);
     } else {
       $this->task_instance = NULL;
     }
@@ -142,6 +144,8 @@ class BatchRunnerController implements RunnerControllerInterface {
    * @return BatchRunnerResponse
    */
   public function handleRequest(Request $request, CuratorApplication $app_container) {
+    $this->loadTaskGroupAndTaskInstance();
+
     $runner_id = $this->getRunnerId($request);
     if ($runner_id === NULL) {
       throw new BadRequestHttpException('X-Runner-Id header required.');
@@ -218,6 +222,8 @@ class BatchRunnerController implements RunnerControllerInterface {
    * @return JsonResponse
    */
   public function handleTaskInfoRequest(Request $request, CuratorApplication $app_container) {
+    $this->loadTaskGroupAndTaskInstance();
+
     if ($this->task_instance != NULL) {
       // TODO: The task group task count will be inaccurate once group has finished tasks, but this
       // API isn't typically invoked at other times, and the count is for % complete estimation only.
@@ -238,7 +244,9 @@ class BatchRunnerController implements RunnerControllerInterface {
         'No tasks are scheduled in this session.',
         [],
         0,
-        0
+        0,
+        null,
+        null
       ), 404);
     }
   }

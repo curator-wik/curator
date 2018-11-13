@@ -80,7 +80,7 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
 
   function testFileExists() {
     $fs = $this->sutFactory('/');
-    $fs->isFile('/root/test');
+    $fs->isFile('/home/www-data/test');
   }
 
   function testFilePut_AllRegisteredWriteAdapters() {

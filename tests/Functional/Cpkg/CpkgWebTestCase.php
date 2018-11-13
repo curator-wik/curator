@@ -100,10 +100,6 @@ abstract class CpkgWebTestCase extends WebTestCase {
     ksort($expected_files, SORT_STRING);
     ksort($files_less_rollback_capture, SORT_STRING);
     $this->assertEquals($expected_files, $files_less_rollback_capture, 'Expected files differed from actual.');
-
-    // Now do the rollback and verify it's right.
-    // $this->app['rollback']->fixupToCpkg('rollback');
-
   }
 
   protected static function rollback_capture_filter($input_array, $use_keys = FALSE) {

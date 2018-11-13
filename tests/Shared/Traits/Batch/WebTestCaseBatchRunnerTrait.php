@@ -24,10 +24,12 @@ trait WebTestCaseBatchRunnerTrait {
       'friendlyName' => '',
       'runnerIds' => '',
       'numRunners' => '',
-      'numRunnables' => ''], $batch_info_response));
+      'numRunnables' => '',
+      'taskGroupId' => '',
+      'numTasksInGroup' => ''], $batch_info_response));
     $incomplete_runner_ids = $batch_info_response['runnerIds'];
-    $this->assertGreaterThan(0, count($incomplete_runner_ids));
 
+    $runner_request_count = 0;
     while (count($incomplete_runner_ids)) {
       shuffle($incomplete_runner_ids);
       $runner_id = reset($incomplete_runner_ids);
@@ -40,6 +42,7 @@ trait WebTestCaseBatchRunnerTrait {
 
       $response = $client->getResponse();
       $messages = $this->decodeBatchResponseContent($response->getContent());
+      $runner_request_count++;
 
       // Ensure no errors reported in update messages.
       foreach ($messages as $message) {
@@ -64,6 +67,8 @@ trait WebTestCaseBatchRunnerTrait {
         throw new \RuntimeException('Last message in batch response was not TYPE_RESPONSE or TYPE_CONTROL.');
       }
     }
+
+    return $runner_request_count;
   }
 
   protected function decodeBatchResponseContent($content) {

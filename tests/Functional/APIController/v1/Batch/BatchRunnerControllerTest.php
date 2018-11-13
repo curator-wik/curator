@@ -28,6 +28,13 @@ class BatchRunnerControllerTest extends WebTestCase {
     $client->request('POST', '/api/v1/batch/runner');
   }
 
+  function testTaskInfoRequestWhenNoTaskGroups() {
+    $client = static::createClient();
+    $client->request('GET', '/api/v1/batch/current-task');
+    $json = json_decode($client->getResponse()->getContent());
+
+    $this->assertCount(0, $json->runnerIds, 'More than 0 runner IDs reported ready, but there should be no scheduled tasks.');
+  }
 
   function todo_testStolenBatchIsSkipped() {
     /**
