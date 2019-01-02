@@ -13,6 +13,8 @@ use Curator\Cpkg\CpkgClassificationService;
 use Curator\Cpkg\CpkgReader;
 use Curator\Cpkg\DeleteRenameBatchTask;
 use Curator\FSAccess\FSAccessManager;
+use Curator\FSAccess\PathParser\PosixPathParser;
+use Curator\FSAccess\StreamWrapperFileAdapter;
 use Curator\IntegrationConfig;
 use Curator\Rollback\DoRollbackBatchTaskInstanceState;
 use Curator\Status\StatusModel;
@@ -50,7 +52,11 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
   protected function setUp() {
     parent::setUp();
 
-    $this->reader = new CpkgReader();
+    $fs_adapter = new StreamWrapperFileAdapter(
+      new PosixPathParser()
+    );
+
+    $this->reader = new CpkgReader($fs_adapter, $fs_adapter);
     $this->persistence = new InMemoryPersistenceMock();
     $this->task_scheduler = $this->getMockBuilder('\Curator\Batch\TaskScheduler')->disableOriginalConstructor()->getMock();
 

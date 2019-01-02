@@ -5,10 +5,23 @@ namespace Curator\Tests\Unit\Cpkg;
 
 
 use Curator\Cpkg\CpkgReader;
+use Curator\FSAccess\PathParser\PosixPathParser;
+use Curator\FSAccess\StreamWrapperFileAdapter;
 
+/**
+ * Class CpkgReaderTest
+ *
+ * TODO: test directory cpkgs, maybe just have extracted versions in fixtures?
+ */
 class CpkgReaderTest extends \PHPUnit_Framework_TestCase {
   protected function sutFactory() {
-    return new CpkgReader();
+    $fs_adapter = new StreamWrapperFileAdapter(
+      new PosixPathParser()
+    );
+    return new CpkgReader(
+      $fs_adapter,
+      $fs_adapter
+    );
   }
 
   /**
@@ -22,7 +35,7 @@ class CpkgReaderTest extends \PHPUnit_Framework_TestCase {
   }
 
   /**
-   * @expectedException \Symfony\Component\HttpFoundation\File\Exception\FileException
+   * @expectedException \Curator\FSAccess\FileException
    * @expectedExceptionMessage Archive at baz.tar does not exist or is empty.
    */
   public function testInvalidPathToArchive() {

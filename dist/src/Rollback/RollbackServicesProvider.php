@@ -11,7 +11,7 @@ use Silex\ServiceProviderInterface;
 class RollbackServicesProvider implements ServiceProviderInterface {
   public function register(Application $app) {
     $app['rollback'] = $app->share(function($app) {
-      return new RollbackCaptureService($app['fs_access.mounted'], $app['app_targeting.app_detector']);
+      return new RollbackCaptureService($app['fs_access'], $app['fs_access.rollback'], $app['app_targeting.app_detector']);
     });
 
     $app['rollback.no-op'] = $app->share(function($app) {
@@ -23,7 +23,7 @@ class RollbackServicesProvider implements ServiceProviderInterface {
     });
 
     $app['rollback.cleanup_rollback_batch_task'] = $app->share(function($app) {
-      return new CleanupRollbackBatchTask($app['fs_access.mounted']);
+      return new CleanupRollbackBatchTask($app['fs_access.rollback']);
     });
 
     $app['rollback.rollback_initiator_service'] = $app->share(function($app) {

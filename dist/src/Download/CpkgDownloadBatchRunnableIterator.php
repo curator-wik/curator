@@ -20,21 +20,26 @@ class CpkgDownloadBatchRunnableIterator extends CurlDownloadBatchRunnableIterato
    */
   protected $rollbackPrepRunnable;
 
-  protected $hasRun = false;
+  /**
+   * @var bool $hasRun
+   */
+  protected $hasRun;
 
-  public function __construct(StatusService $status_service, RollbackCaptureService $rollback_service, $url, $last_processed_runnable_id)
+  /** @var int $runnerRank */
+  protected $runnerRank;
+
+  public function __construct(StatusService $status_service, RollbackCaptureService $rollback_service, $url, $runner_rank, $last_processed_runnable_id)
   {
-    parent::__construct($status_service, $url);
-
-    // If the framework has already done everything as indicated by a $last_processed_runnable_id >= 1,
-    // never do anything.
-    if ($last_processed_runnable_id >= 1) {
-      parent::next();
-      $this->next();
+    parent::__construct($status_service, $url, $last_processed_runnable_id);
+    $this->runnerRank = $runner_rank;
+    if ($runner_rank !== 0 || ($runner_rank === 0 && $last_processed_runnable_id > 0)) {
+      $this->hasRun = TRUE;
     } else {
+      $this->hasRun = FALSE;
+
       $this->rollbackPrepRunnable = new RollbackCapturePrepBatchRunnable(
         $rollback_service,
-        2
+        0
       );
     }
   }
@@ -56,11 +61,17 @@ class CpkgDownloadBatchRunnableIterator extends CurlDownloadBatchRunnableIterato
   }
 
   public function valid() {
-    return (! $this->hasRun) || parent::valid();
+    if ($this->runnerRank === 0) {
+      return ! $this->hasRun;
+    } else {
+      return parent::valid();
+    }
   }
 
   public function rewind() {
-    $this->hasRun = FALSE;
     parent::rewind();
+    if ($this->runnerRank === 0) {
+      $this->hasRun = FALSE;
+    }
   }
 }

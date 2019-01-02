@@ -39,7 +39,7 @@ class CleanupRollbackBatchTask implements TaskInterface {
     return new CleanupRollbackBatchRunnableIterator($this->fs_access);
   }
 
-  public function onRunnableError(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $exception, ProgressInfo $progress) { }
+  public function onRunnableError(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $exception, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) { }
 
   public function assembleResultResponse($final_results) {
     return new Response();

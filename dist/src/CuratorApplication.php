@@ -114,14 +114,19 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
           $app['status']->reloadStatus();
           $site_root = $app['status']->getStatus()->site_root;
         }
+        $rollback_root = $app['status']->getStatus()->rollback_capture_path;
+        // The rollback root itself may not exist, but the fsaccess working path
+        // needs to be present for path normalization to work. So just root the
+        // fsaccess manager one level up.
+        $rollback_root = dirname($rollback_root);
 
         $app['fs_access']->setWorkingPath($site_root);
         // TODO: Whole configuration layer that looks at persistence and sets write path better,
         // or does not do it if not in persistence, reports via /status, and expects client to fix.
         $app['fs_access']->setWriteWorkingPath($site_root);
 
-        $app['fs_access.mounted']->setWorkingPath($site_root);
-        $app['fs_access.mounted']->setWriteWorkingPath($site_root);
+        $app['fs_access.rollback']->setWorkingPath($rollback_root);
+        $app['fs_access.rollback']->setWriteWorkingPath($rollback_root);
       }
 
       // Pull in timezone because symfony is much happier this way
@@ -233,8 +238,9 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
       return $manager;
     });
 
-    // Mounted fs_access service, always uses mounted filesystem for writes.
-    $this['fs_access.mounted'] = $this->share(function ($app) {
+    // Rollback fs_access service, always uses mounted filesystem and may use
+    // a different virtual root. Backup copies of modified files stored here.
+    $this['fs_access.rollback'] = $this->share(function ($app) {
       $manager = new FSAccessManager($app['fs_access.read_adapter.filesystem'], $app['fs_access.write_adapter.filesystem']);
       return $manager;
     });

@@ -47,7 +47,7 @@ class CurlDownloadBatchTask implements TaskInterface {
     return new CurlDownloadBatchRunnableIterator($this->status_service, $schedule->getUrl());
   }
 
-  public function onRunnableError(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $exception, ProgressInfo $progress) { }
+  public function onRunnableError(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $exception, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) { }
 
   public function assembleResultResponse($final_results) {
     return new Response();

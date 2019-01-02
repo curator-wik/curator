@@ -40,7 +40,7 @@ class DoRollbackBatchTask implements TaskInterface {
     return new DoRollbackBatchRunnableIterator($this->rollback_service);
   }
 
-  public function onRunnableError(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $exception, ProgressInfo $progress) { }
+  public function onRunnableError(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $exception, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) { }
 
   public function assembleResultResponse($final_results) {
     return new Response();

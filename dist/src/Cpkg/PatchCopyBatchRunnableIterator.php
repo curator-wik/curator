@@ -15,7 +15,7 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
   protected $fs_access;
 
   /**
-   * @var ArchiveFileReader $archive_reader;
+   * @var CpkgReaderPrimitivesInterface $archive_reader ;
    */
   protected $archive_reader;
 
@@ -59,11 +59,12 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
 
   /**
    * PatchCopyBatchRunnableIterator constructor.
+   *
    * @param \Curator\FSAccess\FSAccessManager $fs_access
-   * @param \Curator\Cpkg\ArchiveFileReader $archive_reader
+   * @param CpkgReaderPrimitivesInterface $archive_reader
    * @param int $start_index
    */
-  public function __construct(FSAccessManager $fs_access, ArchiveFileReader $archive_reader, RollbackCaptureInterface $rollback, $version, $start_index, $end_index) {
+  public function __construct(FSAccessManager $fs_access, CpkgReaderPrimitivesInterface $archive_reader, RollbackCaptureInterface $rollback, $version, $start_index, $end_index) {
     $this->fs_access = $fs_access;
     $this->archive_reader = $archive_reader;
     $this->rollback = $rollback;
@@ -83,11 +84,12 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
    * Gets an iterator over all files and patches for a particular version
    * in the cpkg archive being read by $archive_reader.
    *
-   * @param \Curator\Cpkg\ArchiveFileReader $archive_reader
+   * @param CpkgReaderPrimitivesInterface $archive_reader
    * @param $version
+   *
    * @return \AppendIterator
    */
-  public static function buildPatchCopyInternalIterator(ArchiveFileReader $archive_reader, $version) {
+  public static function buildPatchCopyInternalIterator(CpkgReaderPrimitivesInterface $archive_reader, $version) {
     $internal_iterator = new \AppendIterator();
     try {
       $internal_iterator->append($archive_reader->getRecursiveFileIterator("payload/$version/files"));

@@ -5,6 +5,7 @@ namespace Curator\Rollback;
 
 
 use Curator\AppTargeting\AppDetector;
+use Curator\Cpkg\FSAccessReader;
 use Curator\FSAccess\FileExistsException;
 use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\FSAccessManager;
@@ -63,6 +64,9 @@ class RollbackCaptureService implements RollbackCaptureInterface
    */
   protected $fs;
 
+  /** @var FSAccessManager $fs */
+  protected $rollbackfs;
+
   /**
    * @var string[] $payloadPathCache
    *   The capture service auto-learns the location within the rollback capture directory
@@ -79,38 +83,41 @@ class RollbackCaptureService implements RollbackCaptureInterface
   /**
    * RollbackCaptureService constructor.
    * @param FSAccessManager $fs
-   *   The FSAccessManager whose read and write adapters are both using mounted filesystems.
+   *   The app's main FSAccessManager, virtual root in the site's root.
+   * @param FSAccessManager $rollbackfs
+   *   The FSAccessManager pointed at the rollback capture location.
+   * @param AppDetector $appDetector
    */
-  public function __construct(FSAccessManager $fs, AppDetector $appDetector)
+  public function __construct(FSAccessManager $fs, FSAccessManager $rollbackfs, AppDetector $appDetector)
   {
     $this->fs = $fs;
+    $this->rollbackfs = $rollbackfs;
     $this->appDetector = $appDetector;
     $this->payloadPathCache = [];
   }
 
   public function initializeCaptureDir($captureDir) {
     try {
-      $this->fs->mkdir($captureDir, TRUE);
+      $this->rollbackfs->mkdir($captureDir, TRUE);
     } catch (FileExistsException $e) {
       if ($e->getCode() == 0) {
         // 0 = it's already there. Make sure we're starting with a clean slate.
-        $this->fs->rm($captureDir, TRUE);
-        $this->fs->mkdir($captureDir);
+        $this->rollbackfs->rm($captureDir, TRUE);
+        $this->rollbackfs->mkdir($captureDir);
       } else {
         throw $e;
       }
     }
 
-    $captureDir = $this->fs->ensureTerminatingSeparator($captureDir);
+    $captureDir = $this->rollbackfs->ensureTerminatingSeparator($captureDir);
 
     // TODO: component file; not needed unless we start doing modules.
-    $appTargeter = $this->appDetector->getTargeter();
-    $this->fs->filePutContents($captureDir . 'application', $appTargeter->getAppName());
-    $this->fs->filePutContents($captureDir . 'package-format-version', '1.0');
-    $this->fs->filePutContents($captureDir . 'version', 'rollback');
-    $this->fs->filePutContents($captureDir . 'prev-versions-inorder', 'partial update');
+    $this->rollbackfs->filePutContents($captureDir . 'application', 'Curator_Rollback');
+    $this->rollbackfs->filePutContents($captureDir . 'package-format-version', '1.0');
+    $this->rollbackfs->filePutContents($captureDir . 'version', 'rollback');
+    $this->rollbackfs->filePutContents($captureDir . 'prev-versions-inorder', 'partial update');
     $payloadDir = $this->payloadPath($captureDir);
-    $this->fs->mkdir($payloadDir, TRUE);
+    $this->rollbackfs->mkdir($payloadDir, TRUE);
   }
 
   /**
@@ -156,17 +163,19 @@ class RollbackCaptureService implements RollbackCaptureInterface
     }
   }
 
+  // $destructive was at one time used to indicate the file could be mv'd.
+  // Would need a single FSAccessManaager allowing multiple base paths for that.
   protected function captureFile($path, $destructive, $captureDir) {
     $capturePath = $this->payloadPath($captureDir);
     $destination = sprintf("%s%s%s",
       $capturePath,
-      $this->fs->ensureTerminatingSeparator('files'),
+      $this->rollbackfs->ensureTerminatingSeparator('files'),
       $path
     );
 
     // Ensure the full directory structure required to capture the file is present.
     try {
-      $this->fs->mkdir($this->fs->ensureTerminatingSeparator($destination) . '..', TRUE);
+      $this->rollbackfs->mkdir($this->fs->ensureTerminatingSeparator($destination) . '..', TRUE);
     } catch (FileExistsException $e) {
       if ($e->getCode() != 0) {
         throw $e;
@@ -174,15 +183,10 @@ class RollbackCaptureService implements RollbackCaptureInterface
     }
 
     try {
-      if ($destructive) {
-        // Should be safe even when $path is a directory since we know backend is mounted fs
-        $this->fs->mv($path, $destination);
+      if ($this->fs->isDir($path)) {
+        $this->rollbackfs->mkdir($destination);
       } else {
-        if ($this->fs->isDir($path)) {
-          $this->fs->mkdir($destination);
-        } else {
-          $this->fs->filePutContents($destination, $this->fs->fileGetContents($path));
-        }
+        $this->rollbackfs->filePutContents($destination, $this->fs->fileGetContents($path));
       }
     } catch (FileNotFoundException $e) {
       // The fs methods might throw this due to the $destination's dirtree being incomplete or
@@ -195,7 +199,7 @@ class RollbackCaptureService implements RollbackCaptureInterface
       // trying to delete the same file (see github issue #5 for discussion.) If another runner
       // beat us to removing $path, then it will exist now at $destination, and in that case we
       // can safely swallow this exception.
-      if (! $this->fs->isFile($destination) &&  ! $this->fs->isDir($destination)) {
+      if (! $this->rollbackfs->isFile($destination) &&  ! $this->rollbackfs->isDir($destination)) {
         throw $e;
       }
     }
@@ -213,25 +217,25 @@ class RollbackCaptureService implements RollbackCaptureInterface
     }
 
     try {
-      $currentDeletes = $this->fs->fileGetContents($deletesFile);
+      $currentDeletes = $this->rollbackfs->fileGetContents($deletesFile);
     } catch (FileNotFoundException $e) {
       // First time.
       $currentDeletes = '';
     }
 
     $currentDeletes .= implode("\n", $paths) . "\n";
-    $this->fs->filePutContents($deletesFile, $currentDeletes);
+    $this->rollbackfs->filePutContents($deletesFile, $currentDeletes);
   }
 
   protected function payloadPath($captureDir) {
     if (empty($this->payloadPathCache[$captureDir])) {
-      $rollbackSyntheticVersion = $this->fs->fileGetContents(
+      $rollbackSyntheticVersion = $this->rollbackfs->fileGetContents(
         $this->fs->ensureTerminatingSeparator($captureDir) . 'version'
       );
       $this->payloadPathCache[$captureDir] =
-        $this->fs->ensureTerminatingSeparator($captureDir) .
-        $this->fs->ensureTerminatingSeparator('payload') .
-        $this->fs->ensureTerminatingSeparator($rollbackSyntheticVersion);
+        $this->rollbackfs->ensureTerminatingSeparator($captureDir) .
+        $this->rollbackfs->ensureTerminatingSeparator('payload') .
+        $this->rollbackfs->ensureTerminatingSeparator($rollbackSyntheticVersion);
     }
 
     return $this->payloadPathCache[$captureDir];
@@ -250,26 +254,26 @@ class RollbackCaptureService implements RollbackCaptureInterface
 
   protected function fixupDeletes($capturePath) {
     // combines all deleted_files.* files into deleted_files
-    $listing = $this->fs->ls($capturePath);
+    $listing = $this->rollbackfs->ls($capturePath);
     $buffer = [];
     foreach ($listing as $inode_name) {
       if (strpos($inode_name, 'deleted_files') === 0) {
-        $buffer = array_merge($buffer, explode("\n", $this->fs->fileGetContents($capturePath . $inode_name)));
+        $buffer = array_merge($buffer, explode("\n", $this->rollbackfs->fileGetContents($capturePath . $inode_name)));
       }
     }
 
-    $this->fs->filePutContents($capturePath . 'deleted_files', implode("\n", $buffer));
+    $this->rollbackfs->filePutContents($capturePath . 'deleted_files', implode("\n", $buffer));
     return $buffer;
   }
 
   protected function fixupRenamePatch($capturePath, $deleted_things) {
     // Search for paths that are both being deleted and written; remove the write.
     // See comment block at top.
-    $captured_writes_path = $this->fs->ensureTerminatingSeparator($capturePath . 'files');
+    $captured_writes_path = $this->rollbackfs->ensureTerminatingSeparator($capturePath . 'files');
     foreach ($deleted_things as $path) {
       $check = $captured_writes_path . $path;
-      if ($this->fs->isFile($check)) {
-        $this->fs->rm($check);
+      if ($this->rollbackfs->isFile($check)) {
+        $this->rollbackfs->rm($check);
       }
     }
   }

@@ -51,7 +51,7 @@ class StatusModel {
 
   /**
    * @var string $rollback_capture_path
-   *   A location under the site_root where backup copies of modified files are stored.
+   *   A location where backup copies of modified files are stored.
    */
   public $rollback_capture_path;
 

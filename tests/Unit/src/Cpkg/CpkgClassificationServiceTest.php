@@ -8,13 +8,19 @@ use Curator\Cpkg\CpkgClassificationService;
 use Curator\Cpkg\CpkgReader;
 use Curator\Cpkg\DeleteRenameBatchTask;
 use Curator\FSAccess\FSAccessManager;
+use Curator\FSAccess\PathParser\PosixPathParser;
+use Curator\FSAccess\StreamWrapperFileAdapter;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
 use Curator\Tests\Unit\FSAccess\Mocks\WriteAdapterMock;
 
 class CpkgClassificationServiceTest extends \PHPUnit_Framework_TestCase {
   protected function sutFactory() {
+    $fs_adapter = new StreamWrapperFileAdapter(
+      new PosixPathParser()
+    );
+
     return new CpkgClassificationService(
-      new CpkgReader()
+      new CpkgReader($fs_adapter, $fs_adapter)
     );
   }
 

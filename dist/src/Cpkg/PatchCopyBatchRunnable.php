@@ -29,7 +29,7 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
   protected $fs_access;
 
   /**
-   * @var ArchiveFileReader $reader
+   * @var CpkgReaderPrimitivesInterface $reader
    */
   protected $reader;
 
@@ -56,7 +56,7 @@ class PatchCopyBatchRunnable extends AbstractRunnable implements DescribedRunnab
    */
   protected $destination;
 
-  public function __construct(FSAccessManager $fs_access, ArchiveFileReader $reader, RollbackCaptureInterface $rollback, $id, $operation, $source_in_cpkg, $destination) {
+  public function __construct(FSAccessManager $fs_access, CpkgReaderPrimitivesInterface $reader, RollbackCaptureInterface $rollback, $id, $operation, $source_in_cpkg, $destination) {
     parent::__construct($id);
 
     $this->fs_access = $fs_access;

@@ -3,7 +3,9 @@
 
 namespace Curator\Cpkg;
 
-use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
+use Curator\FSAccess\FileNotFoundException;
+use Curator\FSAccess\ReadAdapterInterface;
+use Curator\FSAccess\WriteAdapterInterface;
 
 /**
  * Class CpkgReader
@@ -56,7 +58,42 @@ class CpkgReader implements CpkgReaderInterface {
    */
   protected $entry_delimiter = "\n";
 
-  public function __construct() {
+  /**
+   * @var ReadAdapterInterface $fsAccessReader
+   */
+  protected $fsAccessReader;
+
+  /**
+   * @var WriteAdapterInterface $fsAccessWriter
+   */
+  protected $fsAccessWriter;
+
+  /**
+   * CpkgReader constructor.
+   *
+   * @param \Curator\FSAccess\ReadAdapterInterface $fsAccessReader
+   *   Reader used when the underlying cpkg is not a phar=compatible archive.
+   * @param \Curator\FSAccess\WriteAdapterInterface $fsAccessWriter
+   *   Writer accompanying the reader to create an FSAccessManager.
+   */
+  public function __construct(ReadAdapterInterface $fsAccessReader, WriteAdapterInterface $fsAccessWriter) {
+    $this->fsAccessReader = $fsAccessReader;
+    $this->fsAccessWriter = $fsAccessWriter;
+  }
+
+  /**
+   * Selects a CpkgReaderPrimitivesInterface implementation for a given cpkg.
+   *
+   * @param $cpkg_path
+   *
+   * @return \Curator\Cpkg\CpkgReaderPrimitivesInterface
+   */
+  public function getReaderPrimitives($cpkg_path) {
+    if (is_dir($cpkg_path)) {
+      return new FSAccessReader($cpkg_path, $this->fsAccessReader, $this->fsAccessWriter);
+    } else {
+      return new ArchiveFileReader($cpkg_path);
+    }
   }
 
   public function validateCpkgStructure($cpkg_path) {
@@ -69,10 +106,10 @@ class CpkgReader implements CpkgReaderInterface {
     }
 
     try {
-      $reader = new ArchiveFileReader($cpkg_path);
+      $reader = $this->getReaderPrimitives($cpkg_path);
       $required_files = [
         'application' => '/.+/',
-        'package-format-version' => '/^(1\.0)?\s+$/',
+        'package-format-version' => '/^(1\.0)?\s*$/',
         'version' => '|^[^\0\n/]+$|',
         'prev-versions-inorder' => '%^(?:[^\0\n/]+\n)*[^\0\n/]+\n*$%'
       ];
@@ -124,16 +161,16 @@ class CpkgReader implements CpkgReaderInterface {
       $this->validateCpkgStructure($cpkg_path);
     }
 
-    $reader = new ArchiveFileReader($cpkg_path);
-    if (! array_key_exists($reader->getArchivePath(), $this->versionCache)) {
+    if (! array_key_exists($cpkg_path, $this->versionCache)) {
+      $reader = $this->getReaderPrimitives($cpkg_path);
       $version = trim($reader->getContent('version'));
       if ($version === '') {
         throw new \LogicException('Newest version in cpkg not found.');
       }
-      $this->versionCache[$reader->getArchivePath()] = $version;
+      $this->versionCache[$cpkg_path] = $version;
     }
 
-    return $this->versionCache[$reader->getArchivePath()];
+    return $this->versionCache[$cpkg_path];
   }
 
   /**
@@ -153,8 +190,8 @@ class CpkgReader implements CpkgReaderInterface {
       $this->validateCpkgStructure($cpkg_path);
     }
 
-    $reader = new ArchiveFileReader($cpkg_path);
-    if (! array_key_exists($reader->getArchivePath(), $this->prevVersionsCache)) {
+    if (! array_key_exists($cpkg_path, $this->prevVersionsCache)) {
+      $reader = $this->getReaderPrimitives($cpkg_path);
       $prev_versions = $reader->getContent('prev-versions-inorder');
       $prev_versions = explode($this->entry_delimiter, $prev_versions);
       $prev_versions = array_filter($prev_versions, function($v) {
@@ -165,10 +202,10 @@ class CpkgReader implements CpkgReaderInterface {
         // Should not happen because validateCpkg should have rejected.
         throw new \LogicException('No previous versions found.');
       }
-      $this->prevVersionsCache[$reader->getArchivePath()] = $prev_versions;
+      $this->prevVersionsCache[$cpkg_path] = $prev_versions;
     }
 
-    return $this->prevVersionsCache[$reader->getArchivePath()];
+    return $this->prevVersionsCache[$cpkg_path];
   }
 
   public function getApplication($cpkg_path) {
@@ -180,13 +217,13 @@ class CpkgReader implements CpkgReaderInterface {
       $this->validateCpkgStructure($cpkg_path);
     }
 
-    $reader = new ArchiveFileReader($cpkg_path);
-    if (! array_key_exists($reader->getArchivePath(), $this->applicationNameCache)) {
-      $this->applicationNameCache[$reader->getArchivePath()]
+    if (! array_key_exists($cpkg_path, $this->applicationNameCache)) {
+      $reader = $this->getReaderPrimitives($cpkg_path);
+      $this->applicationNameCache[$cpkg_path]
         = trim($reader->getContent('application'));
     }
 
-    return $this->applicationNameCache[$reader->getArchivePath()];
+    return $this->applicationNameCache[$cpkg_path];
   }
 
   public function getRenames($cpkg_path, $version) {
@@ -198,9 +235,9 @@ class CpkgReader implements CpkgReaderInterface {
       $this->validateCpkgStructure($cpkg_path);
     }
 
-    $reader = new ArchiveFileReader($cpkg_path);
     $cache_key = $cpkg_path . $version;
     if (! array_key_exists($cache_key, $this->renamesCache)) {
+      $reader = $this->getReaderPrimitives($cpkg_path);
       $renames = $reader->tryGetContent("payload/$version/renamed_files");
       $renames = array_filter(
         explode($this->entry_delimiter, $renames),
@@ -233,9 +270,9 @@ class CpkgReader implements CpkgReaderInterface {
       $this->validateCpkgStructure($cpkg_path);
     }
 
-    $reader = new ArchiveFileReader($cpkg_path);
     $cache_key = $cpkg_path . $version;
     if (! array_key_exists($cache_key, $this->deletesCache)) {
+      $reader = $this->getReaderPrimitives($cpkg_path);
       $deletes = $reader->tryGetContent("payload/$version/deleted_files");
       $deletes = array_filter(
         explode($this->entry_delimiter, $deletes),

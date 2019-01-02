@@ -88,7 +88,7 @@ class BatchTaskTranslationService {
     // Find the versions we'll upgrade through.
     $versions = [$this->cpkg_reader->getVersion($path_to_cpkg)];
     $prev_versions_reversed = array_reverse($this->cpkg_reader->getPrevVersions($path_to_cpkg));
-    while (current($prev_versions_reversed) !== $app_targeter->getCurrentVersion()) {
+    while (current($prev_versions_reversed) !== $app_targeter->getCurrentVersion() && count($prev_versions_reversed)) {
       $versions[] = array_shift($prev_versions_reversed);
     }
     // Put in order that upgrades must be applied.
@@ -132,7 +132,7 @@ class BatchTaskTranslationService {
       }
 
       $patch_copy_iterator = PatchCopyBatchRunnableIterator::buildPatchCopyInternalIterator(
-        new ArchiveFileReader($path_to_cpkg),
+        $this->cpkg_reader->getReaderPrimitives($path_to_cpkg),
         $version
       );
       $patch_copy_runnables = 0;
@@ -157,7 +157,7 @@ class BatchTaskTranslationService {
     }
 
     // If there is a failure, the whole TaskGroup gets unscheduled by
-    // CpkgBatchTask::onRunnableError. Otherwise, clean up the rollback
+    // CpkgBatchTask::assembleResultResponse. Otherwise, clean up the rollback
     // location at the end.
     $cleanup_task = new DoRollbackBatchTaskInstanceState(
       $this->task_scheduler->assignTaskInstanceId(),
@@ -175,6 +175,13 @@ class BatchTaskTranslationService {
 
   protected function validateCpkgIsApplicable($cpkg_path) {
     $cpkg_application = $this->cpkg_reader->getApplication($cpkg_path);
+    $version_in_cpkg = $this->cpkg_reader->getVersion($cpkg_path);
+
+    // Do not perform these validations if the cpkg looks like a rollback.
+    if ($cpkg_application === 'Curator_Rollback' && $version_in_cpkg == 'rollback') {
+      return;
+    }
+
     $app_targeter = $this->app_detector->getTargeter();
     if (strcasecmp($cpkg_application, $app_targeter->getAppName()) !== 0) {
       throw new \InvalidArgumentException(
@@ -187,7 +194,7 @@ class BatchTaskTranslationService {
 
     $current_version = (string) $app_targeter->getCurrentVersion();
 
-    if ($this->cpkg_reader->getVersion($cpkg_path) === $current_version) {
+    if ($version_in_cpkg === $current_version) {
       throw new \InvalidArgumentException(sprintf('The update package provides version "%s", but it is already installed.', $current_version));
     }
 

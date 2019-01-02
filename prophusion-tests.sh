@@ -24,4 +24,4 @@ fi
 echo "PHPUNIT is: $PHPUNIT"
 export PHPUNIT
 
-echo "{ cd /curator; /usr/local/phpenv/shims/php $PHPUNIT; }" | sudo -u www-data --login
+echo "{ XDEBUG2HOST="${XDEBUG2HOST}"; . /usr/local/bin/xdebug2host; cd /curator; /usr/local/phpenv/shims/php $PHPUNIT; }" | sudo -u www-data --preserve-env --login

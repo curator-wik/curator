@@ -112,6 +112,11 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
     $this->assertEquals($contents, self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/test/file_depth1'));
   }
 
+  public function testRollbackFsNotInProjectRoot() {
+    // if feature is kept. Possibly by feeding data provider to existing tests.
+    $this->fail('Not implemented/reminder');
+  }
+
   protected function assertDeletion($path, $runnerId) {
     $deletions = self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . "payload/rollback/deleted_files.$runnerId");
     $deletions = explode("\n", $deletions);

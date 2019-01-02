@@ -20,14 +20,19 @@ class CurlDownloadBatchRunnableIterator extends AbstractRunnableIterator {
    */
   protected $is_valid;
 
-  public function __construct(StatusService $status_service, $url) {
+  public function __construct(StatusService $status_service, $url, $last_processed_runnable_id) {
+    // Always constructed to retain \Iterator compliance in case of rewind().
     $this->runnable = new CurlDownloadBatchRunnable(
       $status_service,
       1,
       $url
     );
 
-    $this->is_valid = TRUE;
+    if ($last_processed_runnable_id < 1) {
+      $this->is_valid = TRUE;
+    } else {
+      $this->is_valid = FALSE;
+    }
   }
 
   public function current() {

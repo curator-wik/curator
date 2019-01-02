@@ -11,7 +11,10 @@ class CpkgServicesProvider implements ServiceProviderInterface {
   public function register(Application $app) {
 
     $app['cpkg.reader'] = $app->share(function($app) {
-      return new CpkgReader();
+      return new CpkgReader(
+        $app['fs_access.read_adapter'],
+        $app['fs_access.write_adapter']
+      );
     });
 
     $app['cpkg.classifier'] = $app->share(function($app) {

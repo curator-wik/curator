@@ -39,7 +39,7 @@ class CpkgDownloadBatchTask extends CurlDownloadBatchTask {
     /**
      * @var CurlDownloadBatchTaskInstanceState $schedule
      */
-    return new CpkgDownloadBatchRunnableIterator($this->status_service, $this->rollback_service, $schedule->getUrl(), $last_processed_runnable_id);
+    return new CpkgDownloadBatchRunnableIterator($this->status_service, $this->rollback_service, $schedule->getUrl(), $runner_rank, $last_processed_runnable_id);
   }
 
   public function onRunnableComplete(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $result, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {

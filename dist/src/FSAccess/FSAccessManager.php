@@ -481,6 +481,9 @@ class FSAccessManager implements FSAccessInterface {
     $path = $this->normalizePath($path, NULL, FALSE);
     if ($this->readOps->isDir($path)) {
       if ($recursive) {
+        if ($path == $this->workingPath || empty($path)) {
+          throw new \LogicException("Failsafe: refusing to recursively delete \"$path\"");
+        }
         $ls = $this->ls($path);
         foreach ($ls as $child) {
           $this->rm($this->ensureTerminatingSeparator($path) . $child, $recursive);
