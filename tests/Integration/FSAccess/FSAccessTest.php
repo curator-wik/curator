@@ -87,7 +87,7 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
     $adapters_tested = 0;
     foreach ($this->getAdapterServices('write') as $writeAdapterService) {
       // FSAccessManager needs to be reinitialized for each write adapter
-      $fs = $this->sutFactory('/home/ftptest/www', ['filesystem', $writeAdapterService]);
+      $fs = $this->sutFactory('/home/ftptest/world_writable_test_location', ['filesystem', $writeAdapterService]);
       $name = $this->app['fs_access.write_adapter']->getAdapterName();
 
       $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
@@ -172,12 +172,12 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
     $adapters_tested = 0;
     foreach ($this->getAdapterServices('write') as $writeAdapterService) {
       // FSAccessManager needs to be reinitialized for each write adapter
-      $fs = $this->sutFactory('/home/ftptest', ['filesystem', $writeAdapterService]);
+      $fs = $this->sutFactory('/home/ftptest/world_writable_test_location', ['filesystem', $writeAdapterService]);
       $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
       $name = $this->app['fs_access.write_adapter']->getAdapterName();
 
       try {
-        $fs->mkdir('www');
+        $fs->mkdir('existing_dir');
         $this->assertFalse(TRUE, "No exception thrown when making an existing directory with $name.");
       } catch (FileExistsException $e) {
         $this->assertEquals(
@@ -196,12 +196,12 @@ class FSAccessTest extends \PHPUnit_Framework_TestCase
     $adapters_tested = 0;
     foreach ($this->getAdapterServices('write') as $writeAdapterService) {
       // FSAccessManager needs to be reinitialized for each write adapter
-      $fs = $this->sutFactory('/home/ftptest', ['filesystem', $writeAdapterService]);
+      $fs = $this->sutFactory('/home/ftptest/world_writable_test_location', ['filesystem', $writeAdapterService]);
       $fs->setWriteWorkingPath($fs->autodetectWriteWorkingPath());
       $name = $this->app['fs_access.write_adapter']->getAdapterName();
 
       try {
-        $fs->mkdir('.profile');
+        $fs->mkdir('existing_file');
         $this->assertFalse(
           TRUE,
           "No exception thrown when attempting to make directory over existing file with $name."

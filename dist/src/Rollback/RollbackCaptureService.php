@@ -177,30 +177,36 @@ class RollbackCaptureService implements RollbackCaptureInterface
     try {
       $this->rollbackfs->mkdir($this->fs->ensureTerminatingSeparator($destination) . '..', TRUE);
     } catch (FileExistsException $e) {
-      if ($e->getCode() != 0) {
+      if ($e->getCode() != 0) { // 0 = exists and is a directory
         throw $e;
       }
     }
 
-    try {
-      if ($this->fs->isDir($path)) {
+    if ($this->fs->isDir($path)) {
+      try {
         $this->rollbackfs->mkdir($destination);
-      } else {
-        $this->rollbackfs->filePutContents($destination, $this->fs->fileGetContents($path));
+      } catch (FileExistsException $e) {
+        if ($e->getCode() != 0) {
+          throw $e;
+        }
       }
-    } catch (FileNotFoundException $e) {
-      // The fs methods might throw this due to the $destination's dirtree being incomplete or
-      // due to the source file at $path being absent. We assume the former isn't the case
-      // because we just ensured the directory structure was present, therefore it must be that
-      // $path is not there.
-      // This is actually not necessarily cause for alarm, because a common user of this
-      // function is DeleteRenameBatchRunnable's delete(), which currently removes files and
-      // directories in an undefined order with the possibility of several concurrent runners
-      // trying to delete the same file (see github issue #5 for discussion.) If another runner
-      // beat us to removing $path, then it will exist now at $destination, and in that case we
-      // can safely swallow this exception.
-      if (! $this->rollbackfs->isFile($destination) &&  ! $this->rollbackfs->isDir($destination)) {
-        throw $e;
+    } else {
+      try {
+        $this->rollbackfs->filePutContents($destination, $this->fs->fileGetContents($path));
+      } catch (FileNotFoundException $e) {
+        // The fs methods might throw this due to the $destination's dirtree being incomplete or
+        // due to the source file at $path being absent. We assume the former isn't the case
+        // because we just ensured the directory structure was present, therefore it must be that
+        // $path is not there.
+        // This is actually not necessarily cause for alarm, because a common user of this
+        // function is DeleteRenameBatchRunnable's delete(), which currently removes files and
+        // directories in an undefined order with the possibility of several concurrent runners
+        // trying to delete the same file (see github issue #5 for discussion.) If another runner
+        // beat us to removing $path, then it will exist now at $destination, and in that case we
+        // can safely swallow this exception.
+        if (! $this->rollbackfs->isFile($destination) &&  ! $this->rollbackfs->isDir($destination)) {
+          throw $e;
+        }
       }
     }
   }

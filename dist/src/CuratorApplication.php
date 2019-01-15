@@ -125,8 +125,10 @@ class CuratorApplication extends Application implements AppTargeterFactoryInterf
         // or does not do it if not in persistence, reports via /status, and expects client to fix.
         $app['fs_access']->setWriteWorkingPath($site_root);
 
-        $app['fs_access.rollback']->setWorkingPath($rollback_root);
-        $app['fs_access.rollback']->setWriteWorkingPath($rollback_root);
+        if (!empty($rollback_root)) {
+          $app['fs_access.rollback']->setWorkingPath($rollback_root);
+          $app['fs_access.rollback']->setWriteWorkingPath($rollback_root);
+        }
       }
 
       // Pull in timezone because symfony is much happier this way

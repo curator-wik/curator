@@ -15,7 +15,7 @@ class PersistenceTest extends \PHPUnit_Framework_TestCase {
    */
   protected $appContainer;
 
-  const TEST_PATH = '/home/ftptest/www';
+  const TEST_PATH = '/home/www-data';
 
   public function setUp() {
     parent::setUp();

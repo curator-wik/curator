@@ -62,7 +62,8 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
       ->getMock();
     $detector->method('getTargeter')->willReturn(new AppTargeterMock());
 
-    $sut = new RollbackCaptureService(self::$fsAccessManager, $detector);
+    // TODO: using a separate fsAccessManager instance for rollbackfs would be more realistic.
+    $sut = new RollbackCaptureService(self::$fsAccessManager, self::$fsAccessManager, $detector);
     $sut->initializeCaptureDir(self::ROLLBACK_CAPTURE_PATH);
     return $sut;
   }

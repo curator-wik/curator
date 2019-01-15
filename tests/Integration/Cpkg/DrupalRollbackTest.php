@@ -58,7 +58,7 @@ class DrupalRollbackTest extends IntegrationWebTestCase {
     $cj->set($session_cookie);
 
     $this->assertTrue(
-      chmod($this->getTestSiteRoot() . DIRECTORY_SEPARATOR . 'modules/system', 0000),
+      chmod($this->getTestSiteRoot() . DIRECTORY_SEPARATOR . 'modules/locale', 0000),
       'Failed to set up permissions problem, test run would be invalid.'
       );
     $runner_request_count = $this->runBatchApplicationOfCpkg('/home/www-data/Drupal7.54-7.60.cpkg.zip', $client);
