@@ -80,14 +80,7 @@ class RollbackInitiatorService
       $task_group = $this->task_group_mgr->makeNewGroup('Roll back');
     }
 
-    /*
-    // First task in the group will be to cpkgize the capture location.
-    $cpkgize_task = new DoRollbackBatchTaskInstanceState(
-      $this->task_scheduler->assignTaskInstanceId(),
-      $rollback_capture_path
-    );
-    $this->task_group_mgr->appendTaskInstance($task_group, $cpkgize_task);
-    */
+    // First we need to fully cpkgize the rollback capture location.
     $this->rollback->fixupToCpkg($rollback_capture_path);
 
     // Then use the Cpkg\BatchTaskTranslationService to append the rollback tasks.

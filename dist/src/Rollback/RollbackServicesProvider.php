@@ -18,10 +18,6 @@ class RollbackServicesProvider implements ServiceProviderInterface {
       return new RollbackCaptureNoOpService();
     });
 
-    $app['rollback.do_rollback_batch_task'] = $app->share(function($app) {
-      return new DoRollbackBatchTask($app['rollback']);
-    });
-
     $app['rollback.cleanup_rollback_batch_task'] = $app->share(function($app) {
       return new CleanupRollbackBatchTask($app['fs_access.rollback']);
     });
