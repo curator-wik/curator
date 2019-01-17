@@ -9,7 +9,7 @@ use Curator\Batch\TaskInstanceState;
 class DoRollbackBatchTaskInstanceState extends TaskInstanceState {
   protected $rollback_capture_path;
 
-  public function __construct($task_id, $rollback_capture_path, $task_service_name = 'rollback.do_rollback_batch_task') {
+  public function __construct($task_id, $rollback_capture_path, $task_service_name) {
     $this->parentConstruct($task_service_name, $task_id, 1, 1);
     $this->rollback_capture_path = $rollback_capture_path;
   }

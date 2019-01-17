@@ -71,6 +71,12 @@ class BatchTaskTranslationService {
 
   /**
    * @param string $path_to_cpkg
+   *   Path to the cpkg to be applied via the batch tasks.
+   * @param TaskGroup $group
+   *   The TaskGroup to add the batch tasks to.
+   * @param bool $captureForRollback
+   *   Whether to pass a nonempty rollback capture location on to the runnables.
+   *   This causes them to save their changes to a new cpkg as they go.
    *
    * @return TaskGroup
    *   The new TaskGroup created from the cpkg.
@@ -80,7 +86,7 @@ class BatchTaskTranslationService {
    * @throws \InvalidArgumentException
    *   When the cpkg does not contain upgrades for the application.
    */
-  public function makeBatchTasks($path_to_cpkg, TaskGroup $group = NULL) {
+  public function makeBatchTasks($path_to_cpkg, TaskGroup $group = NULL, $captureForRollback = TRUE) {
     $app_targeter = $this->app_detector->getTargeter();
     $this->cpkg_reader->validateCpkgStructure($path_to_cpkg);
     $this->validateCpkgIsApplicable($path_to_cpkg);
@@ -105,7 +111,11 @@ class BatchTaskTranslationService {
       );
     }
 
-    $rollback_path = $this->status_service->getStatus()->rollback_capture_path;
+    if ($captureForRollback === TRUE) {
+      $rollback_path = $this->status_service->getStatus()->rollback_capture_path;
+    } else {
+      $rollback_path = '';
+    }
 
     foreach ($versions as $version) {
       /*
@@ -156,16 +166,18 @@ class BatchTaskTranslationService {
       }
     }
 
-    // If there is a failure, the whole TaskGroup gets unscheduled by
-    // CpkgBatchTask::assembleResultResponse. Otherwise, clean up the rollback
-    // location at the end.
-    $cleanup_task = new DoRollbackBatchTaskInstanceState(
-      $this->task_scheduler->assignTaskInstanceId(),
-      $rollback_path,
-      'rollback.cleanup_rollback_batch_task'
-    );
-    $this->task_group_mgr->appendTaskInstance($group, $cleanup_task);
-
+    // If there is a failure, the whole TaskGroup (incl. the below task) gets
+    // unscheduled by CpkgBatchTask::assembleResultResponse. Otherwise, if we
+    // were capturing changes to a rollback location, clean up that stuff after
+    // a successful update.
+    if (!empty($rollback_path)) {
+      $cleanup_task = new DoRollbackBatchTaskInstanceState(
+        $this->task_scheduler->assignTaskInstanceId(),
+        $rollback_path,
+        'rollback.cleanup_rollback_batch_task'
+      );
+      $this->task_group_mgr->appendTaskInstance($group, $cleanup_task);
+    }
 
     $this->task_scheduler->scheduleGroupInSession($group);
     $this->persistence->popEnd();

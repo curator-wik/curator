@@ -118,7 +118,7 @@ class PatchCopyBatchRunnableIterator extends AbstractRunnableIterator {
     if (!empty($path)) {
       // Example: 'phar:///path/to/cpkg.zip/payload/1.2.3'
       $this->destination_excess_prefix = dirname(dirname($path));
-      $this->source_excess_prefix = dirname(dirname($this->destination_excess_prefix));
+      $this->source_excess_prefix = dirname(dirname($this->destination_excess_prefix)) . '/';
     }
   }
 

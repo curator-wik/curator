@@ -74,8 +74,6 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
     $contents = self::$fsAccessManager->fileGetContents('README');
     $sut->capture(new ChangeTypeDelete('README'), self::ROLLBACK_CAPTURE_PATH, 1);
 
-    // This capture is allowed to be destructive, should result in an mv of README
-    $this->assertFalse(self::$fsAccessManager->isFile('README'));
     $this->assertEquals($contents, self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/README'));
   }
 

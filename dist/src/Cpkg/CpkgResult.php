@@ -16,4 +16,11 @@ class CpkgResult {
    * @var int $errorCount
    */
   public $errorCount;
+
+  /**
+   * If applicable, the location where rollback data was captured to.
+   *
+   * @var string $rollbackCaptureLocation
+   */
+  public $rollbackCaptureLocation;
 }

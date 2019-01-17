@@ -43,12 +43,18 @@ class RollbackInitiatorService
    */
   protected $cpkg_to_tasks_service;
 
+  /**
+   * @var RollbackCaptureService $rollback
+   */
+  protected $rollback;
+
   public function __construct(
     PersistenceInterface $persistence,
     StatusService $status_service,
     TaskGroupManager $task_group_mgr,
     TaskScheduler $task_scheduler,
-    BatchTaskTranslationService $cpkg_to_tasks_service
+    BatchTaskTranslationService $cpkg_to_tasks_service,
+    RollbackCaptureService $rollback
   )
   {
     $this->persistence = $persistence;
@@ -56,6 +62,7 @@ class RollbackInitiatorService
     $this->task_group_mgr = $task_group_mgr;
     $this->task_scheduler = $task_scheduler;
     $this->cpkg_to_tasks_service = $cpkg_to_tasks_service;
+    $this->rollback = $rollback;
   }
 
   /**
@@ -68,24 +75,24 @@ class RollbackInitiatorService
    * @return TaskGroup
    */
   public function makeBatchTasks($rollback_capture_path = '', $task_group = NULL) {
-    if ($rollback_capture_path === '') {
-      $rollback_capture_path = $this->status_service->getStatus()->rollback_capture_path;
-    }
-
     $this->persistence->beginReadWrite();
     if ($task_group === NULL) {
       $task_group = $this->task_group_mgr->makeNewGroup('Roll back');
     }
 
+    /*
     // First task in the group will be to cpkgize the capture location.
     $cpkgize_task = new DoRollbackBatchTaskInstanceState(
       $this->task_scheduler->assignTaskInstanceId(),
       $rollback_capture_path
     );
     $this->task_group_mgr->appendTaskInstance($task_group, $cpkgize_task);
+    */
+    $this->rollback->fixupToCpkg($rollback_capture_path);
 
     // Then use the Cpkg\BatchTaskTranslationService to append the rollback tasks.
-    $this->cpkg_to_tasks_service->makeBatchTasks($rollback_capture_path, $task_group);
+    $captureRollback = FALSE;
+    $this->cpkg_to_tasks_service->makeBatchTasks($rollback_capture_path, $task_group, $captureRollback);
 
     $cleanup_task = new DoRollbackBatchTaskInstanceState(
       $this->task_scheduler->assignTaskInstanceId(),

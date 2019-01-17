@@ -32,7 +32,8 @@ class RollbackServicesProvider implements ServiceProviderInterface {
         $app['status'],
         $app['batch.taskgroup_manager'],
         $app['batch.task_scheduler'],
-        $app['cpkg.batch_task_translator']
+        $app['cpkg.batch_task_translator'],
+        $app['rollback']
         );
     });
   }

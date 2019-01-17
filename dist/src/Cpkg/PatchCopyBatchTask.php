@@ -46,7 +46,7 @@ class PatchCopyBatchTask extends CpkgBatchTask {
 
     return new PatchCopyBatchRunnableIterator(
       $this->fs_access,
-      new ArchiveFileReader($instance_state->getCpkgPath()),
+      $this->reader->getReaderPrimitives($instance_state->getCpkgPath()),
       $rollback_svc,
       $instance_state->getVersion(),
       $start,

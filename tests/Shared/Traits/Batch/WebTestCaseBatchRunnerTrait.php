@@ -13,7 +13,7 @@ trait WebTestCaseBatchRunnerTrait {
   private $ENDPOINT_BATCH_RUNNER = '/api/v1/batch/runner';
   private $ENDPOINT_BATCH_TASK_INFO = '/api/v1/batch/current-task';
 
-  protected function runBatchTasks(Client $client, TaskGroup $taskgroup, $run_subsequent_tasks = TRUE) {
+  protected function runBatchTasks(Client $client, TaskGroup $taskgroup, $run_subsequent_tasks = TRUE, $allow_runnable_failures = FALSE) {
     $prev_task = NULL;
     // Seed the requests to the batch controller by asking it for the current task information.
     $client->request('GET', $this->ENDPOINT_BATCH_TASK_INFO);
@@ -44,13 +44,15 @@ trait WebTestCaseBatchRunnerTrait {
       $messages = $this->decodeBatchResponseContent($response->getContent());
       $runner_request_count++;
 
-      // Ensure no errors reported in update messages.
-      foreach ($messages as $message) {
-        if ($message->type === BatchRunnerMessage::TYPE_UPDATE) {
-          $this->assertTrue(
-            $message->ok,
-            sprintf('BatchRunnerUpdateMessage indicated failure: %s', implode(' | ', $message->chatter ? $message->chatter : []))
-          );
+      if (! $allow_runnable_failures) {
+        // Ensure no errors reported in update messages.
+        foreach ($messages as $message) {
+          if ($message->type === BatchRunnerMessage::TYPE_UPDATE) {
+            $this->assertTrue(
+              $message->ok,
+              sprintf('BatchRunnerUpdateMessage indicated failure: %s', implode(' | ', $message->chatter ? $message->chatter : []))
+            );
+          }
         }
       }
 

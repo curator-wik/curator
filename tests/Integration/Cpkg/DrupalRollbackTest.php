@@ -57,12 +57,21 @@ class DrupalRollbackTest extends IntegrationWebTestCase {
     $session_cookie = new Cookie($this->app['session']->getName(), $this->app['session']->getId());
     $cj->set($session_cookie);
 
+    // Make a permissions problem before we do the update
     $this->assertTrue(
       chmod($this->getTestSiteRoot() . DIRECTORY_SEPARATOR . 'modules/locale', 0000),
       'Failed to set up permissions problem, test run would be invalid.'
       );
-    $runner_request_count = $this->runBatchApplicationOfCpkg('/home/www-data/Drupal7.54-7.60.cpkg.zip', $client);
+    $runner_request_count = $this->runBatchApplicationOfCpkg('/home/www-data/Drupal7.54-7.60.cpkg.zip', $client, NULL, TRUE);
     $this->assertGreaterThan(1, $runner_request_count, 'Number of batch runner requests to complete the upgrade seems too low.');
+
+    // Fix the permissions problem so that diff can descend into modules/locale.
+    $this->assertTrue(
+      chmod($this->getTestSiteRoot() . DIRECTORY_SEPARATOR . 'modules/locale', 0750),
+      'Failed to set up permissions problem, test run would be invalid.'
+    );
+
+    // Verify update was rolled back to exactly the original state.
     $this->verifyTreeIs754('7.54 source tree after update to 7.60 that should have failed did not roll back to match 7.54 source tree.');
   }
 

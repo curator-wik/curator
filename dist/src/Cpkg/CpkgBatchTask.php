@@ -61,7 +61,8 @@ abstract class CpkgBatchTask implements TaskInterface {
   }
 
   public function reduce(RunnableResultAggregatorInterface $aggregator) {
-    return array_reduce($aggregator->getCollectedResults(), [$this, 'aggregateResults'], new CpkgResult());
+    $r = $aggregator->getCollectedResults();
+    return array_reduce($r, [$this, 'aggregateResults'], new CpkgResult());
   }
 
   public function updatePartialResult($new, $current = NULL) {
@@ -74,18 +75,26 @@ abstract class CpkgBatchTask implements TaskInterface {
 
   protected function aggregateResults(CpkgResult $a, CpkgResult $b) {
     $a->errorCount += $b->errorCount;
+    if (empty($a->rollbackCaptureLocation) && !empty($b->rollbackCaptureLocation)) {
+      $a->rollbackCaptureLocation = $b->rollbackCaptureLocation;
+    }
     return $a;
   }
 
   public function onRunnableComplete(TaskInstanceStateInterface $instance_state, RunnableInterface $runnable, $result, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {
-    if ($result) {
-      $aggregator->collectResult($runnable, $result);
+    /** @var \Curator\Cpkg\CpkgResult $result */
+    if ($result === NULL) {
+      $result = new CpkgResult();
     }
+
+    $result->rollbackCaptureLocation = $instance_state->getRollbackPath();
+    $aggregator->collectResult($runnable, $result);
   }
 
   public function onRunnableError(TaskInstanceStateInterface $instance_state, RunnableInterface $runnable, $exception, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {
     $result = new CpkgResult();
     $result->errorCount = 1;
+    $result->rollbackCaptureLocation = $instance_state->getRollbackPath();
     $aggregator->collectResult($runnable, $result);
   }
 
@@ -93,12 +102,11 @@ abstract class CpkgBatchTask implements TaskInterface {
     /** @var \Curator\Cpkg\CpkgResult $final_results */
     if ($final_results !== null && $final_results->errorCount > 0) {
       // If there is a rollback capture path, initiate the rollback.
-      /** @var CpkgBatchTaskInstanceState $instance_state */
-      if ($instance_state->getRollbackPath() !== '') {
+      if (!empty($final_results->rollbackCaptureLocation)) {
         // Prevent remaining Tasks in the update TaskGroup from running.
         $this->scheduler->removeGroupFromSession($this->scheduler->getCurrentGroupInSession());
         // And schedule the rollback TaskGroup.
-        $this->rollback_initiator->makeBatchTasks($instance_state->getRollbackPath());
+        $this->rollback_initiator->makeBatchTasks($final_results->rollbackCaptureLocation);
       }
     }
 
