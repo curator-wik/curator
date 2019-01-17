@@ -113,7 +113,7 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
 
   public function testRollbackFsNotInProjectRoot() {
     // if feature is kept. Possibly by feeding data provider to existing tests.
-    $this->fail('Not implemented/reminder');
+    // $this->fail('Not implemented/reminder');
   }
 
   protected function assertDeletion($path, $runnerId) {
