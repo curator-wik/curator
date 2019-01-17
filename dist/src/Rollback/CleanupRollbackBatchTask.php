@@ -1,9 +1,10 @@
 <?php
 
 
-namespace Curator\Download;
+namespace Curator\Rollback;
 
 
+use Curator\FSAccess\FSAccessInterface;
 use Curator\IntegrationConfig;
 use Curator\Status\StatusService;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
@@ -15,36 +16,27 @@ use mbaynton\BatchFramework\TaskInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Class CurlDownloadBatchTask
- * This class downloads things using cURL using the Batch framework.
- * It currently only supports sequential, single downloads with one runnable.
+ * Class CleanupRollbackBatchTask
+ * Simple single-runnable task that rm -rf's the rollback capture location, e.g. when
+ * an update hsa completed.
  *
- * It is likely useful to extend this class with more interesting
- * implementations of onRunnableComplete() that do things with the download.
- *
- * Service id: download.curl_download_batch_task
+ * Service id: rollback.cleanup_rollback_batch_task
  */
-class CurlDownloadBatchTask implements TaskInterface {
+class CleanupRollbackBatchTask implements TaskInterface {
 
   /**
-   * @var StatusService $status_service
+   * @var FSAccessInterface $fs_access
    */
-  protected $status_service;
+  protected $fs_access;
 
-  public function __construct(StatusService $statusService) {
-    $this->status_service = $statusService;
+  public function __construct(FSAccessInterface $fs_access) {
+    $this->fs_access = $fs_access;
   }
 
-  public function onRunnableComplete(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $result, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {
-    // Since one Runnable downloads entire files, you can act on the download
-    // by overriding this method.
-  }
+  public function onRunnableComplete(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $result, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {}
 
   public function getRunnableIterator(TaskInstanceStateInterface $schedule, RunnerInterface $runner, $runner_rank, $last_processed_runnable_id) {
-    /**
-     * @var CurlDownloadBatchTaskInstanceState $schedule
-     */
-    return new CurlDownloadBatchRunnableIterator($this->status_service, $schedule->getUrl());
+    return new CleanupRollbackBatchRunnableIterator($this->fs_access);
   }
 
   public function onRunnableError(TaskInstanceStateInterface $schedule, RunnableInterface $runnable, $exception, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) { }

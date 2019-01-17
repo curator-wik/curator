@@ -13,7 +13,7 @@ trait WebTestCaseBatchRunnerTrait {
   private $ENDPOINT_BATCH_RUNNER = '/api/v1/batch/runner';
   private $ENDPOINT_BATCH_TASK_INFO = '/api/v1/batch/current-task';
 
-  protected function runBatchTasks(Client $client, TaskGroup $taskgroup, $run_subsequent_tasks = TRUE) {
+  protected function runBatchTasks(Client $client, TaskGroup $taskgroup, $run_subsequent_tasks = TRUE, $allow_runnable_failures = FALSE) {
     $prev_task = NULL;
     // Seed the requests to the batch controller by asking it for the current task information.
     $client->request('GET', $this->ENDPOINT_BATCH_TASK_INFO);
@@ -24,10 +24,12 @@ trait WebTestCaseBatchRunnerTrait {
       'friendlyName' => '',
       'runnerIds' => '',
       'numRunners' => '',
-      'numRunnables' => ''], $batch_info_response));
+      'numRunnables' => '',
+      'taskGroupId' => '',
+      'numTasksInGroup' => ''], $batch_info_response));
     $incomplete_runner_ids = $batch_info_response['runnerIds'];
-    $this->assertGreaterThan(0, count($incomplete_runner_ids));
 
+    $runner_request_count = 0;
     while (count($incomplete_runner_ids)) {
       shuffle($incomplete_runner_ids);
       $runner_id = reset($incomplete_runner_ids);
@@ -40,20 +42,23 @@ trait WebTestCaseBatchRunnerTrait {
 
       $response = $client->getResponse();
       $messages = $this->decodeBatchResponseContent($response->getContent());
+      $runner_request_count++;
 
-      // Ensure no errors reported in update messages.
-      foreach ($messages as $message) {
-        if ($message->type === BatchRunnerMessage::TYPE_UPDATE) {
-          $this->assertTrue(
-            $message->ok,
-            sprintf('BatchRunnerUpdateMessage indicated failure: %s', implode(' | ', $message->chatter ? $message->chatter : []))
-          );
+      if (! $allow_runnable_failures) {
+        // Ensure no errors reported in update messages.
+        foreach ($messages as $message) {
+          if ($message->type === BatchRunnerMessage::TYPE_UPDATE) {
+            $this->assertTrue(
+              $message->ok,
+              sprintf('BatchRunnerUpdateMessage indicated failure: %s', implode(' | ', $message->chatter ? $message->chatter : []))
+            );
+          }
         }
       }
 
       $last_message = end($messages);
       if ($last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
-        $incomplete_runner_ids = $last_message->incomplete_runner_ids;
+         $incomplete_runner_ids = $last_message->incomplete_runner_ids;
       } else if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE) {
         if ($run_subsequent_tasks) {
           $incomplete_runner_ids = $last_message->incomplete_runner_ids;
@@ -64,6 +69,8 @@ trait WebTestCaseBatchRunnerTrait {
         throw new \RuntimeException('Last message in batch response was not TYPE_RESPONSE or TYPE_CONTROL.');
       }
     }
+
+    return $runner_request_count;
   }
 
   protected function decodeBatchResponseContent($content) {

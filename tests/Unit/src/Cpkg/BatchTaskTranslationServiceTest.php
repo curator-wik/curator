@@ -9,10 +9,15 @@ use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Cpkg\BatchTaskTranslationService;
 use Curator\Cpkg\CpkgBatchTaskInstanceState;
+use Curator\Cpkg\CpkgClassificationService;
 use Curator\Cpkg\CpkgReader;
 use Curator\Cpkg\DeleteRenameBatchTask;
 use Curator\FSAccess\FSAccessManager;
+use Curator\FSAccess\PathParser\PosixPathParser;
+use Curator\FSAccess\StreamWrapperFileAdapter;
 use Curator\IntegrationConfig;
+use Curator\Rollback\DoRollbackBatchTaskInstanceState;
+use Curator\Status\StatusModel;
 use Curator\Tests\Shared\Mocks\AppTargeterMock;
 use Curator\Tests\Shared\Mocks\InMemoryPersistenceMock;
 use Curator\Tests\Unit\FSAccess\Mocks\ReadAdapterMock;
@@ -47,7 +52,11 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
   protected function setUp() {
     parent::setUp();
 
-    $this->reader = new CpkgReader();
+    $fs_adapter = new StreamWrapperFileAdapter(
+      new PosixPathParser()
+    );
+
+    $this->reader = new CpkgReader($fs_adapter, $fs_adapter);
     $this->persistence = new InMemoryPersistenceMock();
     $this->task_scheduler = $this->getMockBuilder('\Curator\Batch\TaskScheduler')->disableOriginalConstructor()->getMock();
 
@@ -65,18 +74,25 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
       ->getMock();
     $detector->method('getTargeter')->willReturn(new AppTargeterMock());
 
-    $scheduler = $this->getMockBuilder('\\Curator\\Batch\\TaskScheduler')
+    $status = $this->getMockBuilder('\\Curator\\Status\\StatusService')
       ->disableOriginalConstructor()
-      ->setMethods(['removeGroupFromSession'])
+      ->setMethods(['getStatus'])
       ->getMock();
+    $statusModel = new StatusModel();
+    $statusModel->rollback_capture_path = '/test-rollback-path';
+    $status->method('getStatus')
+      ->willReturn($statusModel);
+
+    $classifier = new CpkgClassificationService($this->reader);
 
     $sut = new BatchTaskTranslationService(
+      $status,
       $detector,
       $this->reader,
       $this->taskgroup_manager,
       $this->task_scheduler,
       $this->persistence,
-      new DeleteRenameBatchTask($this->reader, new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/')), $scheduler)
+      $classifier
     );
 
     return $sut;
@@ -137,30 +153,35 @@ class BatchTaskTranslationServiceTest extends \PHPUnit_Framework_TestCase {
 
   public function testDeletionsCauseDeleteRenameTask() {
     $sut = $this->sutFactory();
-    $this->taskgroup_manager->expects($this->once())
-      ->method('appendTaskInstance')
-      ->with(
-        $this->isInstanceOf('\Curator\Batch\TaskGroup'),
-        $this->callback(function(CpkgBatchTaskInstanceState $instanceState) {
-          return $instanceState->getTaskServiceName() == 'cpkg.delete_rename_batch_task';
-        })
-      );
+    $this->installAppendTaskInstanceExpectations();
 
     $sut->makeBatchTasks($this->p('minimal+deletion.zip'));
   }
 
   public function testRenamesCauseDeleteRenameTask() {
     $sut = $this->sutFactory();
-    $this->taskgroup_manager->expects($this->once())
-      ->method('appendTaskInstance')
-      ->with(
-        $this->isInstanceOf('\Curator\Batch\TaskGroup'),
-        $this->callback(function(CpkgBatchTaskInstanceState $instanceState) {
-          return $instanceState->getTaskServiceName() == 'cpkg.delete_rename_batch_task';
-        })
-      );
+    $this->installAppendTaskInstanceExpectations();
 
     $sut->makeBatchTasks($this->p('minimal+renames.zip'));
+  }
+
+  protected function installAppendTaskInstanceExpectations() {
+    $this->taskgroup_manager->expects($this->exactly(2))
+      ->method('appendTaskInstance')
+      ->withConsecutive(
+        [
+          $this->isInstanceOf('\Curator\Batch\TaskGroup'),
+          $this->callback(function (CpkgBatchTaskInstanceState $instanceState) {
+            return $instanceState->getTaskServiceName() == 'cpkg.delete_rename_batch_task';
+          })
+        ],
+        [
+          $this->isInstanceOf('\Curator\Batch\TaskGroup'),
+          $this->callback(function (DoRollbackBatchTaskInstanceState $instanceState) {
+            return $instanceState->getTaskServiceName() == 'rollback.cleanup_rollback_batch_task';
+          })
+        ]
+      );
   }
 
 }

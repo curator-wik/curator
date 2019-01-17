@@ -5,6 +5,9 @@ namespace Curator\Cpkg;
 
 
 use Curator\Batch\TaskScheduler;
+use Curator\Rollback\RollbackCaptureNoOpService;
+use Curator\Rollback\RollbackCaptureService;
+use Curator\Rollback\RollbackInitiatorService;
 use mbaynton\BatchFramework\Datatype\ProgressInfo;
 use mbaynton\BatchFramework\RunnableInterface;
 use mbaynton\BatchFramework\RunnableResultAggregatorInterface;
@@ -23,45 +26,90 @@ abstract class CpkgBatchTask implements TaskInterface {
    */
   protected $scheduler;
 
-  public function __construct(CpkgReader $reader, TaskScheduler $scheduler) {
+  /**
+   * @var RollbackCaptureService $rollback
+   */
+  protected $rollback;
+
+  /**
+   * @var RollbackCaptureNoOpService $null_rollback
+   */
+  protected $null_rollback;
+
+  /**
+   * @var RollbackInitiatorService $rollback_initiator
+   */
+  protected $rollback_initiator;
+
+  public function __construct(CpkgReader $reader, TaskScheduler $scheduler, RollbackCaptureService $rollback, RollbackCaptureNoOpService $null_rollback, RollbackInitiatorService $rollback_initiator) {
     $this->reader = $reader;
     $this->scheduler = $scheduler;
+    $this->rollback = $rollback;
+    $this->null_rollback = $null_rollback;
+    $this->rollback_initiator = $rollback_initiator;
   }
 
   /**
-   * Reduction not needed: Runnable results are not gathered.
-   *
    * @return bool
    */
   public function supportsReduction() {
-    return FALSE;
+    return TRUE;
   }
 
   public function supportsUnaryPartialResult() {
-    return FALSE;
+    return TRUE;
   }
 
-  public function reduce(RunnableResultAggregatorInterface $aggregator) { }
+  public function reduce(RunnableResultAggregatorInterface $aggregator) {
+    $r = $aggregator->getCollectedResults();
+    return array_reduce($r, [$this, 'aggregateResults'], new CpkgResult());
+  }
 
-  public function updatePartialResult($new, $current = NULL) { }
-
-  public function onRunnableComplete(TaskInstanceStateInterface $instance_state, RunnableInterface $runnable, $result, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) { }
-
-  public function onRunnableError(TaskInstanceStateInterface $instance_state, RunnableInterface $runnable, $exception, ProgressInfo $progress) {
-    // When something goes wrong with replaying a cpkg, we want to stop making further changes from it.
-    // The current TaskGroup is guaranteed to be the one that does those changes, so we unschedule it now.
-    // It's possible, though, that another runner also encountered an error and already cancelled the group.
-    // TODO: This assumes no subsequent task groups are scheduled after the cpkg update application one.
-    //       Currently that's correct, but if there was ever a possibility of another one, we'd no longer be
-    //       guaranteed that the current group is the one to cancel if it's non-null, and would need a more
-    //       exact way to identify the task group type.
-    $taskGroup = $this->scheduler->getCurrentGroupInSession();
-    if ($taskGroup !== NULL) {
-      $this->scheduler->removeGroupFromSession($taskGroup);
+  public function updatePartialResult($new, $current = NULL) {
+    if ($current === NULL) {
+      return $new;
+    } else {
+      return $this->aggregateResults($new, $current);
     }
   }
 
+  protected function aggregateResults(CpkgResult $a, CpkgResult $b) {
+    $a->errorCount += $b->errorCount;
+    if (empty($a->rollbackCaptureLocation) && !empty($b->rollbackCaptureLocation)) {
+      $a->rollbackCaptureLocation = $b->rollbackCaptureLocation;
+    }
+    return $a;
+  }
+
+  public function onRunnableComplete(TaskInstanceStateInterface $instance_state, RunnableInterface $runnable, $result, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {
+    /** @var \Curator\Cpkg\CpkgResult $result */
+    if ($result === NULL) {
+      $result = new CpkgResult();
+    }
+
+    $result->rollbackCaptureLocation = $instance_state->getRollbackPath();
+    $aggregator->collectResult($runnable, $result);
+  }
+
+  public function onRunnableError(TaskInstanceStateInterface $instance_state, RunnableInterface $runnable, $exception, RunnableResultAggregatorInterface $aggregator, ProgressInfo $progress) {
+    $result = new CpkgResult();
+    $result->errorCount = 1;
+    $result->rollbackCaptureLocation = $instance_state->getRollbackPath();
+    $aggregator->collectResult($runnable, $result);
+  }
+
   public function assembleResultResponse($final_results) {
+    /** @var \Curator\Cpkg\CpkgResult $final_results */
+    if ($final_results !== null && $final_results->errorCount > 0) {
+      // If there is a rollback capture path, initiate the rollback.
+      if (!empty($final_results->rollbackCaptureLocation)) {
+        // Prevent remaining Tasks in the update TaskGroup from running.
+        $this->scheduler->removeGroupFromSession($this->scheduler->getCurrentGroupInSession());
+        // And schedule the rollback TaskGroup.
+        $this->rollback_initiator->makeBatchTasks($final_results->rollbackCaptureLocation);
+      }
+    }
+
     return new Response();
   }
 

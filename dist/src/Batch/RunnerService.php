@@ -133,8 +133,7 @@ class RunnerService extends AbstractRunner {
     $result['incomplete_runner_ids'] = $this->getIncompleteRunnerIds();
 
     if ($this->task->supportsUnaryPartialResult()) {
-      // TODO: this is fatally flawed? The same partial unaries will be combined multiple times by concurrent runners?
-      $r = $this->persistence->get("BatchTask.$task_id.ReducedResults.1");
+      $r = $this->persistence->get("BatchTask.$task_id.Runner.$runner_id.PartialResult");
       if ($r !== NULL) {
         $result['partial_result'] = unserialize($r);
       } else {
@@ -155,7 +154,7 @@ class RunnerService extends AbstractRunner {
       foreach ($this->instance_state->getRunnerIds() as $runner_id) {
         $partial = $this->persistence->get("BatchTask.$task_id.Runner.$runner_id.PartialResult", NULL);
         if ($partial !== NULL) {
-          $result[] = $partial;
+          $result[] = unserialize($partial);
         }
       }
     } else {
@@ -209,7 +208,7 @@ class RunnerService extends AbstractRunner {
   protected function persistUnaryPartialResult($partial_result) {
     $task_id = $this->instance_state->getTaskId();
     $runner_id = $this->getRunnerId();
-    $this->persistence->set("BatchTask.$task_id.Runner.$runner_id.PartialResult", $partial_result);
+    $this->persistence->set("BatchTask.$task_id.Runner.$runner_id.PartialResult", serialize($partial_result));
   }
 
   /**

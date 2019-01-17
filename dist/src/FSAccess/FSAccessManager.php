@@ -481,6 +481,9 @@ class FSAccessManager implements FSAccessInterface {
     $path = $this->normalizePath($path, NULL, FALSE);
     if ($this->readOps->isDir($path)) {
       if ($recursive) {
+        if ($path == $this->workingPath || empty($path)) {
+          throw new \LogicException("Failsafe: refusing to recursively delete \"$path\"");
+        }
         $ls = $this->ls($path);
         foreach ($ls as $child) {
           $this->rm($this->ensureTerminatingSeparator($path) . $child, $recursive);
@@ -539,7 +542,10 @@ class FSAccessManager implements FSAccessInterface {
    *   Absolute path, or relative path under the working path.
    * @param bool $create_parents
    *   Make parent directories as needed.
-   * @return void
+   * @param bool $no_op
+   *   Determine which directories need to be created, but do not create them.
+   * @return string[]
+   *   The set of directories that were created.
    * @throws FileNotFoundException
    *   When a non-leaf directory of $path is not found and $create_parents is
    *   false.
@@ -551,7 +557,7 @@ class FSAccessManager implements FSAccessInterface {
    * @throws \InvalidArgumentException
    *   If $path is outside the working path.
    */
-  function mkdir($path, $create_parents = FALSE) {
+  function mkdir($path, $create_parents = FALSE, $no_op = FALSE) {
     /*
      * Creating directories is harder than it looks. This is because we need to
      * support creating parent directories as needed, but the
@@ -582,6 +588,11 @@ class FSAccessManager implements FSAccessInterface {
         $parent = $this->readOps->simplifyPath($parent . $this->readSeparator . '..');
       }
     }
+
+    if ($no_op) {
+      return $dirs_needed;
+    }
+
     if ($parent == '.') {
       // Then the last $parent checked by normalizePath() was in the working
       // path. Either $path is absolute and the working path is /, or $path is
@@ -634,6 +645,9 @@ class FSAccessManager implements FSAccessInterface {
         throw new FileExistsException($existing_dirs_write, 1);
       }
     }
+
+    array_push($dirs_needed, $last_dir_needed);
+    return $dirs_needed;
   }
 
   /**
@@ -682,6 +696,19 @@ class FSAccessManager implements FSAccessInterface {
     return $this->readOps->isDir($path);
   }
 
+  /**
+   * Lists the contents of a directory.
+   *
+   * @param $path
+   *   Absolute path, or relative path under the working path.
+   * @return string[]
+   *   An array containing the file and directory names found within the path.
+   *   '.' and '..' are not included.
+   * @throws FileException
+   *   If a directory listing cannot be obtained from the given path.
+   * @throws \InvalidArgumentException
+   *   If $path is outside the working path.
+   */
   public function ls($path) {
     $path = $this->normalizePath($path);
     return $this->readOps->ls($path);

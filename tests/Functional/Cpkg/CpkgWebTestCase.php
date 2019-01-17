@@ -53,7 +53,7 @@ abstract class CpkgWebTestCase extends WebTestCase {
   }
 
   public function setUp() {
-    parent::setUp();
+    parent::setUp(); // The application is constructed in here.
 
     $this->client = self::createClient();
     /**
@@ -80,19 +80,43 @@ abstract class CpkgWebTestCase extends WebTestCase {
     return __DIR__ . "/../../Unit/fixtures/cpkgs/$archive_name";
   }
 
-  protected function _testCpkgBatchApplication($cpkg_path, $initial_dirs, $expected_dirs, $initial_files, $expected_files, $num_tasks = 2) {
+  protected function _testCpkgBatchApplication($cpkg_path, $initial_dirs, $expected_dirs, $initial_files, $expected_files, $num_tasks = 3) {
     // Set mock fs contents
-    $this->fs_contents->directories = $initial_dirs;
+    $this->fs_contents->directories = array_merge($this->fs_contents->directories, $initial_dirs);
 
-    $this->fs_contents->files = $initial_files;
+    $this->fs_contents->files = array_merge($this->fs_contents->files, $initial_files);
 
     $this->runBatchApplicationOfCpkg($cpkg_path, $this->client, $num_tasks);
 
-    $this->assertEquals($expected_dirs, $this->fs_contents->directories);
+    // Rather than testing the specifics of what the rollback capture service created,
+    // we'll test it functionally below by asking it to roll back.
+    $dirs_less_rollback_capture = static::rollback_capture_filter($this->fs_contents->directories);
+    sort($dirs_less_rollback_capture);
+    sort($expected_dirs);
+    $this->assertEquals($expected_dirs, $dirs_less_rollback_capture, 'Expected directories differed from actual.');
 
+    $files_less_rollback_capture = static::rollback_capture_filter($this->fs_contents->files, TRUE);
+    // Files are ksort()ed, not sort()ed, because they are indexed associatively.
     ksort($expected_files, SORT_STRING);
-    ksort($this->fs_contents->files, SORT_STRING);
-    $this->assertEquals($expected_files, $this->fs_contents->files);
+    ksort($files_less_rollback_capture, SORT_STRING);
+    $this->assertEquals($expected_files, $files_less_rollback_capture, 'Expected files differed from actual.');
+  }
+
+  protected static function rollback_capture_filter($input_array, $use_keys = FALSE) {
+    $filtered_array = [];
+
+    foreach ($input_array AS $key => $value) {
+      if ($use_keys) {
+        $include = strpos($key, 'rollback') !== 0;
+      } else {
+        $include = strpos($value, 'rollback') !== 0;
+      }
+
+      if ($include) {
+        $filtered_array[$key] = $value;
+      }
+    }
+    return $filtered_array;
   }
 
 }

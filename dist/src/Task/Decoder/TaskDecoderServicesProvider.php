@@ -11,7 +11,7 @@ class TaskDecoderServicesProvider implements ServiceProviderInterface {
 
   public function register(Application $app) {
     $app['task.decoder.update'] = $app->share(function($app) {
-      return new UpdateTaskDecoder($app['batch.taskgroup_manager'], $app['batch.task_scheduler']);
+      return new UpdateTaskDecoder($app['batch.taskgroup_manager'], $app['batch.task_scheduler'], $app['status']);
     });
 
     /* Not currently using this.

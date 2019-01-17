@@ -54,12 +54,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/mbaynton/batch-framework.git",
-                "reference": "c514940196195911406ab3e330056054fd8d23fb"
+                "reference": "27c12b0d891823794635cd502f4e060402a6f765"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mbaynton/batch-framework/zipball/c514940196195911406ab3e330056054fd8d23fb",
-                "reference": "c514940196195911406ab3e330056054fd8d23fb",
+                "url": "https://api.github.com/repos/mbaynton/batch-framework/zipball/27c12b0d891823794635cd502f4e060402a6f765",
+                "reference": "27c12b0d891823794635cd502f4e060402a6f765",
                 "shasum": ""
             },
             "require": {
@@ -96,7 +96,7 @@
                 "source": "https://github.com/mbaynton/batch-framework/tree/master",
                 "issues": "https://github.com/mbaynton/batch-framework/issues"
             },
-            "time": "2017-03-22T22:06:39+00:00"
+            "time": "2018-12-21T15:26:33+00:00"
         },
         {
             "name": "paragonie/random_compat",
@@ -364,6 +364,7 @@
             "keywords": [
                 "microframework"
             ],
+            "abandoned": "symfony/flex",
             "time": "2016-01-06T14:59:35+00:00"
         },
         {

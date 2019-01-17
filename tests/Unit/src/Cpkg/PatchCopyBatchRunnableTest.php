@@ -27,9 +27,15 @@ class PatchCopyBatchRunnableTest extends \PHPUnit_Framework_TestCase {
       new FSAccessManager(new ReadAdapterMock('/'), new WriteAdapterMock('/'));
     $fs_access->setWorkingPath('/');
 
+    $rollback = $this->getMockBuilder('\\Curator\\Rollback\\RollbackCaptureService')
+      ->disableOriginalConstructor()
+      ->setMethods(['initializeCaptureDir', 'capture'])
+      ->getMock();
+
     $sut = new PatchCopyBatchRunnable(
       $fs_access,
       new ArchiveFileReader($cpkg_path),
+      $rollback,
       isset($options['id']) ? $options['id'] : 1,
       $operation,
       $source_in_cpkg,
@@ -73,7 +79,12 @@ class PatchCopyBatchRunnableTest extends \PHPUnit_Framework_TestCase {
     );
 
     $task_mock = $this->getMock('\mbaynton\BatchFramework\TaskInterface');
-    $instance_mock = $this->getMock('\mbaynton\BatchFramework\TaskInstanceStateInterface');
+    $instance_mock = $this->getMockBuilder('\\Curator\\Cpkg\\CpkgBatchTaskInstanceState', ['getRollbackPath'])
+      ->disableOriginalConstructor()
+      ->setMethods(['getRollbackPath'])
+      ->getMock();
+    $instance_mock->method('getRollbackPath')->willReturn('/test-rollback-path');
+
     $sut->run($task_mock, $instance_mock);
 
     $sut = $this->sutFactory(
@@ -83,8 +94,8 @@ class PatchCopyBatchRunnableTest extends \PHPUnit_Framework_TestCase {
       'parent/child',
       ['fs_access' => $fs_access]
     );
-    $task_mock = $this->getMock('\mbaynton\BatchFramework\TaskInterface');
-    $instance_mock = $this->getMock('\mbaynton\BatchFramework\TaskInstanceStateInterface');
+    //$task_mock = $this->getMock('\mbaynton\BatchFramework\TaskInterface');
+
     $sut->run($task_mock, $instance_mock);
   }
 }

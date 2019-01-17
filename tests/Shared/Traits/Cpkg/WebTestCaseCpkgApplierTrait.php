@@ -46,8 +46,17 @@ trait WebTestCaseCpkgApplierTrait {
    *   The client to make the batch runner requests on; cookie jar should be preconfigured.
    * @param int|null $num_tasks
    *   The expected number of tasks that will result from the given cpkg.
+   * @param bool $allow_runnable_failures
+   *   Whether to immediately fail the test if a runnable sends a failure update.
+   * @return int
+   *   The number of batch runner requests that were made in processing the cpkg.
    */
-  protected function runBatchApplicationOfCpkg($cpkg_path, Client $client, $num_tasks = NULL) {
+  protected function runBatchApplicationOfCpkg($cpkg_path, Client $client, $num_tasks = NULL, $allow_runnable_failures = FALSE) {
+    // Prep rollback capture area
+    $rollback_capture_path = $this->app['status']->getStatus();
+    $rollback_capture_path = $rollback_capture_path->rollback_capture_path;
+    $this->app['rollback']->initializeCaptureDir($rollback_capture_path);
+
     $taskgroup = $this->scheduleCpkg($cpkg_path);
     if ($num_tasks != NULL) {
       $this->assertEquals(
@@ -60,6 +69,6 @@ trait WebTestCaseCpkgApplierTrait {
     /********* End setup, begin execution of client requests as necessary *****/
     $this->app['session']->save();
 
-    $this->runBatchTasks($client, $taskgroup);
+    return $this->runBatchTasks($client, $taskgroup, TRUE, $allow_runnable_failures);
   }
 }

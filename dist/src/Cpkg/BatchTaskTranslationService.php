@@ -3,19 +3,23 @@
 
 namespace Curator\Cpkg;
 use Curator\AppTargeting\AppDetector;
-use Curator\AppTargeting\TargeterInterface;
 use Curator\Batch\TaskGroup;
 use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\Persistence\PersistenceInterface;
-use mbaynton\BatchFramework\TaskSchedulerInterface;
+use Curator\Rollback\DoRollbackBatchTaskInstanceState;
+use Curator\Status\StatusService;
 
 /**
  * Class BatchTaskTranslationService
  *   Evaluates a cpkg archive structure and builds the necessary batch tasks
  *   to apply the archive.
+ *
+ * DI ID: cpkg.batch_task_translator
  */
 class BatchTaskTranslationService {
+
+  protected $status_service;
 
   /**
    * @var AppDetector $app_detector
@@ -43,28 +47,36 @@ class BatchTaskTranslationService {
   protected $persistence;
 
   /**
-   * @var DeleteRenameBatchTask $delete_rename_task
+   * @var CpkgClassificationService $classifier
    */
-  protected $delete_rename_task;
+  protected $classifier;
 
   public function __construct(
+    StatusService $status_service,
     AppDetector $app_detector,
     CpkgReaderInterface $cpkg_reader,
     TaskGroupManager $task_group_mgr,
     TaskScheduler $task_scheduler,
     PersistenceInterface $persistence,
-    DeleteRenameBatchTask $delete_rename_task
+    CpkgClassificationService $classifier
   ) {
+    $this->status_service = $status_service;
     $this->app_detector = $app_detector;
     $this->cpkg_reader = $cpkg_reader;
     $this->task_group_mgr = $task_group_mgr;
     $this->task_scheduler = $task_scheduler;
     $this->persistence = $persistence;
-    $this->delete_rename_task = $delete_rename_task;
+    $this->classifier = $classifier;
   }
 
   /**
    * @param string $path_to_cpkg
+   *   Path to the cpkg to be applied via the batch tasks.
+   * @param TaskGroup $group
+   *   The TaskGroup to add the batch tasks to.
+   * @param bool $captureForRollback
+   *   Whether to pass a nonempty rollback capture location on to the runnables.
+   *   This causes them to save their changes to a new cpkg as they go.
    *
    * @return TaskGroup
    *   The new TaskGroup created from the cpkg.
@@ -74,7 +86,7 @@ class BatchTaskTranslationService {
    * @throws \InvalidArgumentException
    *   When the cpkg does not contain upgrades for the application.
    */
-  public function makeBatchTasks($path_to_cpkg) {
+  public function makeBatchTasks($path_to_cpkg, TaskGroup $group = NULL, $captureForRollback = TRUE) {
     $app_targeter = $this->app_detector->getTargeter();
     $this->cpkg_reader->validateCpkgStructure($path_to_cpkg);
     $this->validateCpkgIsApplicable($path_to_cpkg);
@@ -82,7 +94,7 @@ class BatchTaskTranslationService {
     // Find the versions we'll upgrade through.
     $versions = [$this->cpkg_reader->getVersion($path_to_cpkg)];
     $prev_versions_reversed = array_reverse($this->cpkg_reader->getPrevVersions($path_to_cpkg));
-    while (current($prev_versions_reversed) !== $app_targeter->getCurrentVersion()) {
+    while (current($prev_versions_reversed) !== $app_targeter->getCurrentVersion() && count($prev_versions_reversed)) {
       $versions[] = array_shift($prev_versions_reversed);
     }
     // Put in order that upgrades must be applied.
@@ -90,15 +102,20 @@ class BatchTaskTranslationService {
 
     // Assemble a Task Group to capture all tasks in the required order.
     $this->persistence->beginReadWrite();
-    /**
-     * @var \Curator\Batch\TaskGroup $group
-     */
-    $group = $this->task_group_mgr->makeNewGroup(
-      sprintf('Update %s from %s to %s',
-        $this->cpkg_reader->getApplication($path_to_cpkg),
-        $app_targeter->getCurrentVersion(),
-        $this->cpkg_reader->getVersion($path_to_cpkg))
-    );
+    if ($group === NULL) {
+      $group = $this->task_group_mgr->makeNewGroup(
+        sprintf('Update %s from %s to %s',
+          $this->cpkg_reader->getApplication($path_to_cpkg),
+          $app_targeter->getCurrentVersion(),
+          $this->cpkg_reader->getVersion($path_to_cpkg))
+      );
+    }
+
+    if ($captureForRollback === TRUE) {
+      $rollback_path = $this->status_service->getStatus()->rollback_capture_path;
+    } else {
+      $rollback_path = '';
+    }
 
     foreach ($versions as $version) {
       /*
@@ -110,7 +127,7 @@ class BatchTaskTranslationService {
       $num_renames = count($this->cpkg_reader->getRenames($path_to_cpkg, $version));
       $num_deletes = count($this->cpkg_reader->getDeletes($path_to_cpkg, $version));
       if ($num_renames + $num_deletes > 0) {
-        $num_runners = $this->delete_rename_task->getRunnerCount($path_to_cpkg, $version);
+        $num_runners = $this->classifier->getRunnerCountDeleteRename($path_to_cpkg, $version);
         $task_id = $this->task_scheduler->assignTaskInstanceId();
         $del_rename_task = new CpkgBatchTaskInstanceState(
           'cpkg.delete_rename_batch_task',
@@ -118,13 +135,14 @@ class BatchTaskTranslationService {
           $num_runners,
           $num_renames + $num_deletes,
           $path_to_cpkg,
-          $version
+          $version,
+          $rollback_path
         );
         $this->task_group_mgr->appendTaskInstance($group, $del_rename_task);
       }
 
       $patch_copy_iterator = PatchCopyBatchRunnableIterator::buildPatchCopyInternalIterator(
-        new ArchiveFileReader($path_to_cpkg),
+        $this->cpkg_reader->getReaderPrimitives($path_to_cpkg),
         $version
       );
       $patch_copy_runnables = 0;
@@ -140,21 +158,42 @@ class BatchTaskTranslationService {
           4,
           $patch_copy_runnables,
           $path_to_cpkg,
-          $version
+          $version,
+          $rollback_path
         );
 
         $this->task_group_mgr->appendTaskInstance($group, $patch_copy_task);
       }
     }
 
+    // If there is a failure, the whole TaskGroup (incl. the below task) gets
+    // unscheduled by CpkgBatchTask::assembleResultResponse. Otherwise, if we
+    // were capturing changes to a rollback location, clean up that stuff after
+    // a successful update.
+    if (!empty($rollback_path)) {
+      $cleanup_task = new DoRollbackBatchTaskInstanceState(
+        $this->task_scheduler->assignTaskInstanceId(),
+        $rollback_path,
+        'rollback.cleanup_rollback_batch_task'
+      );
+      $this->task_group_mgr->appendTaskInstance($group, $cleanup_task);
+    }
+
     $this->task_scheduler->scheduleGroupInSession($group);
-    $this->persistence->end();
+    $this->persistence->popEnd();
 
     return $group;
   }
 
   protected function validateCpkgIsApplicable($cpkg_path) {
     $cpkg_application = $this->cpkg_reader->getApplication($cpkg_path);
+    $version_in_cpkg = $this->cpkg_reader->getVersion($cpkg_path);
+
+    // Do not perform these validations if the cpkg looks like a rollback.
+    if ($cpkg_application === 'Curator_Rollback' && $version_in_cpkg == 'rollback') {
+      return;
+    }
+
     $app_targeter = $this->app_detector->getTargeter();
     if (strcasecmp($cpkg_application, $app_targeter->getAppName()) !== 0) {
       throw new \InvalidArgumentException(
@@ -167,7 +206,7 @@ class BatchTaskTranslationService {
 
     $current_version = (string) $app_targeter->getCurrentVersion();
 
-    if ($this->cpkg_reader->getVersion($cpkg_path) === $current_version) {
+    if ($version_in_cpkg === $current_version) {
       throw new \InvalidArgumentException(sprintf('The update package provides version "%s", but it is already installed.', $current_version));
     }
 

@@ -6,6 +6,7 @@ namespace Curator\AppTargeting;
 
 
 
+use Curator\FSAccess\FileException;
 use Curator\FSAccess\FSAccessManager;
 use Curator\IntegrationConfig;
 use Curator\Status\StatusService;
@@ -78,7 +79,13 @@ class AppDetector {
     foreach ($app_signatures as $target_service_id => $app_signature) {
       $match = TRUE;
       foreach ($app_signature as $filename) {
-        if (! $this->fs_access->isFile($filename)) {
+        try {
+          if (! $this->fs_access->isFile($filename)) {
+            $match = FALSE;
+            break;
+          }
+        } catch (FileException $e) {
+          // TODO this more gracefully.
           $match = FALSE;
           break;
         }

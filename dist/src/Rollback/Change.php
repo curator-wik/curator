@@ -15,6 +15,7 @@ abstract class Change
   const OPERATION_PATCH  = 2;
   const OPERATION_DELETE = 3;
   const OPERATION_RENAME = 4;
+  const OPERATION_MKDIRTREE = 5;
 
   /**
    * @var int $operation

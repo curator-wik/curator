@@ -241,10 +241,24 @@ class AppManager {
     // So, there is also request middleware that rechecks for a site root.
     $site_root = $app['status']->getStatus()->site_root;
     if (! empty($site_root)) {
-      $app['fs_access']->setWorkingPath($app['status']->getStatus()->site_root);
+      /** @var \Curator\Status\StatusModel $status */
+      $status = $app['status']->getStatus();
+      $site_root = $status->site_root;
+      $rollback_root = $status->rollback_capture_path;
+      // The rollback root itself may not exist, but the fsaccess working path
+      // needs to be present for path normalization to work. So just root the
+      // fsaccess manager one level up.
+      $rollback_root = dirname($rollback_root);
+
+      $app['fs_access']->setWorkingPath($site_root);
       // TODO: Whole configuration layer that looks at persistence and sets write path better,
       // or does not do it if not in persistence, reports via /status, and expects client to fix.
-      $app['fs_access']->setWriteWorkingPath($app['status']->getStatus()->site_root);
+      $app['fs_access']->setWriteWorkingPath($site_root);
+
+      if (! empty($rollback_root)) {
+        $app['fs_access.rollback']->setWorkingPath($rollback_root);
+        $app['fs_access.rollback']->setWriteWorkingPath($rollback_root);
+      }
     }
 
     $this->silexApp = $app;

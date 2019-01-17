@@ -7,6 +7,15 @@ namespace Curator\Cpkg;
  *   Service offering an API for easy traversal of the cpkg format.
  */
 interface CpkgReaderInterface {
+  /**
+   * Selects a CpkgReaderPrimitivesInterface implementation for a given cpkg.
+   *
+   * @param $cpkg_path
+   *
+   * @return \Curator\Cpkg\CpkgReaderPrimitivesInterface
+   */
+  function getReaderPrimitives($cpkg_path);
+
   function validateCpkgStructure($cpkg_path);
 
   function getVersion($cpkg_path);

@@ -39,6 +39,9 @@ class SessionFauxPersistence implements PersistenceInterface {
     if ($value === NULL) {
       $this->session->remove("faux_persistence.$key");
     } else {
+      if (is_object($value)) {
+        throw new \InvalidArgumentException('Invalid type to persist: objects are not supported by PersistenceInterface');
+      }
       $this->session->set("faux_persistence.$key", $value);
     }
   }

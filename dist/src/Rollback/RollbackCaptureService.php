@@ -4,12 +4,16 @@
 namespace Curator\Rollback;
 
 
+use Curator\AppTargeting\AppDetector;
+use Curator\Cpkg\FSAccessReader;
 use Curator\FSAccess\FileExistsException;
 use Curator\FSAccess\FileNotFoundException;
 use Curator\FSAccess\FSAccessManager;
 
 /**
  * Class RollbackCaptureService
+ *
+ * Service ID: rollback
  *
  * This service is invoked by and works in concert with the runnables that apply cpkg updates.
  * The idea is to create a directory structure at a writable scratch location that is itself more or
@@ -53,12 +57,15 @@ use Curator\FSAccess\FSAccessManager;
  *       This telltale sign of a write and a delete at the same path is explicitly searched for in post-processing,
  *       and resolved by removing the write (thus preventing two copies of the original from being restored.)
  */
-class RollbackCaptureService
+class RollbackCaptureService implements RollbackCaptureInterface
 {
   /**
    * @var FSAccessManager $fs
    */
   protected $fs;
+
+  /** @var FSAccessManager $fs */
+  protected $rollbackfs;
 
   /**
    * @var string[] $payloadPathCache
@@ -69,33 +76,48 @@ class RollbackCaptureService
   protected $payloadPathCache;
 
   /**
+   * @var AppDetector $appDetector
+   */
+  protected $appDetector;
+
+  /**
    * RollbackCaptureService constructor.
    * @param FSAccessManager $fs
-   *   The FSAccessManager whose read and write adapters are both using mounted filesystems.
+   *   The app's main FSAccessManager, virtual root in the site's root.
+   * @param FSAccessManager $rollbackfs
+   *   The FSAccessManager pointed at the rollback capture location.
+   * @param AppDetector $appDetector
    */
-  public function __construct(FSAccessManager $fs)
+  public function __construct(FSAccessManager $fs, FSAccessManager $rollbackfs, AppDetector $appDetector)
   {
     $this->fs = $fs;
+    $this->rollbackfs = $rollbackfs;
+    $this->appDetector = $appDetector;
     $this->payloadPathCache = [];
   }
 
   public function initializeCaptureDir($captureDir) {
     try {
-      $this->fs->mkdir($captureDir, TRUE);
+      $this->rollbackfs->mkdir($captureDir, TRUE);
     } catch (FileExistsException $e) {
-      if ($e->getCode() != 0) { // 0 = it's already there
+      if ($e->getCode() == 0) {
+        // 0 = it's already there. Make sure we're starting with a clean slate.
+        $this->rollbackfs->rm($captureDir, TRUE);
+        $this->rollbackfs->mkdir($captureDir);
+      } else {
         throw $e;
       }
     }
 
-    $captureDir = $this->fs->ensureTerminatingSeparator($captureDir);
+    $captureDir = $this->rollbackfs->ensureTerminatingSeparator($captureDir);
 
-    // TODO: application, component.
-    $this->fs->filePutContents($captureDir . 'package-format-version', '1.0');
-    $this->fs->filePutContents($captureDir . 'version', 'rollback');
-    $this->fs->filePutContents($captureDir . 'prev-versions-inorder', 'partial update');
+    // TODO: component file; not needed unless we start doing modules.
+    $this->rollbackfs->filePutContents($captureDir . 'application', 'Curator_Rollback');
+    $this->rollbackfs->filePutContents($captureDir . 'package-format-version', '1.0');
+    $this->rollbackfs->filePutContents($captureDir . 'version', 'rollback');
+    $this->rollbackfs->filePutContents($captureDir . 'prev-versions-inorder', 'partial update');
     $payloadDir = $this->payloadPath($captureDir);
-    $this->fs->mkdir($payloadDir, TRUE);
+    $this->rollbackfs->mkdir($payloadDir, TRUE);
   }
 
   /**
@@ -122,9 +144,13 @@ class RollbackCaptureService
           $this->captureDelete($change->getTarget(), $captureDir, $runnerId);
         }
         break;
+      case Change::OPERATION_MKDIRTREE:
+        $this->captureDeletes($change->getTarget(), $captureDir, $runnerId);
+        break;
       case Change::OPERATION_PATCH:
-        // Similar to OPERATION_WRITE, but we'll assume there's a file there, and we cannot capture destructively.
-        $this->captureFile($change->getTarget(), FALSE, $captureDir);
+        // Similar to OPERATION_WRITE, but we'll assume there's a file there.
+        // Current patch strategy is to patch an in-memory copy and rewrite whole file, so destructive is okay.
+        $this->captureFile($change->getTarget(), TRUE, $captureDir);
         break;
       case Change::OPERATION_DELETE:
         $this->captureFile($change->getTarget(), TRUE, $captureDir);
@@ -137,31 +163,59 @@ class RollbackCaptureService
     }
   }
 
+  // $destructive was at one time used to indicate the file could be mv'd.
+  // Would need a single FSAccessManaager allowing multiple base paths for that.
   protected function captureFile($path, $destructive, $captureDir) {
     $capturePath = $this->payloadPath($captureDir);
     $destination = sprintf("%s%s%s",
       $capturePath,
-      $this->fs->ensureTerminatingSeparator('files'),
+      $this->rollbackfs->ensureTerminatingSeparator('files'),
       $path
     );
 
     // Ensure the full directory structure required to capture the file is present.
     try {
-      $this->fs->mkdir($this->fs->ensureTerminatingSeparator($destination) . '..', TRUE);
+      $this->rollbackfs->mkdir($this->fs->ensureTerminatingSeparator($destination) . '..', TRUE);
     } catch (FileExistsException $e) {
-      if ($e->getCode() != 0) {
+      if ($e->getCode() != 0) { // 0 = exists and is a directory
         throw $e;
       }
     }
 
-    if ($destructive) {
-      $this->fs->mv($path, $destination);
+    if ($this->fs->isDir($path)) {
+      try {
+        $this->rollbackfs->mkdir($destination);
+      } catch (FileExistsException $e) {
+        if ($e->getCode() != 0) {
+          throw $e;
+        }
+      }
     } else {
-      $this->fs->filePutContents($destination, $this->fs->fileGetContents($path));
+      try {
+        $this->rollbackfs->filePutContents($destination, $this->fs->fileGetContents($path));
+      } catch (FileNotFoundException $e) {
+        // The fs methods might throw this due to the $destination's dirtree being incomplete or
+        // due to the source file at $path being absent. We assume the former isn't the case
+        // because we just ensured the directory structure was present, therefore it must be that
+        // $path is not there.
+        // This is actually not necessarily cause for alarm, because a common user of this
+        // function is DeleteRenameBatchRunnable's delete(), which currently removes files and
+        // directories in an undefined order with the possibility of several concurrent runners
+        // trying to delete the same file (see github issue #5 for discussion.) If another runner
+        // beat us to removing $path, then it will exist now at $destination, and in that case we
+        // can safely swallow this exception.
+        if (! $this->rollbackfs->isFile($destination) &&  ! $this->rollbackfs->isDir($destination)) {
+          throw $e;
+        }
+      }
     }
   }
 
   protected function captureDelete($path, $captureDir, $runnerId) {
+    $this->captureDeletes([$path], $captureDir, $runnerId);
+  }
+
+  protected function captureDeletes($paths, $captureDir, $runnerId) {
     $capturePath = $this->payloadPath($captureDir);
     $deletesFile = $capturePath . 'deleted_files';
     if ($runnerId !== null) {
@@ -169,27 +223,64 @@ class RollbackCaptureService
     }
 
     try {
-      $currentDeletes = $this->fs->fileGetContents($deletesFile);
+      $currentDeletes = $this->rollbackfs->fileGetContents($deletesFile);
     } catch (FileNotFoundException $e) {
       // First time.
       $currentDeletes = '';
     }
 
-    $currentDeletes .= $path . "\n";
-    $this->fs->filePutContents($deletesFile, $currentDeletes);
+    $currentDeletes .= implode("\n", $paths) . "\n";
+    $this->rollbackfs->filePutContents($deletesFile, $currentDeletes);
   }
 
   protected function payloadPath($captureDir) {
     if (empty($this->payloadPathCache[$captureDir])) {
-      $rollbackSyntheticVersion = $this->fs->fileGetContents(
+      $rollbackSyntheticVersion = $this->rollbackfs->fileGetContents(
         $this->fs->ensureTerminatingSeparator($captureDir) . 'version'
       );
       $this->payloadPathCache[$captureDir] =
-        $this->fs->ensureTerminatingSeparator($captureDir) .
-        $this->fs->ensureTerminatingSeparator('payload') .
-        $this->fs->ensureTerminatingSeparator($rollbackSyntheticVersion);
+        $this->rollbackfs->ensureTerminatingSeparator($captureDir) .
+        $this->rollbackfs->ensureTerminatingSeparator('payload') .
+        $this->rollbackfs->ensureTerminatingSeparator($rollbackSyntheticVersion);
     }
 
     return $this->payloadPathCache[$captureDir];
+  }
+
+  /**
+   * Transforms the almost-cpkg rollback capture directory into a correct cpkg structure.
+   *
+   * @param string $captureDir
+   */
+  public function fixupToCpkg($captureDir) {
+    $capturePath = $this->payloadPath($captureDir);
+    $deleted_things = $this->fixupDeletes($capturePath);
+    $this->fixupRenamePatch($capturePath, $deleted_things);
+  }
+
+  protected function fixupDeletes($capturePath) {
+    // combines all deleted_files.* files into deleted_files
+    $listing = $this->rollbackfs->ls($capturePath);
+    $buffer = [];
+    foreach ($listing as $inode_name) {
+      if (strpos($inode_name, 'deleted_files') === 0) {
+        $buffer = array_merge($buffer, explode("\n", $this->rollbackfs->fileGetContents($capturePath . $inode_name)));
+      }
+    }
+
+    $this->rollbackfs->filePutContents($capturePath . 'deleted_files', implode("\n", $buffer));
+    return $buffer;
+  }
+
+  protected function fixupRenamePatch($capturePath, $deleted_things) {
+    // Search for paths that are both being deleted and written; remove the write.
+    // See comment block at top.
+    $captured_writes_path = $this->rollbackfs->ensureTerminatingSeparator($capturePath . 'files');
+    foreach ($deleted_things as $path) {
+      $check = $captured_writes_path . $path;
+      if ($this->rollbackfs->isFile($check)) {
+        $this->rollbackfs->rm($check);
+      }
+    }
   }
 }

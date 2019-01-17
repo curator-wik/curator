@@ -4,8 +4,8 @@
 namespace Curator\Cpkg;
 
 
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
-use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
+use Curator\FSAccess\FileException;
+use Curator\FSAccess\FileNotFoundException;
 
 /**
  * Class ArchiveFileReader
@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
  *   getting extracted. This class acts as an abstraction layer to a future
  *   alternative means of handling archive file I/O.
  */
-class ArchiveFileReader {
+class ArchiveFileReader implements CpkgReaderPrimitivesInterface {
 
   /**
    * @var \PharData[]
@@ -70,7 +70,7 @@ class ArchiveFileReader {
    * @param string $path
    *   A path within the archive file.
    *
-   * @throws \Symfony\Component\HttpFoundation\File\Exception\FileNotFoundException;
+   * @throws \Curator\FSAccess\FileNotFoundException
    *   When $path is not a regular file in the archive.
    *
    * @return string

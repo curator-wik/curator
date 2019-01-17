@@ -15,7 +15,7 @@ class DownloadServicesProvider implements ServiceProviderInterface {
     });
 
     $app['download.cpkg_download_batch_task'] = $app->share(function($app) {
-      return new CpkgDownloadBatchTask($app['status'], $app['cpkg.batch_task_translator']);
+      return new CpkgDownloadBatchTask($app['status'], $app['cpkg.batch_task_translator'], $app['rollback']);
     });
   }
 
