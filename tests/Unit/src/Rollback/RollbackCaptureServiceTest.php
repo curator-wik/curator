@@ -55,69 +55,111 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
     self::$fsAccessManager->setWriteWorkingPath(self::PROJECT_PATH);
   }
 
-  protected function sutFactory() {
+  protected function sutFactory($rollbackRoot) {
     $detector = $this->getMockBuilder('\Curator\AppTargeting\AppDetector')
       ->disableOriginalConstructor()
       ->setMethods(['getTargeter'])
       ->getMock();
     $detector->method('getTargeter')->willReturn(new AppTargeterMock());
 
-    // TODO: using a separate fsAccessManager instance for rollbackfs would be more realistic.
-    $sut = new RollbackCaptureService(self::$fsAccessManager, self::$fsAccessManager, $detector);
+    $rb_reads = new ReadAdapterMock($rollbackRoot);
+    $rb_writes = new WriteAdapterMock($rollbackRoot);
+    $rb_fs = new FSAccessManager($rb_reads, $rb_writes);
+    if (strpos($rollbackRoot, self::PROJECT_PATH) === 0) {
+      $rb_reads->setFilesystemContents(self::$readAdapter->getFilesystemContents());
+      $rb_writes->setFilesystemContents(self::$readAdapter->getFilesystemContents());
+    } else {
+      $rb_contents = new MockedFilesystemContents();
+      $rb_contents->clearAll();
+      $rb_reads->setFilesystemContents($rb_contents);
+      $rb_writes->setFilesystemContents($rb_contents);
+    }
+    $rb_fs->setWorkingPath($rollbackRoot);
+    $rb_fs->setWriteWorkingPath($rollbackRoot);
+
+    $sut = new RollbackCaptureService(self::$fsAccessManager, $rb_fs, $detector);
     $sut->initializeCaptureDir(self::ROLLBACK_CAPTURE_PATH);
-    return $sut;
+    return [$sut, $rb_fs];
   }
 
-  public function testSingleDelete() {
-    $sut = $this->sutFactory();
+  public function rollbackRootsProvider() {
+    return [
+      [self::PROJECT_PATH],
+      ['/outside/project'],
+    ];
+  }
+
+  /**
+   * @dataProvider rollbackRootsProvider
+   */
+  public function testSingleDelete($rollbackRoot) {
+    /** @var RollbackCaptureService $sut */
+    /** @var FSAccessManager $rollbackfs */
+    list($sut, $rollbackfs) = $this->sutFactory($rollbackRoot);
     $this->assertTrue(self::$fsAccessManager->isFile('README'));
     $contents = self::$fsAccessManager->fileGetContents('README');
     $sut->capture(new ChangeTypeDelete('README'), self::ROLLBACK_CAPTURE_PATH, 1);
 
-    $this->assertEquals($contents, self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/README'));
+    $this->assertEquals($contents, $rollbackfs->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/README'));
   }
 
-  public function testSinglePatch() {
-    $sut = $this->sutFactory();
+  /**
+   * @dataProvider rollbackRootsProvider
+   */
+  public function testSinglePatch($rollbackRoot) {
+    /** @var RollbackCaptureService $sut */
+    /** @var FSAccessManager $rollbackfs */
+    list($sut, $rollbackfs) = $this->sutFactory($rollbackRoot);
     $this->assertTrue(self::$fsAccessManager->isFile('test/file_depth1'));
     $contents = self::$fsAccessManager->fileGetContents('test/file_depth1');
     $sut->capture(new ChangeTypePatch('test/file_depth1'), self::ROLLBACK_CAPTURE_PATH, 1);
 
-    $this->assertEquals($contents, self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/test/file_depth1'));
+    $this->assertEquals($contents, $rollbackfs->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/test/file_depth1'));
   }
 
-  public function testSingleWrite_newFile() {
-    $sut = $this->sutFactory();
+  /**
+   * @dataProvider rollbackRootsProvider
+   */
+  public function testSingleWrite_newFile($rollbackRoot) {
+    /** @var RollbackCaptureService $sut */
+    /** @var FSAccessManager $rollbackfs */
+    list($sut, $rollbackfs) = $this->sutFactory($rollbackRoot);
     $sut->capture(new ChangeTypeWrite('some/sort/of/file.php'), self::ROLLBACK_CAPTURE_PATH, '2');
 
-    $this->assertDeletion('some/sort/of/file.php', '2');
+    $this->assertDeletion('some/sort/of/file.php', '2', $rollbackfs);
   }
 
-  public function testSingleWrite_overwrite() {
-    $sut = $this->sutFactory();
+  /**
+   * @dataProvider rollbackRootsProvider
+   */
+  public function testSingleWrite_overwrite($rollbackRoot) {
+    /** @var RollbackCaptureService $sut */
+    /** @var FSAccessManager $rollbackfs */
+    list($sut, $rollbackfs) = $this->sutFactory($rollbackRoot);
     $contents = self::$fsAccessManager->fileGetContents('test/file_depth1');
     $this->assertNotEmpty($contents);
     $sut->capture(new ChangeTypeWrite('test/file_depth1'), self::ROLLBACK_CAPTURE_PATH, '2');
     // Unlike testSingleWrite_newFile, since this file exists the reversal is to capture the original.
-    $this->assertEquals($contents, self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/test/file_depth1'));
+    $this->assertEquals($contents, $rollbackfs->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/test/file_depth1'));
   }
 
-  public function testSingleRename() {
-    $sut = $this->sutFactory();
+  /**
+   * @dataProvider rollbackRootsProvider
+   */
+  public function testSingleRename($rollbackRoot) {
+    /** @var RollbackCaptureService $sut */
+    /** @var FSAccessManager $rollbackfs */
+    list($sut, $rollbackfs) = $this->sutFactory($rollbackRoot);
     $contents = self::$fsAccessManager->fileGetContents('test/file_depth1');
     $sut->capture(new ChangeTypeRename('test/file_depth1', 'test/file_renamed'), self::ROLLBACK_CAPTURE_PATH, '1');
 
-    $this->assertDeletion('test/file_renamed', '1');
-    $this->assertEquals($contents, self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/test/file_depth1'));
+    $this->assertDeletion('test/file_renamed', '1', $rollbackfs);
+    $this->assertEquals($contents, $rollbackfs->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . 'payload/rollback/files/test/file_depth1'));
   }
 
-  public function testRollbackFsNotInProjectRoot() {
-    // if feature is kept. Possibly by feeding data provider to existing tests.
-    // $this->fail('Not implemented/reminder');
-  }
 
-  protected function assertDeletion($path, $runnerId) {
-    $deletions = self::$fsAccessManager->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . "payload/rollback/deleted_files.$runnerId");
+  protected function assertDeletion($path, $runnerId, $rollbackfs) {
+    $deletions = $rollbackfs->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . "payload/rollback/deleted_files.$runnerId");
     $deletions = explode("\n", $deletions);
     $this->assertContains($path, $deletions);
   }
