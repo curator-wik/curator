@@ -54,12 +54,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/mbaynton/batch-framework.git",
-                "reference": "27c12b0d891823794635cd502f4e060402a6f765"
+                "reference": "000477dc031d78ce40a767ad2b8a66d4c717386a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mbaynton/batch-framework/zipball/27c12b0d891823794635cd502f4e060402a6f765",
-                "reference": "27c12b0d891823794635cd502f4e060402a6f765",
+                "url": "https://api.github.com/repos/mbaynton/batch-framework/zipball/000477dc031d78ce40a767ad2b8a66d4c717386a",
+                "reference": "000477dc031d78ce40a767ad2b8a66d4c717386a",
                 "shasum": ""
             },
             "require": {
@@ -96,7 +96,7 @@
                 "source": "https://github.com/mbaynton/batch-framework/tree/master",
                 "issues": "https://github.com/mbaynton/batch-framework/issues"
             },
-            "time": "2018-12-21T15:26:33+00:00"
+            "time": "2019-01-03T14:37:11+00:00"
         },
         {
             "name": "paragonie/random_compat",
@@ -1882,6 +1882,7 @@
                 "github",
                 "test"
             ],
+            "abandoned": "php-coveralls/php-coveralls",
             "time": "2016-01-20T17:35:46+00:00"
         },
         {

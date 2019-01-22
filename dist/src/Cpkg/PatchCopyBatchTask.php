@@ -4,6 +4,7 @@
 namespace Curator\Cpkg;
 
 
+use Curator\Batch\TaskGroupManager;
 use Curator\Batch\TaskScheduler;
 use Curator\FSAccess\FSAccessManager;
 use Curator\Rollback\RollbackCaptureNoOpService;
@@ -18,8 +19,8 @@ class PatchCopyBatchTask extends CpkgBatchTask {
    */
   protected $fs_access;
 
-  public function __construct(\Curator\Cpkg\CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler, RollbackCaptureService $rollback, RollbackCaptureNoOpService $null_rollback, RollbackInitiatorService $rollback_initiator) {
-    parent::__construct($reader, $scheduler, $rollback, $null_rollback, $rollback_initiator);
+  public function __construct(\Curator\Cpkg\CpkgReader $reader, FSAccessManager $fs_access, TaskScheduler $scheduler, TaskGroupManager $taskGroupManager, RollbackCaptureService $rollback, RollbackCaptureNoOpService $null_rollback, RollbackInitiatorService $rollback_initiator) {
+    parent::__construct($reader, $scheduler, $taskGroupManager, $rollback, $null_rollback, $rollback_initiator);
     $this->fs_access = $fs_access;
   }
 

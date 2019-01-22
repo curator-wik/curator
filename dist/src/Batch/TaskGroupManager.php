@@ -115,10 +115,19 @@ class TaskGroupManager {
     $task_id = reset($group->taskIds);
     if ($task_id !== FALSE) {
       $task_instance = $this->persistence->get(sprintf('BatchTask.%d', $task_id));
-      $task_instance = unserialize($task_instance);
-      $this->persistence->popEnd();
-      return $task_instance;
+      if ($task_instance === NULL) {
+        // This occurs when the next Task has actually been completed or
+        // destroyed already, but the incoming TaskGroup copy doesn't know that.
+        // Try the next task in the group.
+        $this->removeTaskInstance($group, $task_id);
+        return $this->getActiveTaskInstance($group);
+      } else {
+        $task_instance = unserialize($task_instance);
+        $this->persistence->popEnd();
+        return $task_instance;
+      }
     } else {
+      $this->persistence->popEnd();
       return NULL;
     }
   }

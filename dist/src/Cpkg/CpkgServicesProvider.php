@@ -26,6 +26,7 @@ class CpkgServicesProvider implements ServiceProviderInterface {
         $app['cpkg.reader'],
         $app['fs_access'],
         $app['batch.task_scheduler'],
+        $app['batch.taskgroup_manager'],
         $app['rollback'],
         $app['rollback.no-op'],
         $app['rollback.rollback_initiator_service'],
@@ -38,6 +39,7 @@ class CpkgServicesProvider implements ServiceProviderInterface {
         $app['cpkg.reader'],
         $app['fs_access'],
         $app['batch.task_scheduler'],
+        $app['batch.taskgroup_manager'],
         $app['rollback'],
         $app['rollback.no-op'],
         $app['rollback.rollback_initiator_service']

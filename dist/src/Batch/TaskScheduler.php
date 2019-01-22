@@ -58,6 +58,9 @@ class TaskScheduler {
    *   This only occurs if the session did in fact own the group.
    */
   public function removeGroupFromSession(TaskGroup $group, $delete_group = TRUE) {
+    if (count($group->taskIds) > 0) {
+      throw new \LogicException('Invalid precondition: Group must contain no Tasks when removed from session.');
+    }
     $session_queue = $this->session->get('TaskGroupQueue', []);
     $group_ix = array_search($group->taskGroupId, $session_queue);
     if ($group_ix !== FALSE) {

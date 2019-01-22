@@ -58,7 +58,9 @@ trait WebTestCaseBatchRunnerTrait {
 
       $last_message = end($messages);
       if ($last_message->type == BatchRunnerMessage::TYPE_CONTROL) {
-         $incomplete_runner_ids = $last_message->incomplete_runner_ids;
+        // Client only required to take on newly introduced runner IDs in TYPE_RESPONSE messages.
+        // The server should not do it, but this test helps enforce/catch.
+        $incomplete_runner_ids = array_values(array_intersect($incomplete_runner_ids, $last_message->incomplete_runner_ids));
       } else if ($last_message->type == BatchRunnerMessage::TYPE_RESPONSE) {
         if ($run_subsequent_tasks) {
           $incomplete_runner_ids = $last_message->incomplete_runner_ids;
