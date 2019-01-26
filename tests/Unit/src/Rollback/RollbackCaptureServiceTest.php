@@ -126,7 +126,7 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
     list($sut, $rollbackfs) = $this->sutFactory($rollbackRoot);
     $sut->capture(new ChangeTypeWrite('some/sort/of/file.php'), self::ROLLBACK_CAPTURE_PATH, '2');
 
-    $this->assertDeletion('some/sort/of/file.php', '2', $rollbackfs);
+    $this->assertDeletion('some/sort/of/file.php', '2', $rollbackfs, 1);
   }
 
   /**
@@ -158,9 +158,12 @@ class RollbackCaptureServiceTest extends \PHPUnit_Framework_TestCase
   }
 
 
-  protected function assertDeletion($path, $runnerId, $rollbackfs) {
+  protected function assertDeletion($path, $runnerId, $rollbackfs, $expected_num_deletions = null) {
     $deletions = $rollbackfs->fileGetContents(self::ROLLBACK_CAPTURE_PATH . DIRECTORY_SEPARATOR . "payload/rollback/deleted_files.$runnerId");
-    $deletions = explode("\n", $deletions);
+    $deletions = explode("\n", trim($deletions, "\n"));
+    if (is_int($expected_num_deletions)) {
+      $this->assertCount($expected_num_deletions, $deletions, 'Not expected number of deletions');
+    }
     $this->assertContains($path, $deletions);
   }
 }

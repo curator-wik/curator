@@ -347,8 +347,7 @@ class FSAccessManager implements FSAccessInterface {
       throw new \RuntimeException('A file write operation was attempted before calling FSAccessManager::setWriteWorkingPath().');
     }
 
-    // $normalized_path starts with $this->workingPath by definition
-    $relative_path = substr($normalized_path, strlen($this->workingPath));
+    $relative_path = $this->readPathToRelative($normalized_path);
 
     if ($this->readOps->getPathParser()->pathIsAbsolute($relative_path)) {
       // TODO. Can this happen?
@@ -589,10 +588,6 @@ class FSAccessManager implements FSAccessInterface {
       }
     }
 
-    if ($no_op) {
-      return $dirs_needed;
-    }
-
     if ($parent == '.') {
       // Then the last $parent checked by normalizePath() was in the working
       // path. Either $path is absolute and the working path is /, or $path is
@@ -604,6 +599,11 @@ class FSAccessManager implements FSAccessInterface {
     // within the working path.
     $existing_dirs_write = $this->toWritePath($parent);
     $existing_dirs_read = $parent;
+    $existing_dirs_path = $this->readPathToRelative($parent);
+
+    if ($no_op) {
+      return $this->generateMkdirReturn($dirs_needed, $existing_dirs_path);
+    }
 
     $last_dir_needed = array_pop($dirs_needed);
 
@@ -647,7 +647,46 @@ class FSAccessManager implements FSAccessInterface {
     }
 
     array_push($dirs_needed, $last_dir_needed);
-    return $dirs_needed;
+    return $this->generateMkdirReturn($dirs_needed, $existing_dirs_path);
+  }
+
+  protected function generateMkdirReturn($dirs_needed, $existing_dirs_path) {
+    if ($existing_dirs_path === '.') {
+      $s = '';
+      $separator = '';
+    } else {
+      $s = $existing_dirs_path;
+      $separator = $this->readSeparator;
+    }
+
+    $out = [];
+    foreach ($dirs_needed as $dir) {
+      $s .= $separator . $dir;
+      $out[] = $s;
+      $separator = $this->readSeparator;
+    }
+    return $out;
+  }
+
+  /**
+   * Transforms a normalized read path (which is absolute) back to the relative
+   * equivalent.
+   *
+   * @param string $normalized_read_path
+   *
+   * @return string
+   */
+  protected function readPathToRelative($normalized_read_path) {
+    // A normalized_path starts with $this->workingPath by definition.
+    if ($normalized_read_path === $this->workingPath) {
+      return '.';
+    } else if ($this->workingPath === $this->readSeparator) {
+      $strip_second_slash = 0;
+    } else {
+      $strip_second_slash = 1;
+    }
+
+    return substr($normalized_read_path, strlen($this->workingPath) + $strip_second_slash);
   }
 
   /**

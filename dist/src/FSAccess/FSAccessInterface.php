@@ -182,6 +182,8 @@ interface FSAccessInterface {
    *   Absolute path, or relative path under the working path.
    * @param bool $create_parents
    *   Make parent directories as needed.
+   * @param bool $no_op
+   *   Determine which directories need to be created, but do not create them.
    * @return void
    * @throws FileNotFoundException
    *   When a non-leaf directory of $path is not found and $create_parents is
@@ -191,7 +193,7 @@ interface FSAccessInterface {
    * @throws \InvalidArgumentException
    *   If $path is outside the working path.
    */
-  function mkdir($path, $create_parents = FALSE);
+  function mkdir($path, $create_parents = FALSE, $no_op = FALSE);
 
   /**
    * Determines whether a path exists and is a regular file.

@@ -264,7 +264,7 @@ class RollbackCaptureService implements RollbackCaptureInterface
     $buffer = [];
     foreach ($listing as $inode_name) {
       if (strpos($inode_name, 'deleted_files') === 0) {
-        $buffer = array_merge($buffer, explode("\n", $this->rollbackfs->fileGetContents($capturePath . $inode_name)));
+        $buffer = array_merge($buffer, explode("\n", trim($this->rollbackfs->fileGetContents($capturePath . $inode_name), "\n")));
       }
     }
 

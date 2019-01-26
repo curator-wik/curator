@@ -238,6 +238,52 @@ class FSAccessManagerTest extends \PHPUnit_Framework_TestCase {
     self::assertMockDirExists($sut, 'test/a/new/dir/attached/to/existing/tree');
   }
 
+  /**
+   * @dataProvider mkdirTestsProvider
+   */
+  public function testMkdirRecursive($sut_callback, $path, $expected, $no_op) {
+    /** @var \Curator\FSAccess\FSAccessInterface $sut */
+    $sut = $sut_callback(); // Because static::sutFactory doesn't work until after setUp()
+    $created_dirs = $sut->mkdir($path, TRUE, $no_op);
+
+    if (! $no_op) {
+      foreach ($expected as $exp) {
+        $this->assertMockDirExists($sut, $exp);
+      }
+    }
+
+    $this->assertEquals($expected, $created_dirs, 'Return value listing created directories was incorrect.');
+  }
+
+  public function mkdirTestsProvider() {
+    // cartesian product of testing in/out of sys root, with/without no-op,
+    // and at/below first level of existing directories.
+    $scenarios = [];
+    $systems_under_test = [
+      function() { return static::sutFactory(TRUE); },
+      function() { return static::sutFactory(FALSE); },
+    ];
+    foreach ($systems_under_test as $sut) {
+      foreach ([TRUE, FALSE] as $no_op) {
+        $scenarios[] = [
+          $sut,
+          'whole/new/tree',
+          ['whole', 'whole/new', 'whole/new/tree'],
+          $no_op
+        ];
+
+        $scenarios[] = [
+          $sut,
+          'test/a/new/dir/attached/to/existing/tree',
+          ['test/a/new', 'test/a/new/dir', 'test/a/new/dir/attached', 'test/a/new/dir/attached/to', 'test/a/new/dir/attached/to/existing', 'test/a/new/dir/attached/to/existing/tree'],
+          $no_op
+        ];
+      }
+    }
+
+    return $scenarios;
+  }
+
   public function testMkdir_newRecursiveAtSysRoot() {
     static::_testMkdir_newRecursive(static::sutFactory(TRUE));
   }
