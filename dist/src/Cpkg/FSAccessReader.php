@@ -81,7 +81,7 @@ class FSAccessReader implements CpkgReaderPrimitivesInterface {
       $this->fs_access->ensureTerminatingSeparator($this->getArchivePath()),
       $internal_path);
     return new \RecursiveIteratorIterator(
-      new \RecursiveDirectoryIterator($location),
+      new \RecursiveDirectoryIterator($location, \FilesystemIterator::SKIP_DOTS),
       \RecursiveIteratorIterator::SELF_FIRST
     );
   }
