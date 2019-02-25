@@ -103,9 +103,6 @@ class WebTestCase extends \Silex\WebTestCase {
     $this->app['session.test'] = TRUE;
     unset($this->app['exception_handler']);
 
-    // Prep rollback capture area.
-    $this->app['rollback']->initializeCaptureDir($this->getTestSiteRoot() . '/' . 'rollback');
-
     // Make sure the session is started.
     /**
      * @var SessionInterface $session
