@@ -55,7 +55,9 @@ trait WebTestCaseCpkgApplierTrait {
     // Prep rollback capture area
     $rollback_capture_path = $this->app['status']->getStatus();
     $rollback_capture_path = $rollback_capture_path->rollback_capture_path;
-    $this->app['rollback']->initializeCaptureDir($rollback_capture_path);
+    if (!empty($rollback_capture_path)) {
+      $this->app['rollback']->initializeCaptureDir($rollback_capture_path);
+    }
 
     $taskgroup = $this->scheduleCpkg($cpkg_path);
     if ($num_tasks != NULL) {
