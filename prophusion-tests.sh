@@ -4,6 +4,11 @@
 #
 # To run Curator's full test suite, run docker-all_tests.sh instead.
 
+if [[ $(whoami) == "root" ]]; then
+  sudo -u www-data --preserve-env --login $0
+  exit $?
+fi
+
 echo "Running PHPUnit tests..."
 if [ -z "$PHPUNIT" ]
 then
@@ -24,4 +29,6 @@ fi
 echo "PHPUNIT is: $PHPUNIT"
 export PHPUNIT
 
-echo "XDEBUG2HOST="${XDEBUG2HOST}"; . /usr/local/bin/xdebug2host; cd /curator; /usr/local/phpenv/shims/php $PHPUNIT" | sudo -u www-data --preserve-env --login
+# echo "XDEBUG2HOST="${XDEBUG2HOST}"; . /usr/local/bin/xdebug2host; cd /curator; /usr/local/phpenv/shims/php $PHPUNIT" | sudo -u www-data --preserve-env --login
+cd /curator
+/usr/local/phpenv/shims/php $PHPUNIT
