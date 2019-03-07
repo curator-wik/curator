@@ -212,8 +212,8 @@ class AppManager {
    */
   public function createApplication() {
     if ($this->isPhar()) {
-      set_include_path('phar://curator.phar');
-      require __DIR__.'/../vendor/autoload.php';
+      set_include_path('phar://' . $this->curator_filename);
+      require 'vendor/autoload.php';
     } else {
       require __DIR__.'/../../vendor/autoload.php';
     }
@@ -271,6 +271,14 @@ class AppManager {
 
   public function hasRun() {
     return $this->silexApp !== NULL;
+  }
+
+  /**
+   * @return string
+   *   The path to Curator's .phar or .php on the server.
+   */
+  public function getCuratorFilename() {
+    return $this->curator_filename;
   }
 
 }

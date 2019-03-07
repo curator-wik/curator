@@ -13,8 +13,7 @@ $web = '/web/index.php';
 
 if (in_array('phar', stream_get_wrappers()) && class_exists('Phar', 0)) {
   function load_integration_resources() {
-    $prefix = 'phar://curator';
-    require_once 'phar://curator/integration_include.php';
+    require_once 'phar://' . __FILE__ . '/integration_include.php';
   }
   load_integration_resources();
 

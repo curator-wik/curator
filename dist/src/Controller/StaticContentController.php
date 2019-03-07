@@ -82,7 +82,7 @@ class StaticContentController {
 
   public function getWebPath() {
     if ($this->app_manager->isPhar()) {
-      $root = 'phar://curator/web/';
+      $root = 'phar://' . $this->app_manager->getCuratorFilename() . '/web/';
     } else {
       $root = '';
     }

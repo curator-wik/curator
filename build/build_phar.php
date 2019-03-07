@@ -20,7 +20,7 @@ echo "Creating distribution version of vendor/ directory...\n";
 `composer install --no-dev --optimize-autoloader -d dist/`;
 
 echo "Creating new .phar and setting stub...\n";
-$p = new Phar(dirname(__FILE__) . '/curator.phar', 0, 'curator');
+$p = new Phar(dirname(__FILE__) . '/curator.phar', 0, 'curator.phar');
 $p->setStub(file_get_contents($here . '/phar_stub.php'));
 
 //$p->buildFromDirectory(dirname(__FILE__) . '/dist');
