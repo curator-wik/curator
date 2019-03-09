@@ -420,6 +420,10 @@ class FSAccessManager implements FSAccessInterface {
         strlen($data)
       ), $filename, 1);
     }
+    if (function_exists('opcache_invalidate')) {
+      // Force because cpkg preprocessing means high confidence something changed.
+      opcache_invalidate($filename, TRUE);
+    }
     return $bytes;
   }
 
@@ -451,6 +455,10 @@ class FSAccessManager implements FSAccessInterface {
     if ($this->readOps instanceof ClearStatCacheInterface) {
       $this->readOps->clearstatcache($old_name);
       $this->readOps->clearstatcache($new_name);
+    }
+    if (function_exists('opcache_invalidate')) {
+      opcache_invalidate($old_name, TRUE);
+      opcache_invalidate($new_name, TRUE);
     }
   }
 
