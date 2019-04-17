@@ -229,8 +229,8 @@ class AppManager {
       $app['debug'] = TRUE;
     }
 
-    $app['session.prep']->prepareForNewSession();
     if ($this->integration_configuration !== NULL) {
+      $app['session.prep']->prepareForNewSession();
       $app->setIntegrationConfig($this->integration_configuration);
     }
 
