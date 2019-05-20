@@ -66,7 +66,7 @@ window.CuratorBatchClient = function($) {
                 })
                 .fail(function(data, status) {
                     alert('Current-task response data: ' + data + ". Status: " + status);
-                    batchClient.promise.resolveWith(batchClient, [{'noMoreTasks': true}]);
+                    batchClient.promise.rejectWith(batchClient, [{'noMoreTasks': true}]);
                 });
         } else {
             // .. but info for the next task is sent with task completion, so we might not need to call for it.
