@@ -192,6 +192,11 @@ class AppManager {
       die("Curator requires PHP 5.4+\n");
     }
 
+    // Support Drupal-style 'q' URL parameter to ease server config requirements.
+    if (!empty($_GET['q'])) {
+      $_SERVER['REQUEST_URI'] = $_GET['q'];
+    }
+
     if ($this->hasRun()) {
       throw new \LogicException('Curator has already been run().');
     } else {
