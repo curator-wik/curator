@@ -31,12 +31,12 @@ through an in-browser UI that is **reusable** and can optionally be **self-suffi
 
 ## Status of development
 
-As of April 2018, the problems solved in developed & tested code are:
+As of May 2019, the problems solved in developed & tested code are:
   * A format for expressing and packaging the deltas between two or more releases of a source tree ([docs](https://github.com/curator-wik/common-docs/blob/master/update_package_structure.md)).
     This may be useful for applications that primarily ship new releases as e.g. `tar`
     archives (as opposed Composer files.) The idea is that a one-time process examines two such
     official release tarballs and creates a package expressing the deltas. This preprocessing
-    allows the work performed by the updater client application to be significantly reduced.
+    allows the work performed by the updater on each site to be significantly reduced.
   * A batch framework for PHP that supports concurrency when the set of tasks to be run are
     trivially parallelizable ([repo](https://github.com/mbaynton/batch-framework)).
   * A filesystem access abstraction layer whose differentiator from the many other such
@@ -48,18 +48,20 @@ As of April 2018, the problems solved in developed & tested code are:
     on a source tree via the filesystem abstraction layer.
     ([`BatchTaskTranslationService` &](https://github.com/curator-wik/curator/blob/master/dist/src/Cpkg/BatchTaskTranslationService.php)
     friends in the [`Curator\Cpkg` namespace](https://github.com/curator-wik/curator/tree/master/dist/src/Cpkg)).
-
-Some nearly-complete / experimental features are:
-  * Support for "lightweight" application integrations ([docs](https://github.com/curator-wik/curator/blob/master/docs/Integration-HOWTO.md)).
-    Lightweight integrations use the build of Curator that exhibits self-sufficiency and simply allow
+  * Support for application integrations ([docs](https://github.com/curator-wik/curator/blob/master/docs/Integration-HOWTO.md)).
+    Integrations use the build of Curator that exhibits self-sufficiency and simply allow
     user authz and update task configuration to flow from the target application to the updater. They
-    can be implemented as simple modules / plugins / extensions to the target application.
+    can be implemented as simple modules / plugins / extensions to the target application.  
+    An example application integration is the [core_update module for Drupal 7](https://www.drupal.org/project/core_update/).    
+
+Some experimental features are:
   * Application of .patch files to possibly modified original source files with no requirement for
-    external utilities. (Nearly complete because the php code for patch application is buggy and they do not always apply correctly.)
+    external utilities. (Incomplete because [yetanotherape/diff-match-patch](https://packagist.org/packages/yetanotherape/diff-match-patch)
+    is buggy and patches do not always apply correctly.)
     The goal here would be to offer tooling to deploy small but highly critical patches even to sites with user modified sources.
 
 Incomplete features are:
-  * [The UI](https://github.com/curator-wik/curator-gui).
+  * A [standalone UI](https://github.com/curator-wik/curator-gui) to allow use without an application integration.  
   * Any kind of support for cryptographic verification of new code before it is installed. The project
     currently runs on PHP all the way back to 5.4 in the interests of providing a low bar for as many
     users as possible to receive updates<sup>*</sup>, and sodium-compat was not yet a thing when most of
@@ -145,4 +147,4 @@ random access performance.
 ## License
 MIT
 
-Copyright &copy; 2018 Mike Baynton
+Copyright &copy; 2019 Mike Baynton
