@@ -5,7 +5,7 @@
 # To run Curator's full test suite, run docker-all_tests.sh instead.
 
 if [[ $(whoami) == "root" ]]; then
-  sudo -u www-data --preserve-env --login $0
+  su --preserve-env --login www-data $0
   exit $?
 fi
 
